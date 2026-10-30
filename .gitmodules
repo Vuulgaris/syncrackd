@@ -1,0 +1,12 @@
+[submodule "third_party/Model-TG"]
+	path = third_party/Model-TG
+	url = https://github.com/TinyGregAudio/Model-TG
+[submodule "third_party/elektron-model-tweaks"]
+	path = third_party/elektron-model-tweaks
+	url = https://github.com/drumkilla/elektron-model-tweaks
+[submodule "third_party/elektron-firmware-tool"]
+	path = third_party/elektron-firmware-tool
+	url = https://github.com/mischa85/elektron-firmware-tool
+[submodule "third_party/syntakt-firmware-workbench"]
+	path = third_party/syntakt-firmware-workbench
+	url = https://github.com/Bezronczek/syntakt-firmware-workbench

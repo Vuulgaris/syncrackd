@@ -1,0 +1,27 @@
+# Elektron firmware and anything derived from it: never commit
+firmware/
+sections/
+build/
+*.syx
+*.SYX
+*.bin
+*.wav
+
+# the maintainer's own audio, dropped here for `make samples`
+samples/
+
+# read-only reference clones
+ref/
+
+# python
+.venv/
+__pycache__/
+*.pyc
+.pytest_cache/
+
+# toolchain output
+*.o
+*.elf
+*.map
+
+.DS_Store

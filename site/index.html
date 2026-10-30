@@ -1,0 +1,169 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>SynCrackd patcher</title>
+<meta name="description" content="Make the SynCrackd OS for the Elektron Syntakt from Elektron's own 1.42 file, in your browser.">
+<style>
+  :root {
+    --bg: #f7f6f2; --fg: #1d1d1b; --muted: #6b6a64; --line: #d9d7cf; --card: #ffffff;
+    --accent: #c2410c; --ok: #15803d; --bad: #b91c1c;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #151513; --fg: #eceae4; --muted: #9b998f; --line: #34332e; --card: #1e1e1b;
+      --accent: #fb923c; --ok: #4ade80; --bad: #f87171;
+    }
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--fg);
+         font: 16px/1.55 ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif; }
+  main { max-width: 640px; margin: 0 auto; padding: 48px 16px 64px; }
+  h1 { font-size: 28px; margin: 0 0 4px; letter-spacing: -0.01em; }
+  .sub { color: var(--muted); margin: 0 0 32px; }
+  .warn { border-left: 3px solid var(--accent); padding: 4px 0 4px 14px; margin: 0 0 28px; color: var(--muted);
+          font-size: 14px; }
+  .warn strong { color: var(--fg); }
+  .warn a { color: var(--accent); }
+  #drop { display: block; border: 1.5px dashed var(--line); border-radius: 12px; background: var(--card);
+          padding: 36px 20px; text-align: center; cursor: pointer; transition: border-color .15s; }
+  #drop:hover, #drop.over { border-color: var(--accent); }
+  #drop input { display: none; }
+  #drop .big { font-weight: 600; display: block; margin-bottom: 4px; }
+  #drop .small { color: var(--muted); font-size: 14px; }
+  #status { margin: 24px 0 0; min-height: 1.5em; color: var(--muted); font-size: 15px; }
+  #status.ok { color: var(--ok); } #status.bad { color: var(--bad); }
+  #result { display: none; margin-top: 20px; background: var(--card); border: 1px solid var(--line);
+            border-radius: 12px; padding: 20px; }
+  .hash { font: 13px/1.5 ui-monospace, SFMono-Regular, Menlo, monospace; word-break: break-all; }
+  .label { color: var(--muted); font-size: 13px; margin: 12px 0 2px; }
+  a.button { display: inline-block; margin-top: 16px; background: var(--accent); color: #fff; padding: 10px 18px;
+             border-radius: 8px; text-decoration: none; font-weight: 600; }
+  ol { padding-left: 20px; color: var(--muted); font-size: 15px; }
+  ol li { margin: 4px 0; }
+  footer { margin-top: 40px; color: var(--muted); font-size: 13px; }
+  footer a { color: inherit; }
+</style>
+</head>
+<body>
+<main>
+  <h1>SynCrackd patcher</h1>
+  <p class="sub" id="what">A sampler for the Elektron Syntakt, made from Elektron's own OS 1.42 file.</p>
+
+  <p class="warn"><strong>Unofficial, at your own risk.</strong> Not made or supported by Elektron. Back up your +Drive
+    with Transfer before you flash. Your file never leaves this page: it is patched here, in your browser.
+    <a href="https://github.com/Vuulgaris/syncrackd/blob/main/DISCLAIMER.md">Disclaimer</a>.</p>
+
+  <label id="drop">
+    <input type="file" id="file" accept=".syx">
+    <span class="big">Choose Syntakt_OS1.42.syx</span>
+    <span class="small">or drop it here. Get it from Elektron's site first.</span>
+  </label>
+
+  <p id="status">Loading the patcher...</p>
+
+  <div id="result">
+    <div class="label">SHA-256 of your file</div>
+    <div class="hash" id="sha"></div>
+    <div class="label">This release's</div>
+    <div class="hash" id="want"></div>
+    <a class="button" id="save" download>Save the modded OS</a>
+  </div>
+
+  <ol>
+    <li>Flash it as you would any OS update: with Transfer, or as SysEx from the boot menu.</li>
+    <li>To go back, flash Elektron's 1.42 the same way. The bootloader is never touched.</li>
+    <li>Do not share the file you saved: it holds Elektron's firmware. Share this page.</li>
+  </ol>
+
+  <footer>Runs the same Python patcher as the release, in <a href="https://pyodide.org">Pyodide</a>.
+    <a href="https://github.com/Vuulgaris/syncrackd">Source</a>, MIT.</footer>
+</main>
+
+<script id="worker" type="text/js-worker">
+importScripts("https://cdn.jsdelivr.net/pyodide/v0.26.4/full/pyodide.js");
+const ready = loadPyodide();
+self.onmessage = async (e) => {
+  try {
+    const py = await ready;
+    if (e.data.warm) { self.postMessage({ warm: true }); return; }
+    py.FS.writeFile("/os.syx", new Uint8Array(e.data.syx));
+    py.globals.set("SCRIPT", e.data.script);
+    const out = py.runPython(`
+g = {"__name__": "syncrackd_web", "__file__": "/syncrackd.py"}
+exec(compile(SCRIPT, "syncrackd.py", "exec"), g)
+patch = g["_install"]()
+import base64, json, zlib
+fw = patch.fw
+bundle = json.loads(zlib.decompress(base64.b85decode("".join(g["_BUNDLE"].split()))))
+try:
+    raw = patch.apply(fw.load("/os.syx"), bundle)
+    result = (True, raw, fw.sha256(raw), bundle["image"])
+except fw.GuardError as e:
+    result = (False, None, str(e), bundle["image"])
+result
+`);
+    const [ok, raw, text, image] = out.toJs();
+    out.destroy();
+    if (ok) {
+      const bytes = raw.slice();
+      self.postMessage({ ok: true, out: bytes, sha: text, image }, [bytes.buffer]);
+    } else {
+      self.postMessage({ ok: false, err: text });
+    }
+  } catch (err) {
+    self.postMessage({ ok: false, err: String(err.message || err).split("\n").slice(-2).join(" ") });
+  }
+};
+</script>
+
+<script>
+(async () => {
+  const $ = (id) => document.getElementById(id);
+  const status = (text, cls) => { $("status").textContent = text; $("status").className = cls || ""; };
+  const release = await fetch("release.json").then((r) => r.json());
+  const script = await fetch(release.file).then((r) => r.text());
+  $("what").textContent = release.what;
+  $("want").textContent = release.output;
+
+  const src = $("worker").textContent;
+  const worker = new Worker(URL.createObjectURL(new Blob([src], { type: "text/javascript" })));
+  let busy = true, started = 0, tick = null;
+  worker.postMessage({ warm: true });
+
+  worker.onmessage = (e) => {
+    if (e.data.warm) { busy = false; status("Ready. Choose Elektron's file."); return; }
+    clearInterval(tick); busy = false;
+    if (!e.data.ok) { status("Refused: " + e.data.err + ". Nothing made.", "bad"); return; }
+    const match = e.data.sha === release.output;
+    $("sha").textContent = e.data.sha;
+    const url = URL.createObjectURL(new Blob([e.data.out], { type: "application/octet-stream" }));
+    $("save").href = url;
+    $("save").download = "Syntakt_OS1.42_syncrackd_" + e.data.image + ".syx";
+    $("result").style.display = "block";
+    status(match ? "Done in " + Math.round((Date.now() - started) / 1000) + " s. The hashes match."
+                 : "The hash is not this release's. Do not flash it.", match ? "ok" : "bad");
+    $("save").style.display = match ? "inline-block" : "none";
+    window.lastResult = { sha: e.data.sha, match, bytes: e.data.out.length };
+  };
+
+  window.patchBytes = (buf) => {
+    if (busy) { status("Still working, one moment."); return; }
+    busy = true; started = Date.now(); $("result").style.display = "none";
+    tick = setInterval(() => status("Patching... " + Math.round((Date.now() - started) / 1000) + " s"), 500);
+    worker.postMessage({ syx: buf, script }, [buf]);
+  };
+
+  const take = (f) => f && f.arrayBuffer().then(window.patchBytes);
+  $("file").addEventListener("change", (e) => take(e.target.files[0]));
+  const drop = $("drop");
+  drop.addEventListener("dragover", (e) => { e.preventDefault(); drop.classList.add("over"); });
+  drop.addEventListener("dragleave", () => drop.classList.remove("over"));
+  drop.addEventListener("drop", (e) => { e.preventDefault(); drop.classList.remove("over");
+                                         take(e.dataTransfer.files[0]); });
+  status("Loading the patcher (Pyodide, about 10 MB, once)...");
+})();
+</script>
+</body>
+</html>

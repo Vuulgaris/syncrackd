@@ -1,0 +1,5 @@
+unicorn
+capstone
+numpy
+pytest
+pytest-xdist

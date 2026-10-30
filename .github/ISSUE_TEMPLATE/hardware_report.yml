@@ -1,0 +1,28 @@
+name: Hardware report
+description: What a build did on a real Syntakt.
+labels: [hardware]
+body:
+  - type: input
+    id: sha
+    attributes:
+      label: Image SHA-256
+      description: Printed by the patcher. Never attach the .syx itself.
+    validations:
+      required: true
+  - type: textarea
+    id: did
+    attributes:
+      label: What you did
+    validations:
+      required: true
+  - type: textarea
+    id: heard
+    attributes:
+      label: What happened, what you heard
+    validations:
+      required: true
+  - type: dropdown
+    id: back
+    attributes:
+      label: Did the official OS flash back fine?
+      options: [Did not try, "Yes", "No"]

@@ -1,0 +1,495 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Build Story</title>
+<style>
+:root {
+  --bg: #07090f; --ink: #e8ecf4; --dim: #6f7890; --faint: #262d3d;
+  --new: #ffb347; --kept: #3fd0c9; --changed: #b48cff; --ok: #6fdc8c; --bad: #ff6b6b;
+  --sans: -apple-system, BlinkMacSystemFont, "Inter", "Helvetica Neue", sans-serif;
+  --mono: ui-monospace, "SF Mono", Menlo, monospace;
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+html, body { margin: 0; height: 100%; background: radial-gradient(ellipse at 50% 30%, #121828 0%, var(--bg) 70%); color: var(--ink); font: 14px/1.4 var(--sans); overflow: hidden; }
+#stage { position: fixed; inset: 0; }
+canvas { position: absolute; inset: 0; width: 100%; height: 100%; }
+.top { position: absolute; top: 22px; left: 0; right: 0; text-align: center; pointer-events: none; }
+.chain { display: inline-flex; gap: 10px; align-items: center; color: var(--dim); font-size: 13px; letter-spacing: .04em; }
+.chain b { color: var(--ink); font-size: 26px; font-weight: 600; letter-spacing: .01em; }
+.chain .arrow { opacity: .5; }
+.cap { position: absolute; left: 16px; right: 16px; bottom: 92px; text-align: center; pointer-events: none; transition: opacity .5s; }
+.cap h2 { margin: 0 auto 6px; max-width: 860px; font-size: clamp(19px, 2.6vw, 30px); font-weight: 600; letter-spacing: -.01em; }
+.cap p { margin: 0 auto; max-width: 720px; color: var(--dim); font-size: clamp(13px, 1.4vw, 16px); }
+.bar { position: absolute; left: 0; right: 0; bottom: 18px; display: flex; justify-content: center; align-items: center; gap: 10px; flex-wrap: wrap; padding: 0 16px; }
+.dots { display: flex; gap: 4px; flex-wrap: wrap; justify-content: center; }
+.dots button { background: none; border: 0; padding: 6px 6px 8px; color: var(--dim); font: 11px var(--sans); letter-spacing: .04em; cursor: pointer; position: relative; }
+.dots button::after { content: ""; position: absolute; left: 6px; right: 6px; bottom: 2px; height: 3px; border-radius: 2px; background: var(--faint); }
+.dots button i { position: absolute; left: 6px; bottom: 2px; height: 3px; width: 0; max-width: calc(100% - 12px); border-radius: 2px; background: var(--ink); z-index: 1; }
+.dots button.on { color: var(--ink); }
+.dots button:hover { color: var(--ink); }
+.ctl.round { padding: 5px 10px; }
+.ctl:focus-visible, .dots button:focus-visible { outline: 1px solid var(--ink); outline-offset: 2px; }
+#scrim { position: fixed; inset: 0; background: rgba(3,4,8,.55); opacity: 0; pointer-events: none; transition: opacity .3s; z-index: 19; }
+#scrim.open { opacity: 1; pointer-events: auto; }
+#drawer .head { display: flex; justify-content: space-between; align-items: start; gap: 12px; position: sticky; top: -18px; background: #0c0f17; padding: 18px 0 10px; margin-top: -18px; z-index: 1; }
+.ctl { background: none; border: 1px solid var(--faint); color: var(--ink); border-radius: 16px; padding: 5px 14px; font: 12px var(--sans); cursor: pointer; letter-spacing: .03em; }
+.ctl:hover { border-color: var(--dim); }
+#card { position: absolute; top: 92px; bottom: 200px; left: 16px; right: 16px; display: flex; align-items: center; justify-content: center; pointer-events: none; opacity: 0; transition: opacity .45s; }
+#card.on { opacity: 1; }
+#card .inner { max-width: 660px; width: 100%; max-height: 100%; overflow: auto; background: #0f1420ee; border: 1px solid var(--faint); border-radius: 14px; padding: 22px 24px; pointer-events: auto; }
+#card .eyebrow { color: var(--dim); font-size: 11px; letter-spacing: .12em; text-transform: uppercase; margin-bottom: 10px; }
+#card blockquote { margin: 0; font-size: clamp(16px, 2vw, 21px); line-height: 1.45; color: var(--ink); text-wrap: balance; }
+#card blockquote::before { content: "\201C"; color: var(--new); margin-right: 2px; }
+#card blockquote::after { content: "\201D"; color: var(--new); }
+#card ol { margin: 0; padding: 0; list-style: none; counter-reset: s; display: grid; gap: 12px; }
+#card li { counter-increment: s; display: grid; grid-template-columns: 28px 1fr; gap: 10px; font-size: clamp(14px, 1.5vw, 16px); line-height: 1.5; opacity: 0; transform: translateY(6px); transition: opacity .5s, transform .5s; }
+#card li.in { opacity: 1; transform: none; }
+#card li::before { content: counter(s); width: 24px; height: 24px; border-radius: 12px; background: #2a2010; color: var(--new); display: grid; place-items: center; font-size: 12px; font-weight: 600; }
+#card .note { margin-top: 14px; color: var(--dim); font-size: 13px; }
+.chain .past { color: var(--dim); }
+.chain .next { color: #3a4256; }
+.warn { position: absolute; top: 8px; right: 12px; font-size: 10px; color: #5a3a3a; letter-spacing: .05em; }
+#drawer { z-index: 20; position: fixed; top: 0; right: 0; bottom: 0; width: min(680px, 100%); background: #0c0f17f2; border-left: 1px solid var(--faint); transform: translateX(100%); transition: transform .35s; overflow: auto; padding: 18px; font: 12px/1.5 var(--mono); backdrop-filter: blur(6px); }
+#drawer.open { transform: none; }
+#drawer h3 { font: 600 15px var(--sans); margin: 0 0 4px; }
+#drawer .row { padding: 8px 10px; border-radius: 6px; cursor: pointer; display: flex; gap: 10px; align-items: baseline; }
+#drawer .row:hover, #drawer .row.on { background: #161b27; }
+#drawer .tag { font-size: 10px; padding: 1px 6px; border-radius: 8px; color: #000; flex: none; }
+.listing { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin: 6px 0 14px; }
+.listing pre { margin: 0; background: #080a10; padding: 8px; border-radius: 4px; overflow: auto; max-height: 300px; font-size: 11px; }
+.listing .d { color: #fff; background: rgba(255,179,71,.14); }
+.listing .a { color: var(--dim); }
+.muted { color: var(--dim); }
+</style>
+</head>
+<body>
+<div id="stage"><canvas id="c"></canvas></div>
+<div class="warn">LOCAL ONLY</div>
+<div class="top"><div class="chain" id="chain"></div></div>
+<div id="card"><div class="inner" id="cardin"></div></div>
+<div class="cap" id="cap"><h2 id="h"></h2><p id="p"></p></div>
+<div class="bar">
+  <button class="ctl round" id="back" title="previous scene (left arrow)">&lsaquo;</button>
+  <button class="ctl" id="play" title="play or pause (space)">pause</button>
+  <button class="ctl round" id="fwd" title="next scene (right arrow)">&rsaquo;</button>
+  <div class="dots" id="dots"></div>
+  <button class="ctl" id="code">what changed</button>
+</div>
+<div id="scrim"></div>
+<aside id="drawer" aria-label="what changed"></aside>
+<script>
+const T = /*TRACE*/null;
+const $ = id => document.getElementById(id);
+const cv = $("c"), g = cv.getContext("2d");
+const css = v => getComputedStyle(document.documentElement).getPropertyValue(v).trim();
+const C = { new: css("--new"), kept: css("--kept"), changed: css("--changed"), ok: css("--ok"), bad: css("--bad"), ink: css("--ink"), dim: css("--dim"), faint: css("--faint") };
+const esc = s => String(s).replace(/[&<>]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;" }[c]));
+const ease = x => x < 0 ? 0 : x > 1 ? 1 : x * x * (3 - 2 * x);
+const clamp = (x, a = 0, b = 1) => Math.max(a, Math.min(b, x));
+const lerp = (a, b, t) => a + (b - a) * t;
+
+// the parts, in plain words
+const PLAIN = { 1: "FPGA", 2: "bootloader", 3: "main CPU", 4: "updater", 5: "meta", 6: "boot", 7: "audio CPU", 8: "USB chip" };
+const ROLE = { 3: "screen, knobs, sequencer, mixer", 7: "the voices" };
+const NCELL = 340, GRID = {}, CELLS = {};
+const RANK = { kept: 1, changed: 2, new: 3 };
+
+// each big chip a mosaic: a cell a slice of its section, lit by the strongest change in it
+function cellsOf(sid, N) {
+  const size = T.sections.find(s => s.id === sid).size, cells = Array.from({ length: N }, () => ({ st: null, bytes: 0 }));
+  for (const p of T.patches) {
+    if (p.section !== sid) continue;
+    const a = Math.floor(p.offset / size * N), b = Math.floor((p.offset + p.len - 1) / size * N);
+    for (let i = a; i <= Math.min(N - 1, b); i++) {
+      const c = cells[i];
+      c.bytes += p.len / (b - a + 1);
+      if (!c.st || RANK[p.status] > RANK[c.st]) c.st = p.status;
+    }
+  }
+  return cells;
+}
+const fresh = T.patches.filter(p => p.status !== "kept");
+const kept = T.patches.filter(p => p.status === "kept");
+let flights = [];
+// square cells whatever the chip's shape: the grid follows the layout
+function rebuild(L) {
+  for (const sid of [3, 7]) {
+    const b = L.big[sid], w = b.w - 28, h = b.h - 44;
+    const cols = Math.round(clamp(Math.sqrt(NCELL * w / Math.max(1, h)), 8, 64)), rows = Math.ceil(NCELL / cols);
+    GRID[sid] = { cols, rows };
+    CELLS[sid] = cellsOf(sid, cols * rows);
+  }
+  flights = [];
+  for (const sid of [3, 7]) CELLS[sid].forEach((c, i) => { if (c.st === "new" || c.st === "changed") flights.push({ sid, i, st: c.st }); });
+  flights.sort((a, b) => (a.i % GRID[a.sid].cols) / GRID[a.sid].cols - (b.i % GRID[b.sid].cols) / GRID[b.sid].cols || a.sid - b.sid);
+  flights.forEach((f, k) => { f.k = k; f.seed = Math.sin(k * 12.9898) * 43758.5453 % 1; });
+}
+let W, H, DPR;
+function size() { DPR = devicePixelRatio || 1; W = innerWidth; H = innerHeight; cv.width = W * DPR; cv.height = H * DPR; g.setTransform(DPR, 0, 0, DPR, 0, 0); }
+size(); rebuild(layout());
+addEventListener("resize", () => { size(); rebuild(layout()); });
+const keptCells = [3, 7].reduce((n, s) => n + CELLS[s].filter(c => c.st === "kept").length, 0);
+const bytesNew = fresh.reduce((n, p) => n + p.len, 0);
+const changedBytes = T.sections.reduce((n, s) => n + s.changed, 0);
+const totalBytes = T.sections.reduce((n, s) => n + s.size, 0);
+const tests = T.tests || [];
+const okTests = tests.filter(t => t.ok).length;
+const nNew = fresh.filter(p => p.status === "new").length, nCh = fresh.filter(p => p.status === "changed").length;
+const where = [3, 7].filter(s => fresh.some(p => p.section === s)).map(s => PLAIN[s]).join(" and ") || "nothing";
+
+// the scenes
+const S = [];
+const LABEL = { why: "why", how: "how", wire: "wiring", unit: "on the unit", os: "the OS", lock: "lock", kept: "carried", new: "new", proof: "proof", tests: "tests", done: "done" };
+const A = T.about || {};
+if (A.asked || A.line) S.push({ id: "why", d: 5200, h: A.line ? A.line[0].toUpperCase() + A.line.slice(1) : T.name, p: "what you asked for, and the image it lands in" });
+S.push({ id: "os", d: 3800, h: "Start from Elektron's official OS " + T.version, p: "one file, eight chips' worth of software, checked against its known fingerprint before anything is touched" });
+S.push({ id: "lock", d: 3800, h: "Lock everything except the two brains", p: "the bootloader and updater are what rescue a bricked unit: the build refuses to touch them" });
+if (kept.length) S.push({ id: "kept", d: 3800, h: (T.base || "the base") + " already rewired " + keptCells + " spots", p: "each image is the last one plus its own change: these come along as they were" });
+S.push({ id: "new", d: clamp(2600 + flights.length * 90, 3600, 8000), h: A.line ? "New code lands in the " + where : "New code lands in " + where,
+  p: (nNew ? nNew + " new " : "") + (nNew && nCh ? "and " : "") + (nCh ? nCh + " reworked " : "") + "spot" + (nNew + nCh === 1 ? "" : "s") + " on the " + where + ", " + bytesNew.toLocaleString() + " bytes" });
+if (A.how) S.push({ id: "how", d: 2400 + A.how.length * 2600, h: "How it works", p: "the change in " + T.name + ", step by step" });
+if ((T.paths || []).length) S.push({ id: "wire", d: 9000, h: "How our code plugs into Elektron's",
+  p: "the grey box is a spot in Elektron's own machine code that we changed; the rest is our C or assembly, compiled into the dead code. The pulse is the CPU running through it" });
+S.push({ id: "proof", d: 4200, h: "Prove nothing else moved", p: changedBytes.toLocaleString() + " of " + totalBytes.toLocaleString() + " bytes differ (" + (100 * changedBytes / totalBytes).toFixed(2) + "%), every one inside a declared spot" });
+if (tests.length) S.push({ id: "tests", d: 2400 + tests.length * 120, h: okTests === tests.length ? "All " + tests.length + " tests pass" : okTests + " of " + tests.length + " tests pass", p: "played through an emulated CPU: no unit needed, nothing sent anywhere" });
+if (A.unit) S.push({ id: "unit", d: 5200, h: "What only your Syntakt can tell", p: "everything so far ran in an emulator on this Mac" });
+S.push({ id: "done", d: 6000, h: "Ready when you are", p: "its fingerprint above. the bench never flashes: that's your tap" });
+const START = []; let total = 0; for (const s of S) { START.push(total); total += s.d; }
+
+if (T.public) document.querySelector(".warn").hidden = true;
+{
+  const ch = T.chain || (T.base ? [{ name: T.base }, { name: T.name }] : [{ name: T.name }]);
+  const me = ch.findIndex(c => c.name === T.name), from = W < 760 ? Math.max(0, me - 2) : 0;
+  $("chain").innerHTML = ch.slice(from).map(c => c.name === T.name ? `<b>${esc(c.name)}</b>` :
+    `<span class="${ch.indexOf(c) < me ? "past" : "next"}" title="${esc(c.line || "")}">${esc(c.name)}</span>`).join(`<span class="arrow">&rarr;</span>`);
+}
+$("dots").innerHTML = S.map((s, i) => `<button data-i="${i}" title="${esc(s.h)}"><i></i>${LABEL[s.id]}</button>`).join("");
+$("dots").onclick = e => { const b = e.target.closest("[data-i]"); if (b) jump(+b.dataset.i); };
+
+let t = 0, last = performance.now(), playing = true, scene = -1;
+function setPlaying(on) { playing = on; $("play").textContent = on ? "pause" : t >= total - 1 ? "replay" : "play"; last = performance.now(); }
+// a scene picked by hand is shown whole and held there
+function jump(i) { i = clamp(i, 0, S.length - 1); t = START[i] + S[i].d * (S[i].id === "done" ? .99 : .9); setPlaying(false); }
+const step = d => jump(sceneAt(t) + d);
+$("play").onclick = () => { if (!playing && t >= total - 1) t = 0; else if (!playing && t >= START[sceneAt(t)] + S[sceneAt(t)].d - 2) t = START[sceneAt(t)] + 1; setPlaying(!playing); };
+$("back").onclick = () => step(-1);
+$("fwd").onclick = () => step(1);
+addEventListener("keydown", e => {
+  if (drawerOpen()) { if (e.key === "Escape") closeDrawer(); return; }
+  if (e.key === " ") { e.preventDefault(); $("play").click(); }
+  if (e.key === "ArrowRight") step(1);
+  if (e.key === "ArrowLeft") step(-1);
+  if (e.key === "Home") jump(0);
+  if (e.key === "End") jump(S.length - 1);
+});
+let swipe = null;
+$("stage").addEventListener("pointerdown", e => { swipe = { x: e.clientX, y: e.clientY }; });
+$("stage").addEventListener("pointerup", e => {
+  if (!swipe) return; const dx = e.clientX - swipe.x, dy = e.clientY - swipe.y; swipe = null;
+  if (Math.abs(dx) > 50 && Math.abs(dx) > Math.abs(dy)) step(dx < 0 ? 1 : -1);
+});
+const sceneAt = tt => { let i = 0; while (i + 1 < S.length && tt >= START[i + 1]) i++; return i; };
+const idx = id => S.findIndex(s => s.id === id);
+// progress of a scene by id: 0 before, 0..1 during, 1 after
+const prog = id => { const i = idx(id); if (i < 0) return 1; return clamp((t - START[i]) / S[i].d); };
+
+
+function layout() {
+  const m = 24, narrow = W < 760;
+  const row = [], big = {}, shelf = [];
+  const rw = Math.min(110, (W - 2 * m - 7 * 10) / 8), rh = rw * .72, ry = H * .42 - rh / 2;
+  const rx0 = (W - (8 * rw + 7 * 10)) / 2;
+  T.sections.forEach((s, i) => row[s.id] = { x: rx0 + i * (rw + 10), y: ry, w: rw, h: rh });
+  const top = narrow ? 104 : 110, bottom = H - (narrow ? 236 : 200);
+  if (narrow) {
+    const bw = W - 2 * m, bh = Math.min(bw * .5, (bottom - top - 30) / 2);
+    big[3] = { x: m, y: top, w: bw, h: bh };
+    big[7] = { x: m, y: top + bh + 26, w: bw, h: bh };
+  } else {
+    const bw = Math.min(520, (W - 3 * m - 40) / 2), bh = Math.min(bw * .56, bottom - top - 40);
+    const x0 = (W - (2 * bw + 40)) / 2, y = top + (bottom - 40 - top - bh) / 2;
+    big[3] = { x: x0, y, w: bw, h: bh };
+    big[7] = { x: x0 + bw + 40, y, w: bw, h: bh };
+  }
+  const others = T.sections.filter(s => s.id !== 3 && s.id !== 7);
+  const sw = 46, sh = 20, sy = bottom + 26, sx0 = (W - (others.length * (sw + 8) - 8)) / 2;
+  others.forEach((s, i) => shelf[s.id] = { x: sx0 + i * (sw + 8), y: sy, w: sw, h: sh });
+  return { row, big, shelf, narrow };
+}
+
+function rr(x, y, w, h, r) { g.beginPath(); g.roundRect(x, y, w, h, r); }
+
+function chip(b, label, sub, a, glow, locked) {
+  if (a <= 0) return;
+  g.save(); g.globalAlpha = a;
+  const pin = Math.max(2, b.w / 60), np = Math.max(4, Math.floor(b.w / 18));
+  g.fillStyle = "#2a3245";
+  for (let i = 0; i < np; i++) {
+    const x = b.x + (i + .5) * b.w / np - pin / 2;
+    g.fillRect(x, b.y - pin * 2.2, pin, pin * 2.2); g.fillRect(x, b.y + b.h, pin, pin * 2.2);
+  }
+  if (glow) { g.shadowColor = glow; g.shadowBlur = 30; }
+  rr(b.x, b.y, b.w, b.h, Math.min(14, b.w / 10)); g.fillStyle = "#0f1420"; g.fill();
+  g.shadowBlur = 0; g.lineWidth = 1; g.strokeStyle = locked ? "#1c2230" : "#2c3550"; g.stroke();
+  if (label) {
+    const fs = clamp(b.w / 9, 9, 15);
+    g.fillStyle = locked ? "#3a4256" : C.ink; g.font = `600 ${fs}px ${css("--sans")}`; g.textAlign = "center";
+    g.fillText(label, b.x + b.w / 2, b.y + b.h / 2 + (sub ? -2 : fs / 3));
+    if (sub) { g.fillStyle = C.dim; g.font = `${fs * .75}px ${css("--sans")}`; g.fillText(sub, b.x + b.w / 2, b.y + b.h / 2 + fs); }
+    if (locked) { g.fillStyle = "#3a4256"; g.font = `${fs * .7}px ${css("--sans")}`; g.fillText("locked", b.x + b.w / 2, b.y + b.h / 2 + fs * 1.05); }
+  }
+  g.restore();
+}
+
+function cellBox(b, i, sid) {
+  const { cols, rows } = GRID[sid], pad = 14, head = 30, cw = (b.w - 2 * pad) / cols, ch = (b.h - pad - head) / rows;
+  const c = i % cols, r = Math.floor(i / cols);
+  return { x: b.x + pad + c * cw, y: b.y + head + r * ch, w: cw, h: ch };
+}
+
+function mosaic(sid, b, a, now) {
+  if (a <= 0) return;
+  g.save(); g.globalAlpha = a;
+  g.fillStyle = C.ink; g.font = `600 14px ${css("--sans")}`; g.textAlign = "left";
+  g.fillText(PLAIN[sid], b.x + 14, b.y + 20);
+  g.fillStyle = C.dim; g.font = `12px ${css("--sans")}`; g.textAlign = "right";
+  g.fillText(ROLE[sid], b.x + b.w - 14, b.y + 20);
+  const pk = prog("kept"), pn = prog("new"), pp = prog("proof");
+  const sweep = idx("proof") >= 0 && t >= START[idx("proof")] ? pp : -1;
+  CELLS[sid].forEach((c, i) => {
+    const q = cellBox(b, i, sid), col = i % GRID[sid].cols, x = q.x + 1, y = q.y + 1, w = q.w - 2, h = q.h - 2;
+    let fill = "#161c2a", glow = null, alpha = 1;
+    const fx = (col + .5) / GRID[sid].cols;
+    if (c.st === "kept" && pk > fx * .8) { fill = C.kept; alpha = .55; }
+    if (c.st === "new" || c.st === "changed") {
+      if (c.st === "changed" && pk > fx * .8) { fill = C.kept; alpha = .55; }
+      const f = flights.find(f => f.sid === sid && f.i === i), land = f ? landAt(f) : 2;
+      if (pn >= land) {
+        fill = C[c.st]; alpha = 1;
+        const since = (pn - land) * S[idx("new")].d;
+        if (since < 900) glow = C[c.st], alpha = 1;
+        else glow = C[c.st] + "88";
+      }
+    }
+    if (sweep >= 0 && fx < sweep) {
+      if (!c.st) { fill = "#1d2333"; alpha = .55; }
+      else { alpha = 1; glow = glow || (C[c.st] + "66"); }
+    }
+    g.globalAlpha = a * alpha; g.fillStyle = fill;
+    if (glow) { g.shadowColor = glow; g.shadowBlur = 12; }
+    rr(x, y, w, h, Math.min(3, w / 4)); g.fill(); g.shadowBlur = 0;
+  });
+  if (sweep > 0 && sweep < 1) {
+    const q0 = cellBox(b, 0, sid), x = q0.x + sweep * (b.w - 28);
+    g.globalAlpha = a; const gr = g.createLinearGradient(x - 40, 0, x, 0);
+    gr.addColorStop(0, "rgba(111,220,140,0)"); gr.addColorStop(1, "rgba(111,220,140,.35)");
+    g.fillStyle = gr; g.fillRect(x - 40, b.y + 26, 40, b.h - 34);
+    g.fillStyle = C.ok; g.fillRect(x, b.y + 26, 1.5, b.h - 34);
+  }
+  g.restore();
+}
+
+// where a flight lands, as progress of the "new" scene
+const landAt = f => .08 + (flights.length > 1 ? f.k / (flights.length - 1) : 0) * .62 + .2;
+
+function orb(L, a) {
+  if (a <= 0) return;
+  const x = W / 2, y = L.narrow ? 84 : 88, r = 7 + 2 * Math.sin(t / 180);
+  g.save(); g.globalAlpha = a;
+  g.shadowColor = C.new; g.shadowBlur = 28; g.fillStyle = C.new;
+  g.beginPath(); g.arc(x, y, r, 0, 7); g.fill(); g.restore();
+  return { x, y };
+}
+
+function flightsDraw(L, pn) {
+  const o = { x: W / 2, y: L.narrow ? 84 : 88 };
+  for (const f of flights) {
+    const end = landAt(f), start = end - .2, k = (pn - start) / .2;
+    if (k <= 0 || k >= 1) continue;
+    const q = cellBox(L.big[f.sid], f.i, f.sid), tx = q.x + q.w / 2, ty = q.y + q.h / 2;
+    const cx = lerp(o.x, tx, .5) + (f.seed - .5) * 160, cy = Math.min(o.y, ty) - 40;
+    for (let s = 0; s < 6; s++) {
+      const u = ease(clamp(k - s * .03));
+      const x = (1 - u) * (1 - u) * o.x + 2 * (1 - u) * u * cx + u * u * tx;
+      const y = (1 - u) * (1 - u) * o.y + 2 * (1 - u) * u * cy + u * u * ty;
+      g.globalAlpha = (1 - s / 6) * .9; g.fillStyle = C[f.st];
+      g.shadowColor = C[f.st]; g.shadowBlur = s ? 0 : 14;
+      g.beginPath(); g.arc(x, y, 3.2 - s * .4, 0, 7); g.fill();
+    }
+  }
+  g.globalAlpha = 1; g.shadowBlur = 0;
+}
+
+function testsDraw(L, a, pt) {
+  if (a <= 0 || !tests.length) return;
+  const n = tests.length, gap = 6, r = 5, w = n * (2 * r + gap) - gap, y = H - (W < 760 ? 210 : 172), x0 = (W - w) / 2;
+  g.save(); g.globalAlpha = a;
+  tests.forEach((c, i) => {
+    const on = pt > (i + 1) / (n + 2);
+    g.fillStyle = on ? (c.ok ? C.ok : C.bad) : C.faint;
+    if (on) { g.shadowColor = g.fillStyle; g.shadowBlur = 10; }
+    g.beginPath(); g.arc(x0 + r + i * (2 * r + gap), y, r, 0, 7); g.fill(); g.shadowBlur = 0;
+  });
+  g.restore();
+}
+
+// the image's fingerprint: its sha256 as an 8 x 8 field of colour
+function print(L, a) {
+  if (a <= 0) return;
+  const top = Math.min(L.big[3].y, L.big[7].y) - 12, bot = Math.max(L.big[3].y + L.big[3].h, L.big[7].y + L.big[7].h) + 12;
+  g.save(); g.globalAlpha = a * .82; g.fillStyle = "#07090f"; g.fillRect(0, top, W, bot - top); g.restore();
+  const s = clamp((bot - top) / 18, 10, 20), gap = s / 4, n = 8, w = n * (s + gap) - gap, x0 = (W - w) / 2, y0 = (top + bot) / 2 - w / 2 - 8;
+  g.save(); g.globalAlpha = a;
+  for (let i = 0; i < 64; i++) {
+    const v = parseInt(T.sha_built[i], 16), hue = (v * 22.5 + parseInt(T.sha_built[(i + 7) % 64], 16) * 3) % 360;
+    const appear = clamp((prog("done") * 1.6) - i / 90);
+    g.globalAlpha = a * appear;
+    g.fillStyle = `hsl(${hue} 70% ${35 + v * 2}%)`;
+    rr(x0 + (i % n) * (s + gap), y0 + Math.floor(i / n) * (s + gap), s, s, 3); g.fill();
+  }
+  g.globalAlpha = a * .7; g.fillStyle = C.dim; g.font = `11px ${css("--mono")}`; g.textAlign = "center";
+  g.fillText(T.sha_built.slice(0, 16) + "...", W / 2, y0 + w + 20);
+  g.restore();
+}
+
+function card(id) {
+  const c = $("card"), inn = $("cardin");
+  let html = "";
+  if (id === "why") html = `<div class="eyebrow">you asked</div><blockquote>${esc(A.asked || A.line)}</blockquote><div class="note">${esc(T.name)} is built on ${esc(T.base || "the official file")}: every image is the one before it plus one change, so a flash carries the whole chain.</div>`;
+  if (id === "how") html = `<div class="eyebrow">how ${esc(T.name)} works</div><ol>${A.how.map(x => `<li>${esc(x)}</li>`).join("")}</ol>`;
+  if (id === "unit") html = `<div class="eyebrow">still to hear on the Syntakt</div><blockquote>${esc(A.unit)}</blockquote><div class="note">The emulator runs both CPUs' code instruction by instruction, but not the real timing, the cache, the FPGAs or your ears.</div>`;
+  c.classList.toggle("on", !!html);
+  if (html) {
+    inn.innerHTML = html;
+    if (id === "how") [...inn.querySelectorAll("li")].forEach((li, i) => li.dataset.at = (i + .2) / (A.how.length + .4));
+  }
+}
+
+// the wiring: stock's spot, then our functions down to the one this image adds
+function wire(L, a) {
+  if (a <= 0) return;
+  const pw = prog("wire"), rows = T.paths, narrow = W < 760;
+  const top = 120, bottom = H - 230, rowH = Math.min(120, (bottom - top) / rows.length);
+  const most = Math.max(...rows.map(r => r.chain.length + 1)), gap = narrow ? 18 : 34;
+  const bw = Math.min(170, (W - 32 - gap * (most - 1)) / most), bh = 46;
+  g.save(); g.globalAlpha = a;
+  g.font = `11px ${css("--sans")}`; g.textAlign = "left";
+  g.fillStyle = "#4a5266"; rr(16, top - 34, 10, 10, 2); g.fill();
+  g.fillStyle = C.dim; g.fillText("Elektron's machine code, which we only read", 32, top - 25);
+  g.fillStyle = C.kept; rr(narrow ? 16 : 300, narrow ? top - 18 : top - 34, 10, 10, 2); g.fill();
+  g.fillStyle = C.new; rr(narrow ? 30 : 314, narrow ? top - 18 : top - 34, 10, 10, 2); g.fill();
+  g.fillStyle = C.dim; g.fillText("ours, compiled from C or assembly (amber: new in " + T.name + ")", narrow ? 46 : 330, narrow ? top - 9 : top - 25);
+  rows.forEach((r, ri) => {
+    const nodes = [{ hook: r.hook }, ...r.chain.map(n => ({ n }))];
+    const total = nodes.length * bw + (nodes.length - 1) * gap, x0 = (W - total) / 2, y = top + ri * rowH + (rowH - bh) / 2;
+    const appear = k => clamp((pw - .04 - ri * .08 - k * .07) / .08);
+    nodes.forEach((d, k) => {
+      const x = x0 + k * (bw + gap), al = appear(k);
+      if (al <= 0) return;
+      g.globalAlpha = a * al;
+      if (k) {  // the edge into this node
+        const px = x - gap;
+        g.strokeStyle = k === 1 ? C.changed : "#3a4560"; g.lineWidth = 1.5; g.setLineDash(k === 1 ? [4, 3] : []);
+        g.beginPath(); g.moveTo(px, y + bh / 2); g.lineTo(x - 4, y + bh / 2); g.stroke(); g.setLineDash([]);
+        g.fillStyle = g.strokeStyle; g.beginPath(); g.moveTo(x - 4, y + bh / 2 - 4); g.lineTo(x, y + bh / 2); g.lineTo(x - 4, y + bh / 2 + 4); g.fill();
+        if (!narrow) { g.fillStyle = C.dim; g.font = `10px ${css("--sans")}`; g.textAlign = "center"; g.fillText(k === 1 ? (r.hook && r.hook.len === 4 ? "points to" : "jumps to") : "calls", px + gap / 2, y + bh / 2 - 7); }
+      }
+      let fill = "#141a28", stroke = "#2c3550", title = "", sub = "";
+      if (d.hook !== undefined) {
+        fill = "#1a1f2a"; stroke = "#4a5266";
+        title = d.hook ? "0x" + d.hook.addr.toString(16) : "inside our code";
+        sub = d.hook ? PLAIN[d.hook.section] + ", " + (d.hook.len === 4 ? "a pointer" : d.hook.len + " bytes") : "";
+      } else {
+        const isNew = (T.newsyms || []).some(s => s.split(".")[0] === d.n);
+        stroke = isNew ? C.new : C.kept; fill = isNew ? "#2a2010" : "#0f2422";
+        title = d.n; sub = (T.symfile || {})[d.n] || "";
+      }
+      g.fillStyle = fill; g.strokeStyle = stroke; g.lineWidth = 1;
+      rr(x, y, bw, bh, 8); g.fill(); g.stroke();
+      g.fillStyle = C.ink; g.textAlign = "center"; g.font = `600 ${narrow ? 10 : 12}px ${d.hook !== undefined ? css("--mono") : css("--sans")}`;
+      g.fillText(fit(title, bw - 10), x + bw / 2, y + 19);
+      g.fillStyle = C.dim; g.font = `${narrow ? 9 : 10}px ${css("--sans")}`;
+      g.fillText(fit(sub.replace(/^engine\//, ""), bw - 10), x + bw / 2, y + 34);
+    });
+    // the CPU passing through: a pulse along the row once it is drawn
+    if (appear(nodes.length - 1) >= 1) {
+      const u = ((t / 1600) + ri * .3) % 1, xs = x0 + bw / 2, xe = x0 + total - bw / 2;
+      g.globalAlpha = a * Math.sin(u * Math.PI); g.fillStyle = C.ink; g.shadowColor = C.ink; g.shadowBlur = 12;
+      g.beginPath(); g.arc(lerp(xs, xe, u), y + bh + 9, 3, 0, 7); g.fill(); g.shadowBlur = 0;
+    }
+  });
+  g.restore();
+}
+function fit(s, w) { if (g.measureText(s).width <= w) return s; while (s.length > 2 && g.measureText(s + "...").width > w) s = s.slice(0, -1); return s + "..."; }
+const within = id => { const i = idx(id); if (i < 0) return 0; const q = (t - START[i]) / S[i].d; return q < 0 || q > 1 ? 0 : clamp(q / .08) * clamp((1 - q) / .08); };
+
+function frame(now) {
+  const dt = now - last; last = now;
+  if (playing) { t += dt; if (t >= total) { t = total - 1; setPlaying(false); } }
+  const si = sceneAt(t);
+  if (si !== scene) {
+    scene = si; const cap = $("cap");
+    cap.style.opacity = 0;
+    setTimeout(() => { $("h").textContent = S[si].h; $("p").textContent = S[si].p; cap.style.opacity = 1; }, scene === 0 && t < 50 ? 0 : 220);
+    card(S[si].id);
+  }
+  [...$("dots").children].forEach((b, i) => { b.firstChild.style.width = "calc(" + (100 * clamp((t - START[i]) / S[i].d)) + "% - 12px)"; b.classList.toggle("on", i === si); });
+
+  g.clearRect(0, 0, W, H);
+  const L = layout();
+  const po = prog("os"), pl = ease(prog("lock")), pn = prog("new"), pd = prog("done");
+  const inOs = ease(clamp(po * 2.2));
+  // the eight chips: a row, then two grow into the centre and six go to the shelf
+  for (const s of T.sections) {
+    const r = L.row[s.id], big = s.id === 3 || s.id === 7, to = big ? L.big[s.id] : L.shelf[s.id];
+    const b = { x: lerp(r.x, to.x, pl), y: lerp(r.y, to.y, pl), w: lerp(r.w, to.w, pl), h: lerp(r.h, to.h, pl) };
+    const appear = clamp(inOs * 8 - T.sections.indexOf(s));
+    if (big) {
+      chip(b, pl < .5 ? PLAIN[s.id] : "", "", appear, pl > .3 ? "#3fd0c922" : null, false);
+      mosaic(s.id, b, clamp((pl - .55) / .45), now);
+    } else {
+      chip(b, pl < .6 ? PLAIN[s.id] : "", "", appear * lerp(1, .5, pl), null, pl > .2 && pl < .6);
+      if (pl >= .6) { g.globalAlpha = .5; g.fillStyle = "#3a4256"; g.font = `9px ${css("--sans")}`; g.textAlign = "center"; g.fillText(PLAIN[s.id], b.x + b.w / 2, b.y + b.h / 2 + 3); g.globalAlpha = 1; }
+    }
+  }
+  const ni = idx("new");
+  const orbA = t < START[ni] ? 0 : t < START[ni] + S[ni].d ? clamp(pn * 6) * clamp((1 - pn) * 6) : 0;
+  orb(L, orbA);
+  if (orbA > 0) flightsDraw(L, pn);
+  testsDraw(L, idx("tests") >= 0 && t >= START[idx("tests")] ? 1 - pd * 2 : 0, prog("tests"));
+  const veil = Math.max(within("how"), within("wire"), within("unit"));
+  if (veil > 0) { g.globalAlpha = veil * .88; g.fillStyle = "#07090f"; g.fillRect(0, 70, W, H - 70); g.globalAlpha = 1; }
+  wire(L, within("wire"));
+  if (S[si].id === "how") [...$("cardin").querySelectorAll("li")].forEach(li => li.classList.toggle("in", prog("how") >= +li.dataset.at));
+  if (t >= START[idx("done")]) print(L, clamp(pd * 3));
+  requestAnimationFrame(frame);
+}
+requestAnimationFrame(frame);
+
+// the drawer: the code behind it, for when you want it
+const rows = [...fresh, ...T.dropped];
+function listing(p) {
+  const before = p.was || p.stock || [], label = p.was ? T.base + "'s" : "stock";
+  const set = r => new Set(r.map(([a, , x]) => a + " " + x));
+  const col = (r, o) => { const s = set(o); return r.map(([a, , x]) => `<span class="${s.has(a + " " + x) ? "" : "d"}"><span class="a">${a.toString(16)}</span>  ${esc(x)}</span>`).join("\n"); };
+  if (!before.length && !(p.ours || []).length) return `<div class="muted" style="padding:4px 10px 12px">${T.public ? "the code stays on the bench" : "no listing"}</div>`;
+  if (!before.length) return `<div class="listing" style="grid-template-columns:1fr"><div><div class="muted">ours</div><pre>${col(p.ours || [], [])}</pre></div></div>`;
+  return `<div class="listing"><div><div class="muted">${label}</div><pre>${col(before, p.ours || [])}</pre></div><div><div class="muted">ours</div><pre>${col(p.ours || [], before)}</pre></div></div>`;
+}
+function drawer(open) {
+  const d = $("drawer");
+  d.innerHTML = `<div class="head"><div><h3>What changed in ${esc(T.name)}</h3><div class="muted">${rows.length} spots, the ${esc(where)}.${T.public ? "" : " Click one for its instructions, before and after."}</div></div><button class="ctl" id="close">close</button></div>` +
+    rows.map((p, i) => `<div class="row" data-i="${i}"><span class="tag" style="background:${C[p.status] || C.bad}">${p.status}</span><span>${PLAIN[p.section]}</span><span class="muted">0x${p.addr.toString(16)} &middot; ${p.len} B</span><span>${esc(p.note || "")}</span></div><div id="l${i}"></div>`).join("");
+  d.onclick = e => { if (e.target.id === "close") { closeDrawer(); return; } const r = e.target.closest(".row"); if (!r) return; const i = +r.dataset.i, box = $("l" + i); box.innerHTML = box.innerHTML ? "" : listing(rows[i]); r.classList.toggle("on"); };
+}
+const drawerOpen = () => $("drawer").classList.contains("open");
+function openDrawer() { if (!$("drawer").innerHTML) drawer(); setPlaying(false); $("drawer").classList.add("open"); $("scrim").classList.add("open"); $("close").focus(); }
+function closeDrawer() { $("drawer").classList.remove("open"); $("scrim").classList.remove("open"); $("code").focus(); }
+$("code").onclick = () => drawerOpen() ? closeDrawer() : openDrawer();
+$("scrim").onclick = closeDrawer;
+</script>
+</body>
+</html>
