@@ -1,16 +1,13 @@
 """ColdFire machine on Unicorn, with EMAC executed outside Unicorn.
 
-Unicorn's EMAC is wrong in signed fractional mode. EMAC instructions are
-found with objdump (the reference for instruction boundaries), overwritten
-with NOPs in emulator memory, and run by one code hook per loaded region.
+Unicorn's EMAC is wrong in signed fractional mode. EMAC instructions are found with objdump (the reference for
+instruction boundaries), overwritten with NOPs in emulator memory, and run by one code hook per loaded region.
 
-The hook is C (emu/emac_native.c) when a host compiler is available, else
-Python on emu/emac.py. The Python model is the reference; a test holds the
-two bit-identical.
+The hook is C (emu/emac_native.c) when a host compiler is available, else Python on emu/emac.py. The Python model is
+the reference; a test holds the two bit-identical.
 
-The same hook counts original instructions (a replaced EMAC instruction
-counts once). Unicorn models no cache or bus timing, so counts are a lower
-bound on real cost.
+The same hook counts original instructions (a replaced EMAC instruction counts once). Unicorn models no cache or bus
+timing, so counts are a lower bound on real cost.
 """
 import ctypes
 import os
@@ -72,8 +69,8 @@ class Machine:
         self.native = native.lib() if use_native else None
         self.emac = NativeEmac() if self.native else emac.Emac()
         self.emac_sites = {}
-        self._keep = []            # ctypes objects the C hook points into
-        self._py_table = {}        # address -> Insn, or None inside a replaced instruction
+        self._keep = []  # ctypes objects the C hook points into
+        self._py_table = {}  # address -> Insn, or None inside a replaced instruction
         self._py_insns = 0
         self._py_ops = 0
         self.ret = None
@@ -180,8 +177,9 @@ class Machine:
         self.set_exits([ret])
 
     def set_exits(self, addrs):
-        """Addresses where emulation stops. Unicorn bakes the stop into translated
-        code, so stops must be declared once, not varied per emu_start."""
+        """Addresses where emulation stops. Unicorn bakes the stop into translated code, so stops must be declared once,
+        not varied per emu_start.
+        """
         self.exits = list(addrs)
         self.uc.ctl_exits_enabled(True)
         self.uc.ctl_set_exits(self.exits)

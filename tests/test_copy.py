@@ -1,15 +1,4 @@
-"""The copy image: the rxcap image with every mono track's right buffer copied eight longs a move (movem).
-
-Before the mixer,
-every digital track with no right channel this block is given a copy of its left in the second set of buffers
-(engine/rightdma.c, right_end). take() moved it one long at a time in a loop; mono_copy (MOVEM, in a run of its own)
-moves eight longs each way four times a track. A hardware transfer for it was weighed and left: it would have to start
-after stock's own transfer and end before the mixer, and emulation has no transfer controller; this one is held here
-bit for bit.
-
-Held here, with tests/test_dma.py's rig (the transfers modelled): every mix of stereo and mono tracks gives the right
-buffers the rxcap image gives them, in every mode, nothing beyond them written; and what it costs.
-"""
+"""The copy image: the rxcap image with every mono track's right buffer copied eight longs a move (movem)."""
 import hashlib
 import shutil
 
@@ -67,18 +56,18 @@ def test_eight_mono_tracks_cost_a_fraction_of_the_instructions(main, rxcap):
     assert n * 3 < m
     _, n8, *_ = run(main, 0xff, D.TRUSTED)
     _, m8, *_ = run(rxcap, 0xff, D.TRUSTED)
-    assert n8 <= m8 + 50                        # with every track stereo there is nothing to copy: eight tests of a bit either way
+    assert n8 <= m8 + 50  # with every track stereo there is nothing to copy: eight tests of a bit either way
 
 
 def test_the_image(official_path, main, rxcap):
     quiet = lambda s: None
     raw, _, built, _, _ = build.build(official_path, log=quiet, xfade=37, prof=True)
     was_raw, _, was, _, _ = build.build(official_path, log=quiet, xfade=36, prof=True)
-    assert hashlib.sha256(was_raw).hexdigest().startswith("07bf23ed")      # the rxcap image, as it is
+    assert hashlib.sha256(was_raw).hexdigest().startswith("07bf23ed")  # the rxcap image, as it is
     assert built.section(7) == was.section(7)
     new, old = built.section(3), was.section(3)
     assert new == main[0] and old == rxcap[0]
-    spans = [mm.CAVE_DMA, mm.CAVE_DMA2, mm.CAVE_COPY, mm.CAVE_LAP]           # the transfers' compile: its runs
+    spans = [mm.CAVE_DMA, mm.CAVE_DMA2, mm.CAVE_COPY, mm.CAVE_LAP]  # the transfers' compile: its runs
     ours = lambda b, j: any(lo <= int.from_bytes(b[j:j + 4], "big") < hi for lo, hi in spans)
     moved = lambda k: any(ours(new, j) and ours(old, j) for j in range(k - 3, k + 1))
     assert [hex(mm.BASE + k) for k in range(len(new)) if new[k] != old[k] and not any(mm.off(a) <= k < mm.off(b) for a, b in spans)

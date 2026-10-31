@@ -1,17 +1,4 @@
-"""The slice image: the tlsolo image with a sampler track's keys playing its sample's slices.
-
-
-
-
-
-KEYS is the sampling page's knob H, CHRO or SLCE, bit 1 of the track's own word on slot 24; the main CPU sends it as
-bit 7 of slot 24's low byte (engine/recword.S). On a note's start with it on, the note less 60 picks a slice, round
-the count both ways, and is taken off the pitch. The slices are the scan's hits, the first from frame 0; with no list
-yet, 16 even ones. STRT and LEN are the slice's. The peak and the profile's switch are knob G's.
-
-Not held here: that the key's note reaches the audio CPU in pmod as the rig puts it there (a note number in 16.16, 60
-the sample's own pitch: the pitch image's reading, and every pitched note on the unit since), and how it plays.
-"""
+"""The slice image: the tlsolo image with a sampler track's keys playing its sample's slices."""
 import shutil
 
 import numpy as np
@@ -28,7 +15,7 @@ from tools import mainmap as mm
 
 pytestmark = pytest.mark.skipif(not shutil.which("m68k-elf-gcc"), reason="no ColdFire cross-compiler")
 
-KEYS_ON = 0x80 / 256                    # slot 24 as the main CPU sends it: no REC mark, source 0, KEYS
+KEYS_ON = 0x80 / 256  # slot 24 as the main CPU sends it: no REC mark, source 0, KEYS
 
 
 @pytest.fixture(scope="module")
@@ -57,23 +44,24 @@ def note(built, x, n, keys=True, scan=True, knobs=None):
         for _ in range(len(x) // 128 + len(x) // 256 + 8):
             e.mc.call(syms["hits_block"])
     e.block(1, 0)
-    e.block(0, 0)                               # the note starts a block after its trig
+    e.block(0, 0)  # the note starts a block after its trig
     st = e.voice(0) + ST
     return H.s32(e.mc.r32(st + 36)), H.s32(e.mc.r32(st + 40)), e.mc.r32(st + 24), H.kept(e, 0)[0]
 
 
-# ---- the audio CPU --------------------------------------------------------------------------------------------------
+# ---- the audio CPU
+# --------------------------------------------------------------------------------------------------
 
 def test_each_key_plays_its_hit_to_the_next_the_first_from_0_and_round_both_ways(engine):
     x = x4()
     hits = note(engine, x, 60)[3]
     starts = [0] + [a for a, _, _ in hits[1:]] + [len(x)]
-    assert len(hits) == 4 and [a for a, _, _ in hits] == [f // 32 * 32 for f in (0, 6000, 12000, 18000)]    # a hit's window
+    assert len(hits) == 4 and [a for a, _, _ in hits] == [f // 32 * 32 for f in (0, 6000, 12000, 18000)]  # a hit's window
     for n in range(56, 70):
         i = (n - 60) % 4
         a, b, inc, _ = note(engine, x, n)
         assert (a, b) == (starts[i], starts[i + 1]), n
-        assert inc == 4096                      # a slice at its own pitch, whatever the key
+        assert inc == 4096  # a slice at its own pitch, whatever the key
 
 
 def test_keys_off_is_stocks_whole_sample_at_the_keys_pitch(engine):
@@ -90,10 +78,11 @@ def test_no_list_yet_is_16_even_slices(engine):
 
 def test_strt_and_len_are_the_slices(engine):
     a, b, _, _ = note(engine, x4(), 61, knobs={20: 64, H.P.LENGTH: 64})
-    assert 8900 <= a <= 9100 and 10400 <= b <= 10600          # half way into 5984..12000, and half of what is left
+    assert 8900 <= a <= 9100 and 10400 <= b <= 10600  # half way into 5984..12000, and half of what is left
 
 
-# ---- the main CPU ---------------------------------------------------------------------------------------------------
+# ---- the main CPU
+# ---------------------------------------------------------------------------------------------------
 
 def test_keys_reaches_the_audio_cpu_as_bit_7_under_the_source(main):
     w = S.Word(*main)
@@ -102,7 +91,7 @@ def test_keys_reaches_the_audio_cpu_as_bit_7_under_the_source(main):
             for keys in (0, 2):
                 got = w.run(3, S.signed(src, rec) | keys)
                 assert got["sent"] == (S.ON if rec else S.OFF) << 8 | (0x80 if keys else 0) | src
-                assert got["own"] == S.signed(src, rec) | keys        # signed with it, so nothing is made again from MODE
+                assert got["own"] == S.signed(src, rec) | keys  # signed with it, so nothing is made again from MODE
 
 
 def keyed(built, t):
@@ -126,9 +115,9 @@ def test_h_turns_keys_and_the_last_place_says_it(main):
 def test_rec_and_src_leave_keys_as_it_is(main):
     t = 5
     r = keyed(main, t)
-    G.twist(r, 8, 1)                            # KEYS on
-    G.twist(r, 3, 1)                            # REC
-    G.twist(r, 1, 1)                            # SRC
+    G.twist(r, 8, 1)  # KEYS on
+    G.twist(r, 3, 1)  # REC
+    G.twist(r, 1, 1)  # SRC
     assert G.own(r, t) & 2 and G.own(r, t) != S.signed(4, 0) | 2
 
 
@@ -146,20 +135,21 @@ def test_the_peak_is_in_gs_place_and_keys_in_hs(main, official):
     print("slice: peak", p_new, "was", p_was, "keys", keys)
 
 
-# ---- the image ------------------------------------------------------------------------------------------------------
+# ---- the image
+# ------------------------------------------------------------------------------------------------------
 
 def test_the_image(official_path, main):
     quiet = lambda s: None
     raw, _, built, _, _ = build.build(official_path, log=quiet, xfade=31, prof=True)
     was_raw, _, was, _, _ = build.build(official_path, log=quiet, xfade=29, prof=True)
-    assert __import__("hashlib").sha256(was_raw).hexdigest().startswith("ffae2495")      # the tlsolo image, as it is with the fltr image's fourth build under it (8de0ec13 on the third)
+    assert __import__("hashlib").sha256(was_raw).hexdigest().startswith("ffae2495")
     new, old = built.section(3), was.section(3)
     assert new == main[0]
     spans = [mm.CAVE_FLTR, mm.CAVE_PAGE, mm.CAVE_PAGE2, mm.CAVE_PAGE3, mm.CAVE_PAGE4, mm.CAVE_PAGE5, mm.CAVE_PAGE6,
              mm.CAVE_PAGE7, mm.CAVE_PAGE8, mm.CAVE_PAGE9, mm.CAVE_PAGE10, mm.CAVE_TRIG, mm.CAVE_TRIG2, mm.CAVE_TRIG3,
              mm.CAVE_XKNOB, mm.CAVE_XKNOB2, mm.CAVE_XSHARE, mm.CAVE_SRR, mm.CAVE_METER]
     ours = lambda b, j: any(lo <= int.from_bytes(b[j:j + 4], "big") < hi for lo, hi in spans)
-    moved3 = lambda k: any(ours(new, j) and ours(old, j) for j in range(k - 3, k + 1))     # a pointer to one of our routines, moved
+    moved3 = lambda k: any(ours(new, j) and ours(old, j) for j in range(k - 3, k + 1))  # a pointer to one of our routines, moved
     stray = [hex(mm.BASE + k) for k in range(len(new)) if new[k] != old[k] and not any(mm.off(a) <= k < mm.off(b) for a, b in spans)
              and not moved3(k)]
     assert stray == []

@@ -1,12 +1,12 @@
 """Make the modded OS from Elektron's own file. Python 3.11 or later, the standard library alone.
 
-    python -m tools.patch Syntakt_OS1.42.syx stream.json
-    python -m tools.patch Syntakt_OS1.42.syx stream.json -o somewhere/mod.syx
+python -m tools.patch Syntakt_OS1.42.syx stream.json
+python -m tools.patch Syntakt_OS1.42.syx stream.json -o somewhere/mod.syx
 
 It takes only the exact official file (its SHA-256, and every section's), puts the bundle's bytes in where the
-official bytes under them, a section's all in order, hash as the bundle says, packs the file, decodes it again and checks that it differs
-from the official one only inside the bundle's runs, and that its SHA-256 is the release's. Anything off, and
-nothing is written. It never talks to a unit: flashing is your step.
+official bytes under them, a section's all in order, hash as the bundle says, packs the file, decodes it again and
+checks that it differs from the official one only inside the bundle's runs, and that its SHA-256 is the release's.
+Anything off, and nothing is written.
 """
 import argparse
 import json

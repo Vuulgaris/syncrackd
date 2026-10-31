@@ -1,16 +1,4 @@
-"""The nofx image: the cut image with the FX track's mute taken out and no frame of ours in SDRAM.
-
-
-(stores from 0x4556a000
-up tipped the lag with USB audio streaming: tests D, F, G). With no mute nothing changes the tracks' buffers or the
-return's before the feed, so engine/recfeed.c, NOFX: a take and the meter read a digital track (0x80003d50 + 128 t) or
-the FX return (inputs 6 and 7, 0x80003950) where they are, a long a frame; chan() says the step in an on-chip long
-(FEED_STRIDE, 0x80007d24), engine/feed.S and meter() step by it. No frame of ours, no copies.
-
-Held here with test_pre's rig: every take and the meter come out as on the cut image with the FX track not muted;
-muting the FX track now changes nothing the mixer is shown; nothing is stored from 0x45566490 to 0x45570000.
-Not held: the lag.
-"""
+"""The nofx image: the cut image with the FX track's mute taken out and no frame of ours in SDRAM."""
 import hashlib
 import shutil
 
@@ -93,7 +81,7 @@ def test_the_image(official_path, main, cut):
     quiet = lambda s: None
     raw, _, built, _, _ = build.build(official_path, log=quiet, xfade=42, prof=True)
     was_raw, _, was, _, _ = build.build(official_path, log=quiet, xfade=41, prof=True)
-    assert hashlib.sha256(was_raw).hexdigest().startswith("5ac6638c")      # the cut image, as it is
+    assert hashlib.sha256(was_raw).hexdigest().startswith("5ac6638c")  # the cut image, as it is
     assert built.section(7) == was.section(7)
     new, old = built.section(3), was.section(3)
     assert new == main[0] and old == cut[0]

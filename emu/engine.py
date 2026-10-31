@@ -1,9 +1,8 @@
 """The Syntakt audio engine (section 7) running its real voice loop.
 
-Boot is replayed the way 0x400004bc and 0x40000512 do it, voices are set up
-the way 0x40000fd6 does it, then the real 0x40004324 is called once per
-32-frame block. No UI, sequencer, track filter, mixer or effects: this is
-the per-track machine output, 32-bit mono, before everything downstream.
+Boot is replayed the way 0x400004bc and 0x40000512 do it, voices are set up the way 0x40000fd6 does it, then the real
+0x40004324 is called once per 32-frame block. No UI, sequencer, track filter, mixer or effects: this is the per-track
+machine output, 32-bit mono, before everything downstream.
 """
 import wave
 
@@ -18,17 +17,17 @@ from .machine import Machine
 
 RATE = 48000
 BLOCK = 32
-RET = 0x40000100              # below the image: mapped, never executed
+RET = 0x40000100  # below the image: mapped, never executed
 AFTER_VOICE_INIT = 0x40001860  # clears the state of the stages after the voice loop
 
 # The audio interrupt, for the whole per-block path (Phase 4)
 ISR = 0x40000934
-ISR_RTE = 0x40000b1e          # Unicorn cannot run RTE; the interrupt is run up to it
-HOST = 0x0                    # window shared with the main CPU, audio CPU view
-HOST_SIZE = 0x1b0             # parameter block in
-HOST_AUDIO = 0x1b0            # 8 track buffers out
-HOST_MIRROR = 0x80008000      # where the interrupt copies the block
-TCD47 = 0xfc0455e0            # eDMA channel 47 descriptor
+ISR_RTE = 0x40000b1e  # Unicorn cannot run RTE; the interrupt is run up to it
+HOST = 0x0  # window shared with the main CPU, audio CPU view
+HOST_SIZE = 0x1b0  # parameter block in
+HOST_AUDIO = 0x1b0  # 8 track buffers out
+HOST_MIRROR = 0x80008000  # where the interrupt copies the block
+TCD47 = 0xfc0455e0  # eDMA channel 47 descriptor
 DMA_START = 0xfc04401e
 # return addresses in the interrupt, after each stage that touches the track buffers
 STAGE_ENDS = {"voice_loop": 0x40000a3a, "gain": 0x40000a4c, "drive": 0x40000a60,
@@ -39,8 +38,9 @@ HOST_FIELDS = ((160, 8, (82, 86, 102, 104)), (224, 14, (108, 110, 112, 114, 116,
 
 class Engine:
     def __init__(self, image, loop_entry=m.VOICE_LOOP):
-        """loop_entry: what block() calls. The stock voice loop, or a hook with the
-        same arguments (the sampler's, which also runs its post step)."""
+        """loop_entry: what block() calls. The stock voice loop, or a hook with the same arguments (the sampler's, which
+        also runs its post step).
+        """
         self.image = bytes(image)
         self.loop_entry = loop_entry
         mc = self.mc = Machine()
@@ -48,7 +48,7 @@ class Engine:
         mc.map(m.SRAM, m.SRAM_END - m.SRAM)
         mc.write(m.BASE, self.image)
         mc.load_code(m.BASE + 4, self.image[4:m.off(m.CODE_END)])
-        if len(self.image) > m.off(m.IMAGE_END):     # the back image: what the start's copy puts at m.FAR (tests/test_back.py runs it)
+        if len(self.image) > m.off(m.IMAGE_END):  # the back image: what the start's copy puts at m.FAR (tests/test_back.py runs it)
             mc.load_code(m.FAR, self.image[m.off(m.IMAGE_END):])
         mc.set_stack(m.STACK_TOP - 0x100, RET)
         self._boot()
@@ -133,9 +133,8 @@ class Engine:
 class Board(Engine):
     """Engine plus the shared window and peripheral space, to run the real interrupt.
 
-    Knobs are set as on Engine; interrupt() packs them into the parameter block
-    the main CPU would send, runs 0x40000934, and returns what the audio CPU
-    hands back: the 8 track buffers after its filter and amp stages.
+    Knobs are set as on Engine; interrupt() packs them into the parameter block the main CPU would send, runs
+    0x40000934, and returns what the audio CPU hands back: the 8 track buffers after its filter and amp stages.
     self.stages holds the track buffers after each stage of the last interrupt.
     """
 
@@ -144,9 +143,9 @@ class Board(Engine):
         self.mc.map(HOST, 0x2000)
         self.mc.map(0xfc000000, 0x100000)
         self.mc.map(0xec090000, 0x10000)
-        self.extra = bytearray(HOST_SIZE - 0x170)   # block bytes 0x170.. that are not knobs
-        # the main CPU's side of the knobs: what goes into the block every interrupt,
-        # whatever the audio CPU does to its own copy in between
+        self.extra = bytearray(HOST_SIZE - 0x170)  # block bytes 0x170.. that are not knobs
+        # the main CPU's side of the knobs: what goes into the block every interrupt, whatever the audio CPU does to
+        # its own copy in between
         self.host_params = bytearray(m.PARAM_STRIDE * m.N_VOICES)
         self.host_pmod = bytearray(4 * m.N_VOICES)
         self.mc.set_exits([RET, ISR_RTE])
@@ -161,8 +160,8 @@ class Board(Engine):
 
     def _stage_hook(self, uc, address, size, name):
         self.stages[name] = self._tracks(m.OUT_BUF)
-        # static fields of the DMA descriptor, as init sets them at 0x40001020..0x40001046:
-        # 16-byte transfers, source and destination step 16, 16 bytes per request
+        # static fields of the DMA descriptor, as init sets them at 0x40001020..0x40001046: 16-byte transfers, source
+        # and destination step 16, 16 bytes per request
         self.mc.write(TCD47 + 4, (0x0404).to_bytes(2, "big") + (16).to_bytes(2, "big"))
         self.mc.w32(TCD47 + 8, 16)
         self.mc.write(TCD47 + 0x16, (16).to_bytes(2, "big"))
@@ -200,11 +199,11 @@ class Board(Engine):
     def interrupt(self, trig=0, release=0):
         mc = self.mc
         mc.write(HOST, self.host_block(trig, release))
-        mc.write(TCD47 + 0x1e, b"\x00\x80")          # DONE, so the wait for the last DMA falls through
+        mc.write(TCD47 + 0x1e, b"\x00\x80")  # DONE, so the wait for the last DMA falls through
         mc.uc.reg_write(UC_M68K_REG_A7, m.STACK_TOP - 0x100)
         mc.run(ISR, ISR_RTE)
         src, dst, n = self.dma()
-        mc.write(dst, mc.read(src, n))                 # what the DMA would do
+        mc.write(dst, mc.read(src, n))  # what the DMA would do
         return self._tracks(HOST + HOST_AUDIO)
 
     def dma(self):
@@ -212,7 +211,7 @@ class Board(Engine):
         mc = self.mc
         if mc.read(DMA_START, 1)[0] != 47:
             raise RuntimeError("channel 47 was not started")
-        citer = int.from_bytes(mc.read(TCD47 + 0x14, 2), "big")   # bit 15 links, low 9 bits count
+        citer = int.from_bytes(mc.read(TCD47 + 0x14, 2), "big")  # bit 15 links, low 9 bits count
         return mc.r32(TCD47), mc.r32(TCD47 + 0x10), (citer & 0x1FF) * mc.r32(TCD47 + 8)
 
 

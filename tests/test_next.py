@@ -1,16 +1,4 @@
-"""The next image (engine/recpage.c, NEXT): the trans image with DEST SMPL or NEXT and knob C the track's KIND.
-
-
-
-
-Here, the main CPU only:
-  - B is DEST, SMPL or NEXT; C is KIND, STER or MONO, bit 6 of the track's word on slot 24, kept by a turn of SRC;
-  - at a message the main task gives each NEXT track a free place of its KIND, none another holds, and the box sends its
-    takes there; once the stops say the place holds something, the track's SMPL is on it, the way it was turned;
-  - while the audio CPU is down nothing held is believed, and with no track on NEXT the poll reads two longs;
-  - the word with bit 6 is signed in the per-block routine too;
-  - section 7 the spread image's.
-Emulation only."""
+"""The next image (engine/recpage.c, NEXT): the trans image with DEST SMPL or NEXT and knob C the track's KIND."""
 
 import hashlib
 import shutil
@@ -27,10 +15,10 @@ from tools import mainmap as mm
 
 pytestmark = pytest.mark.skipif(not shutil.which("m68k-elf-gcc"), reason="no ColdFire cross-compiler")
 
-A_, B_, C_ = 1, 2, 3                    # knobs SRC, DEST, KIND
+A_, B_, C_ = 1, 2, 3  # knobs SRC, DEST, KIND
 KIND = 0x40
-SENT = 0x80006348                       # the block the audio CPU is sent: a track's machine at + 62
-BOX = 0x10000e20 + 8                    # struct recbox's dest[8]
+SENT = 0x80006348  # the block the audio CPU is sent: a track's machine at + 62
+BOX = 0x10000e20 + 8  # struct recbox's dest[8]
 DEST_SMPL = 0xffff
 
 
@@ -104,14 +92,14 @@ def test_dest_is_smpl_or_next_and_c_the_tracks_kind(main):
     turns(r, 1, 1, -1, 1, 1, -1)
     assert "SMPL" in says(r) and "STER" in says(r) and "KIND" in says(r) and "REC" not in says(r)
     G.twist(r, B_, 1)
-    assert "NEXT" in says(r) and dest(r, t) == DEST_SMPL      # no place yet: the poll gives it
+    assert "NEXT" in says(r) and dest(r, t) == DEST_SMPL  # no place yet: the poll gives it
     G.twist(r, B_, 1)
     assert "NEXT" in says(r)
     G.twist(r, B_, -1)
     assert "SMPL" in says(r) and dest(r, t) == DEST_SMPL
     G.twist(r, C_, 1)
     assert word(r, t) == R.signed(4, 0) | KIND and "MONO" in says(r)
-    G.twist(r, A_, 1)                                           # SRC turned: KIND stays
+    G.twist(r, A_, 1)  # SRC turned: KIND stays
     assert word(r, t) & KIND and word(r, t) >> 8 & 15 != 4
     G.twist(r, C_, -1)
     assert not word(r, t) & KIND and "STER" in says(r)
@@ -123,11 +111,11 @@ def test_a_next_track_holds_the_first_free_place_of_its_kind(main):
     r = rig(main, 0, frames)
     on(r, main, 0)
     poll(r, main)
-    assert dest(r, 0) == 3                                      # places from 0: stereo place 4
+    assert dest(r, 0) == 3  # places from 0: stereo place 4
     r2 = rig(main, 5, frames)
     on(r2, main, 5, mono=True)
     poll(r2, main)
-    assert dest(r2, 5) == 61                                    # single slot 62
+    assert dest(r2, 5) == 61  # single slot 62
 
 
 def test_two_tracks_of_a_kind_hold_two_places(main):
@@ -136,7 +124,7 @@ def test_two_tracks_of_a_kind_hold_two_places(main):
     on(r, main, 4)
     poll(r, main)
     assert (dest(r, 1), dest(r, 4)) == (1, 2)
-    on(r, main, 6, mono=True)                                   # and a single slot is never inside a held stereo place
+    on(r, main, 6, mono=True)  # and a single slot is never inside a held stereo place
     poll(r, main)
     assert dest(r, 6) == 63 and (dest(r, 1), dest(r, 4)) == (1, 2)
 
@@ -149,7 +137,7 @@ def test_the_take_landing_moves_smpl_to_it_and_the_next_free_place_is_held(main,
     on(r, main, 3)
     poll(r, main)
     assert dest(r, 3) == 3 and smpl(r, 3) == was
-    poll(r, main)                                               # nothing changed: nothing done
+    poll(r, main)  # nothing changed: nothing done
     assert smpl(r, 3) == was
     put(r, bank(stereo=(1, 2, 3, 4)))
     poll(r, main)
@@ -208,7 +196,7 @@ def test_while_the_audio_cpu_is_down_nothing_held_is_believed(main, up, mark):
     assert dest(r, 3) == 1
     r.mc.w32(mm.AUDIO_UP, up)
     r.mc.w32(mm.SHARED + mm.STOPS_MARK, mark)
-    put(r, bank(stereo=(1, 2)), mark)                           # samples loaded while it was down: no take of the track's
+    put(r, bank(stereo=(1, 2)), mark)  # samples loaded while it was down: no take of the track's
     poll(r, main)
     r.mc.w32(mm.AUDIO_UP, 1)
     put(r, bank(stereo=(1, 2)))
@@ -241,7 +229,7 @@ def test_what_a_message_costs(main):
     put(r, bank(stereo=(1, 2)))
     full = counted(r, main)
     print("a message: no NEXT", idle, "nothing changed", same, "the slots changed", full)
-    assert idle < 12 and same < 80 and full < 4000             # no track on NEXT: two longs; nothing changed: the five read
+    assert idle < 12 and same < 80 and full < 4000  # no track on NEXT: two longs; nothing changed: the five read
 
 
 def test_the_main_task_polls_at_each_message(main):
@@ -254,7 +242,7 @@ def test_the_image(official_path, official, main):
     quiet = lambda s: None
     raw, _, built, _, _ = build.build(official_path, log=quiet, xfade=61, prof=True)
     was_raw, _, was, _, _ = build.build(official_path, log=quiet, xfade=60, prof=True)
-    assert hashlib.sha256(was_raw).hexdigest().startswith("b41bad57")      # the trans image, as it is
+    assert hashlib.sha256(was_raw).hexdigest().startswith("b41bad57")  # the trans image, as it is
     print("next image", hashlib.sha256(raw).hexdigest())
     new, old = built.section(3), was.section(3)
     assert new == main[0]

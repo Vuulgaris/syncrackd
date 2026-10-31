@@ -1,60 +1,42 @@
 /* Main CPU (section 3, OS 1.42 only, with the larger slots): keeps takes.
  *
- * Replaces the two calls to the routine that saves a project to the +Drive, the
- * ones behind SAVE PROJECT. It calls that routine, and when the save went well
- * it writes every take that is not on the drive yet into the take's two sample
- * slots. So this runs where stock itself is writing the drive, in the job that
- * shows SAVING, and nowhere else.
+ * Replaces the two calls to the routine that saves a project to the +Drive, the ones behind SAVE PROJECT. It calls
+ * that routine, and when the save went well it writes every take that is not on the drive yet into the take's two
+ * sample slots. So this runs where stock itself is writing the drive, in the job that shows SAVING, and nowhere else.
  *
- * The take is in the audio CPU's memory. It is asked for 512 bytes at a time
- * through the shared window (struct keepbox, engine/sampler.h; the audio CPU's
- * side is keep_step in engine/sampler.c), one drive sector a request. A slot's
- * first sector, with its header, is written last and only if the take is still
- * the length it had: until then the drive holds the old header.
+ * The take is in the audio CPU's memory. It is asked for 512 bytes at a time through the shared window (struct
+ * keepbox, engine/sampler.h; the audio CPU's side is keep_step in engine/sampler.c), one drive sector a request. A
+ * slot's first sector, with its header, is written last and only if the take is still the length it had: until then
+ * the drive holds the old header.
  *
- * Nothing is kept here between calls. The audio CPU remembers which takes are
- * on the drive.
+ * Nothing is kept here between calls. The audio CPU remembers which takes are on the drive.
  *
  * The window is read and written in words and longs only, as stock does.
  *
- * Built with LOAD (the load image) it also takes the place of the one call to
- * the routine that loads a project, the one behind LOAD PROJECT, and after a
- * load that went well it puts the drive's samples back in every slot that holds
- * a take the drive does not have: a project is loaded with the samples as they
- * were saved, and a take that was not kept is gone, as after a restart. The
- * samples go the other way through the same box, one piece a request (KEEP_PUT
- * in engine/sampler.h). The drive is only read.
+ * The samples go the other way through the same box, one piece a request (KEEP_PUT in engine/sampler.h). The drive is
+ * only read.
  *
- * Built with BANKS too (the bank image, with engine/banks.c): a save also notes
- * the project's bank, and a load of a project on another bank loads every slot.
- * The load's code then sits with the banks', for room.
+ * Built with BANKS too (the bank image, with engine/banks.c): a save also notes the project's bank, and a load of a
+ * project on another bank loads every slot. The load's code then sits with the banks', for room.
  *
- * Built with SAVE too (the save image): the takes can be written without the
- * project, from the sampling page. save_start() hands stock's runner of jobs a job
- * of ours, which calls keep_takes in the runner's worker, where SAVE PROJECT's own
- * job runs. A job is started with (the runner, a name, what to do, what to call
- * after): the last two are function objects of 16 bytes, 8 of storage, then a
- * routine that copies or ends the storage, then the routine to call. Stock copies
- * one by calling its second routine with (to, from, 2) and ends one with (it, it,
- * 3); ours keep nothing in the storage, so there is nothing to do for either but
- * copy 8 bytes. What a job does answers 0 when it went well. SAVE_STATE
- * (engine/sampler.h) says how ours is going; it is set by the job itself when it
- * ends, so nothing waits on the second object being called.
+ * Built with SAVE too (the save image): the takes can be written without the project, from the sampling page.
+ * save_start() hands stock's runner of jobs a job of ours, which calls keep_takes in the runner's worker, where SAVE
+ * PROJECT's own job runs. A job is started with (the runner, a name, what to do, what to call after): the last two
+ * are function objects of 16 bytes, 8 of storage, then a routine that copies or ends the storage, then the routine to
+ * call. Stock copies one by calling its second routine with (to, from, 2) and ends one with (it, it, 3); ours keep
+ * nothing in the storage, so there is nothing to do for either but copy 8 bytes. What a job does answers 0 when it
+ * went well. SAVE_STATE (engine/sampler.h) says how ours is going; it is set by the job itself when it ends, so
+ * nothing waits on the second object being called.
  *
- * Built with PTN too (the ptn image): the takes are also written when a whole
- * pattern is saved to the project. The two calls of stock's pattern save that the
- * pattern menu's SAVE TO PROJ, WHOLE PATTERN ends in go to ptn_keep, which calls
- * stock's routine and, when that went well, starts the job above. Nothing is
- * written where the pattern is saved: a full take is seconds of drive writes, and
- * that is the task the keys and the screen are served in. And on this image a take
- * that changed while it was written is left for the next save and the slots after
- * it are still written, where the run ended; the run still answers that not every
- * take is on the drive.
+ * Built with PTN too (the ptn image): the takes are also written when a whole pattern is saved to the project. The
+ * two calls of stock's pattern save that the pattern menu's SAVE TO PROJ, WHOLE PATTERN ends in go to ptn_keep, which
+ * calls stock's routine and, when that went well, starts the job above. Nothing is written where the pattern is
+ * saved: a full take is seconds of drive writes, and that is the task the keys and the screen are served in. And on
+ * this image a take that changed while it was written is left for the next save and the slots after it are still
+ * written, where the run ended; the run still answers that not every take is on the drive.
  *
- * Built with SCRATCH too (the scratch image, engine/scratch.c): a save first copies the
- * takes held on the drive into the bank, and a load first has the slots they are in
- * loaded from the bank.
- */
+ * Built with SCRATCH too (the scratch image, engine/scratch.c): a save first copies the takes held on the drive into
+ * the bank, and a load first has the slots they are in loaded from the bank. */
 #include "sampler.h"
 
 #ifdef SCRATCH
@@ -270,9 +252,9 @@ CAVE u32 save_keep(void *manager, void *project, void *progress)
 }
 
 #ifdef PTN
-/* The ptn image: in the place of stock's pattern save, where a whole pattern is saved to the project.
- * Stock's routine first, with what it was given; its answer is a byte, and the rest of the long is
- * whatever was there. Then the job that writes the takes, which says itself when one is running. */
+/* The ptn image: in the place of stock's pattern save, where a whole pattern is saved to the project. Stock's routine
+ * first, with what it was given; its answer is a byte, and the rest of the long is whatever was there. Then the job
+ * that writes the takes, which says itself when one is running. */
 #define pattern_save ((u32 (*)(void *, u32, u32, u32, u32))0x4001a8d2)     /* (manager, to the temp area, pattern, sequence, kit) */
 
 CAVE u32 ptn_keep(void *manager, u32 temp, u32 pattern, u32 seq, u32 kit)
@@ -340,21 +322,16 @@ CAVE u32 load_keep(void *manager, void *project, void *progress)
     return ok;
 }
 #else
-/* The bank image's load. A whole bank is 64 slots and up to 61 MB, and the first build of this
- * image sent it the way above: a sector read, a sector sent, one an audio block. On the unit a full
- * bank sat on the LOADING screen for minutes and was taken for a hang. So here a slot is read from
- * the drive in two reads, into the block the boot stages the pool in (32 MB, idle once the unit is
- * up; a megabyte in, clear of the boot's own first bytes, and its mark is cleared so that a boot
- * exchange that ever ran again would stage afresh), and sent three sectors a request: one in the
- * box, two in the recorder's ring, which the feed keeps out of while BANK_BUSY says so
- * (engine/recfeed.c).
+/* The bank image's load. So here a slot is read from the drive in two reads, into the block the boot stages the pool
+ * in (32 MB, idle once the unit is up; a megabyte in, clear of the boot's own first bytes, and its mark is cleared so
+ * that a boot exchange that ever ran again would stage afresh), and sent three sectors a request: one in the box, two
+ * in the recorder's ring, which the feed keeps out of while BANK_BUSY says so (engine/recfeed.c).
  *
- * all: every slot, as the drive has it now. Otherwise the slots that hold a take the drive does not
- * have.
+ * all: every slot, as the drive has it now. Otherwise the slots that hold a take the drive does not have.
  *
- * The LOADING screen's bar is moved a slot at a time, through the routine stock's own load moves it
- * with (0x401758e8: the job's progress object, done, of how many; nothing if the object's third long
- * is 0), so that a full bank, which still takes most of a minute, is seen to be going. */
+ * The LOADING screen's bar is moved a slot at a time, through the routine stock's own load moves it with (0x401758e8:
+ * the job's progress object, done, of how many; nothing if the object's third long is 0), so that a full bank, which
+ * still takes most of a minute, is seen to be going. */
 #define progress_step ((void (*)(void *, u32, u32))0x401758e8)
 #define STAGE ((u8 *)0x4d84f2c0)
 #ifdef STREAM
@@ -455,8 +432,8 @@ LCAVE u32 load_keep(void *manager, void *project, void *progress)
 }
 
 #ifdef NEWPROJ
-/* The newproj image: NEW PROJECT has no project to load. The slots the phone names, as LOAD PROJECT loads them, and the
- * held takes dropped as a load drops them (engine/phone.c, fresh_make). */
+/* The newproj image: NEW PROJECT has no project to load. The slots the phone names, as LOAD PROJECT loads them, and
+ * the held takes dropped as a load drops them (engine/phone.c, fresh_make). */
 LCAVE void new_slots(void)
 {
 #ifdef SCRATCH
@@ -467,13 +444,11 @@ LCAVE void new_slots(void)
 #endif
 
 #ifdef STREAM
-/* The stream image: on the unit the phone's writes go unanswered while a load waits on it, so a project's own samples
- * could not come back at its load (into the project loaded
- * after it). Now the phone empties at the load every slot that is not the project's (0x6A), and once the load is done
- * writes the project's samples, saying each slot written with 0x6B (engine/phone.c). Each is loaded here as the load
- * loads the phone's (the phone's mask: no load waits on it while this job runs, the one worker), by a job on stock's
- * runner, one slot after another as they come; a slot that holds a take the drive does not have keeps it. The two sides
- * meet only in stream_bits, set and cleared by one instruction each. */
+/* Now the phone empties at the load every slot that is not the project's (0x6A), and once the load is done writes the
+ * project's samples, saying each slot written with 0x6B (engine/phone.c). Each is loaded here as the load loads the
+ * phone's (the phone's mask: no load waits on it while this job runs, the one worker), by a job on stock's runner,
+ * one slot after another as they come; a slot that holds a take the drive does not have keeps it. The two sides meet
+ * only in stream_bits, set and cleared by one instruction each. */
 #define AAVE __attribute__((section(".cave.a"), noinline))
 #define CCAVE __attribute__((section(".cave.c"), noinline))
 

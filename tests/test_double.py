@@ -1,14 +1,4 @@
-"""The "double" image: the sample pool goes to the audio CPU in two halves. Section 3, OS 1.42.
-
-The patched main program runs here against a drive that is a table of slots: the routine that
-touches the real drive is a stub, the stock header and data readers above it are real. The task
-that sends the pool is played by the test: it sets the chunk index and asks for the chunk's
-address, as the patched sender does, and the chunks are put together by their numbers, as the
-audio CPU does. One test runs the sender's own instructions around the call.
-
-Nothing here says how the exchange goes on the unit while the block is filled again, how long
-that takes, or that the audio CPU's memory past 32 MB behaves: see docs/FINDINGS.md.
-"""
+"""The "double" image: the sample pool goes to the audio CPU in two halves. Section 3, OS 1.42."""
 import shutil
 
 import numpy as np
@@ -26,16 +16,16 @@ pytestmark = pytest.mark.skipif(not shutil.which("m68k-elf-gcc"), reason="no Col
 
 SLOTS = 64
 SECTORS = build_main.BIG_SLOT_SECTORS
-MAX_BYTES = build_main.BIG_SLOT_MAX_BYTES                 # of samples in a slot: 1,048,512
+MAX_BYTES = build_main.BIG_SLOT_MAX_BYTES  # of samples in a slot: 1,048,512
 FIRST, END = mm.SAMPLE_SECTOR0, mm.SAMPLE_SECTOR0 + SLOTS * SECTORS
 CHUNK = 2048
-HALF = mm.POOL_HALF_CHUNKS * CHUNK                        # 33,550,336
+HALF = mm.POOL_HALF_CHUNKS * CHUNK  # 33,550,336
 CAP = 2 * HALF
 STAGE, DATA = mm.POOL_STAGE, mm.POOL_STAGE + 5
 INDEX, STALL = mm.POOL_SEND_INDEX, mm.BOOT_STALL
 STACK = (0x407f0000, 0x407ff000)
 MEMCPY = 0x4011613c
-SENDER = (0x40082fb4, 0x40082ff0)                          # from "command 2" to just after the copy to the window
+SENDER = (0x40082fb4, 0x40082ff0)  # from "command 2" to just after the copy to the window
 
 
 @pytest.fixture(scope="module")
@@ -68,8 +58,9 @@ def noise(n, seed):
 
 
 def stream(samples):
-    """The pool as the audio CPU is to have it: for each slot its frame count and its samples.
-    A slot that does not fit under the cap, with a count left for every slot after it, is empty."""
+    """The pool as the audio CPU is to have it: for each slot its frame count and its samples. A slot that does not fit
+    under the cap, with a count left for every slot after it, is empty.
+    """
     out = bytearray()
     for slot in range(SLOTS):
         x = samples.get(slot, b"")
@@ -84,9 +75,9 @@ class Rig:
         image, self.syms = built
         mc = self.mc = Machine()
         mc.map(0x40000000, 0x800000)
-        mc.map(0x41bb0000, 0x10000)                        # the exchange's variables
+        mc.map(0x41bb0000, 0x10000)  # the exchange's variables
         mc.map(mm.SHARED, 0x2000)
-        mc.map(0x4d800000, 0x2200000)                      # the pool's block and its neighbours
+        mc.map(0x4d800000, 0x2200000)  # the pool's block and its neighbours
         mc.write(mm.BASE, image)
         mc.set_stack(STACK[1], 0x40000100)
         mc.set_exits([0x40000100, SENDER[1]])
@@ -107,7 +98,7 @@ class Rig:
 
         def hook(uc, address, size, user):
             sp = uc.reg_read(UC_M68K_REG_A7)
-            if addr == MEMCPY:                             # the reader's own copies are done for it; the sender's is recorded
+            if addr == MEMCPY:  # the reader's own copies are done for it; the sender's is recorded
                 dst, src, n = (mc.r32(sp + 4 + 4 * k) for k in range(3))
                 self.copies.append((dst, src, n))
                 if dst < mm.SHARED or dst >= mm.SHARED + 0x2000:
@@ -180,16 +171,16 @@ def big_set(seed=0, per=960000, slots=SLOTS):
 
 def test_two_halves_fit_what_stock_used_and_what_the_audio_cpu_has(official):
     assert HALF == 33550336 and HALF % CHUNK == 0
-    assert HALF <= SLOTS * (4 + 2 * mm.SAMPLE_MAX_FRAMES)                  # a half is no more of the block than stock could fill
+    assert HALF <= SLOTS * (4 + 2 * mm.SAMPLE_MAX_FRAMES)  # a half is no more of the block than stock could fill
     assert 5 + HALF <= mm.POOL_STAGE_BYTES and mm.POOL_STAGE + mm.POOL_STAGE_BYTES == mm.AUDIO_IMAGE_STAGE
-    assert CAP <= mm.AUDIO_POOL_BYTES and CAP // CHUNK < 0x8000            # under the audio CPU's 64 MB; the index is a word
-    assert SLOTS * (4 + 960000) <= CAP                                    # 64 slots of 10 s, what the changed Transfer sends
-    assert SLOTS * (4 + 2 * m.REC_MAX) <= CAP                             # 64 kept takes of 10.24 s
+    assert CAP <= mm.AUDIO_POOL_BYTES and CAP // CHUNK < 0x8000  # under the audio CPU's 64 MB; the index is a word
+    assert SLOTS * (4 + 960000) <= CAP  # 64 slots of 10 s, what the changed Transfer sends
+    assert SLOTS * (4 + 2 * m.REC_MAX) <= CAP  # 64 kept takes of 10.24 s
     # the audio CPU's end, as stock has it: the index is a word, taken as unsigned, times 2 KB, from its pool's base
     audio = official.section(7)
     at = m.off(0x40000fa8)
     assert audio[at:at + 24] == bytes.fromhex(fw.sx("c7b16a8677043d4f6fc531bc2815f97609064e357b8966c4") + "%08x" % mm.AUDIO_POOL)
-    assert mm.AUDIO_POOL + mm.AUDIO_POOL_BYTES == m.SLOT_LEN - 4            # its slot table sits right after the 64 MB
+    assert mm.AUDIO_POOL + mm.AUDIO_POOL_BYTES == m.SLOT_LEN - 4  # its slot table sits right after the 64 MB
 
 
 def test_code_space_is_a_run_nothing_reaches(stock3, official, double):
@@ -216,14 +207,14 @@ def test_a_pool_that_fits_one_half_is_built_and_sent_as_the_keep_image_does(doub
         r = Rig(built)
         for slot, x in samples.items():
             r.put(slot, x)
-        r.put(30, b"", frames=MAX_BYTES // 2 + 1)                      # a header that claims too much
+        r.put(30, b"", frames=MAX_BYTES // 2 + 1)  # a header that claims too much
         r.slots[31] = b"JUNK" + bytes(60)
         total = r.boot()
         blocks.append(bytes(r.mc.read(STAGE, 5 + total)))
         if built is double:
             assert not r.stray
             reads = len(r.reads)
-            for i in range((total + CHUNK - 1) // CHUNK):              # every chunk is where stock took it from, and no drive
+            for i in range((total + CHUNK - 1) // CHUNK):  # every chunk is where stock took it from, and no drive
                 assert r.chunk(i) == DATA + (i << 11)
             assert len(r.reads) == reads and r.mc.read(STAGE, 1) == b"\xaa"
     assert blocks[0] == blocks[1]
@@ -233,7 +224,7 @@ def test_a_pool_that_fits_one_half_is_built_and_sent_as_the_keep_image_does(doub
 def test_a_pool_of_exactly_one_half_never_fills_the_block_twice(rig):
     samples = big_set(per=1048000, slots=32)
     used = len(stream(samples))
-    samples[32] = noise(HALF - used, 99)                                 # the last sample ends on the half's last byte
+    samples[32] = noise(HALF - used, 99)  # the last sample ends on the half's last byte
     assert len(stream(samples)) == HALF
     for slot, x in samples.items():
         rig.put(slot, x)
@@ -250,8 +241,8 @@ def test_a_full_set_of_10_s_samples_reaches_the_audio_cpu_whole(rig):
     for slot, x in samples.items():
         rig.put(slot, x)
     want = stream(samples)
-    assert rig.boot() == len(want) == SLOTS * (4 + 960000)                # 61.4 MB: the keep image stops at half of this
-    assert bytes(rig.mc.read(DATA, HALF)) == want[:HALF]                  # the block: the first half, to its last byte
+    assert rig.boot() == len(want) == SLOTS * (4 + 960000)  # 61.4 MB: the keep image stops at half of this
+    assert bytes(rig.mc.read(DATA, HALF)) == want[:HALF]  # the block: the first half, to its last byte
     first = len(rig.reads)
     got = rig.send()
     assert got == want
@@ -265,11 +256,12 @@ def test_a_full_set_of_10_s_samples_reaches_the_audio_cpu_whole(rig):
 
 @pytest.mark.parametrize("shift", [-4, -2, 0, 2, 100, -100])
 def test_a_slot_may_lie_across_the_two_halves_anywhere(rig, shift):
-    """shift: where slot 32's record starts against the half's end. -2 and -4 cut its count in two or put it
-    whole in the first half, 0 starts it with the second, above 0 the cut is in slot 31's samples."""
+    """shift: where slot 32's record starts against the half's end. -2 and -4 cut its count in two or put it whole in the
+    first half, 0 starts it with the second, above 0 the cut is in slot 31's samples.
+    """
     samples = {k: noise(MAX_BYTES - 64, k) for k in range(31)}
-    used = len(stream(samples)) - 4 * (SLOTS - 31)                       # after slot 30
-    samples[31] = noise(HALF + shift - used - 4, 31)                     # slot 31's record ends at HALF + shift
+    used = len(stream(samples)) - 4 * (SLOTS - 31)  # after slot 30
+    samples[31] = noise(HALF + shift - used - 4, 31)  # slot 31's record ends at HALF + shift
     samples[32] = noise(300000, 32)
     samples[40] = noise(MAX_BYTES, 40)
     samples[63] = noise(2, 63)
@@ -305,7 +297,7 @@ def test_the_exchange_may_start_again_at_any_point(rig):
 
 
 def test_what_does_not_fit_in_two_halves_is_left_out(rig):
-    samples = {k: noise(MAX_BYTES, 100 + k) for k in range(SLOTS)}       # every slot as full as a slot gets: 4,352 bytes too many
+    samples = {k: noise(MAX_BYTES, 100 + k) for k in range(SLOTS)}  # every slot as full as a slot gets: 4,352 bytes too many
     for slot, x in samples.items():
         rig.put(slot, x)
     want = stream(samples)
@@ -314,7 +306,7 @@ def test_what_does_not_fit_in_two_halves_is_left_out(rig):
     assert total == len(want) <= CAP
     got = rig.send()
     assert got == want and not rig.stray
-    assert len(got) == 63 * (4 + MAX_BYTES) + 4                          # 63 loaded, the last one empty
+    assert len(got) == 63 * (4 + MAX_BYTES) + 4  # 63 loaded, the last one empty
 
 
 # ---- the stall count ---------------------------------------------------------------------------------
@@ -325,11 +317,11 @@ def test_the_stall_count_is_cleared_all_through_a_fill(rig):
         rig.put(slot, x)
     rig.boot()
     rig.clears = rig.longest = rig.since = 0
-    rig.chunk(mm.POOL_HALF_CHUNKS)                                       # the block is filled again here
+    rig.chunk(mm.POOL_HALF_CHUNKS)  # the block is filled again here
     assert rig.mc.read(STAGE, 1) == bytes([mm.POOL_MARK + 1])
-    assert rig.clears >= (len(stream(samples)) - HALF) // 0x4000 + SLOTS and rig.mc.r32(STALL) == 0      # a slot, and a piece
-    assert rig.longest <= 0x4000 + 3 * 512                              # never more than 16 KB and a few sectors without clearing it
-    assert rig.since == 0                                                # and the last thing it does is clear it
+    assert rig.clears >= (len(stream(samples)) - HALF) // 0x4000 + SLOTS and rig.mc.r32(STALL) == 0  # a slot, and a piece
+    assert rig.longest <= 0x4000 + 3 * 512  # never more than 16 KB and a few sectors without clearing it
+    assert rig.since == 0  # and the last thing it does is clear it
 
 
 # ---- the sender's own instructions ----------------------------------------------------------------
@@ -346,14 +338,14 @@ def test_the_sender_copies_from_the_address_it_is_given(rig, stock3):
     h = mm.POOL_HALF_CHUNKS
     for i in (0, 3, h - 1, h, h + 9, (total - 1) // CHUNK):
         mc.w32(INDEX, i)
-        mc.set_reg(8 + 4, MEMCPY)                                        # a4, as the task sets it up
+        mc.set_reg(8 + 4, MEMCPY)  # a4, as the task sets it up
         mc.uc.reg_write(UC_M68K_REG_A7, STACK[1] - 64)
         rig.copies.clear()
         mc.run(*SENDER)
-        assert mc.uc.reg_read(UC_M68K_REG_A7) == STACK[1] - 64 - 12     # three arguments, as stock pushed them
+        assert mc.uc.reg_read(UC_M68K_REG_A7) == STACK[1] - 64 - 12  # three arguments, as stock pushed them
         assert rig.copies[-1] == (mm.SHARED + 0x800, DATA + ((i - (h if i >= h else 0)) << 11), 0x800)
         assert int.from_bytes(mc.read(mm.SHARED + 2, 2), "big") == 2 and int.from_bytes(mc.read(mm.SHARED + 0xc, 2), "big") == i
-        assert mc.reg(2) == (total + 2047) >> 11                         # the chunk count stock goes on to compare with
+        assert mc.reg(2) == (total + 2047) >> 11  # the chunk count stock goes on to compare with
 
 
 # ---- the image ---------------------------------------------------------------------------------------
@@ -367,7 +359,7 @@ def test_double_image_builds_and_the_others_do_not_contain_it(official_path, off
         if sid not in (3, 7):
             assert built.container.by_id(sid).stored == official.container.by_id(sid).stored
     kept = build.build(official_path, log=quiet, keep=True)[2]
-    assert built.section(7) == kept.section(7)                           # nothing changes on the audio CPU
+    assert built.section(7) == kept.section(7)  # nothing changes on the audio CPU
     lo, hi = mm.CAVE_HALVES
     assert kept.section(3)[mm.off(lo):mm.off(hi)] == stock3[mm.off(lo):mm.off(hi)]
     assert kept.section(3)[mm.off(mm.POOL_CHUNK_SITE):mm.off(mm.POOL_CHUNK_SITE) + 12] == bytes.fromhex(build_main.POOL_CHUNK_STOCK)

@@ -1,19 +1,4 @@
-"""The ptn image: the takes are written to the +Drive when a whole pattern is saved to the project, and the
-sampling page has no SAVE box. Builds and emulation only.
-
-Stock has one pattern save (0x4001a8d2) and five calls of it. The two behind the pattern menu's SAVE TO
-PROJ, WHOLE PATTERN go to a routine of ours (engine/keeptakes.c, ptn_keep) that calls stock's and, when
-its answer's low byte is set, starts the job the save image's box started. The other three are stock's:
-the main screen's save to the temp area, KIT DATA and SEQUENCE DATA.
-
-Run as they are here: stock's pattern save, with the routines under it played by the test (the project's
-number, the write protection, the two writes, the messages); stock's four callbacks of the menu, with
-theirs played (the manager, the pattern's number, the names, the menu's end); the store's write under the
-job, as in tests/test_save.py. The runner of jobs is the test's, as there.
-
-What this cannot show: that the runner takes a job from the task the menu's callbacks run in, which
-screens stock has up while the takes are written, and anything the drive itself does.
-"""
+"""The ptn image: the takes are written to the +Drive when a whole pattern is saved to the project, and the"""
 import re
 import shutil
 
@@ -36,11 +21,11 @@ from tools import fw
 pytestmark = pytest.mark.skipif(not shutil.which("m68k-elf-gcc"), reason="no ColdFire cross-compiler")
 
 MGR, MENU, PATTERN, KIT, HOLDER_OF, POPUPS = 0x41230000, 0x41240000, 0x41250000, 0x41260000, 0x41270000, 0x41280000
-SCRATCH = 0x40700100                        # a callback's storage and the name it is handed
-JUNK = 0xDEADBEEF                           # what a stock routine leaves in d0 when its answer is not one
-YES_NO, NAMED, KIT_DATA, SEQ_DATA = 0x40182728, 0x401826da, 0x4018276a, 0x401827aa     # the menu's four callbacks
-NAME_AND_SAVE = 0x40182632                  # what the naming screen's callback calls
-SEQ_WRITE, KIT_WRITE = 0x4001a36a, 0x4001a458                                           # (manager, to the temp area, pattern)
+SCRATCH = 0x40700100  # a callback's storage and the name it is handed
+JUNK = 0xDEADBEEF  # what a stock routine leaves in d0 when its answer is not one
+YES_NO, NAMED, KIT_DATA, SEQ_DATA = 0x40182728, 0x401826da, 0x4018276a, 0x401827aa  # the menu's four callbacks
+NAME_AND_SAVE = 0x40182632  # what the naming screen's callback calls
+SEQ_WRITE, KIT_WRITE = 0x4001a36a, 0x4001a458  # (manager, to the temp area, pattern)
 NOT_SAVED, PROTECTED, RESAVE, ERROR = "N/A: Unsaved Project", "N/A: Write-protected", "Prj must be re-saved!", "Save Error"
 WHOLE, OTHERS = mm.PATTERN_SAVE_CALLS, mm.PATTERN_SAVE_OTHERS
 
@@ -62,8 +47,9 @@ def before(stock3):
 
 
 class PtnRig(SaveRig):
-    """tests/test_save.py's rig on the ptn image. stock: the pattern save runs as it is and the routines under it are
-    the test's; otherwise the pattern save itself is the test's."""
+    """tests/test_save.py's rig on the ptn image. stock: the pattern save runs as it is and the routines under it are the
+    test's; otherwise the pattern save itself is the test's.
+    """
 
     def __init__(self, built, bank=0, stock=True):
         self.did, self.answer = [], 1
@@ -79,7 +65,7 @@ class PtnRig(SaveRig):
             self.stub(0x4016ea6e, lambda: POPUPS)
             self.stub(0x400c347c, lambda popups, text: self.did.append(("error", self.cstr(text))) or JUNK)
             self.stub(0x40175912, lambda text, s: self.did.append(("said", self.cstr(text))) or JUNK)
-            for addr in (0x401bf31e, 0x400c3422):                       # a string made, the message shown
+            for addr in (0x401bf31e, 0x400c3422):  # a string made, the message shown
                 self.stub(addr, lambda: JUNK)
         else:
             self.stub(mm.PATTERN_SAVE, lambda a, b, c, d, e: self.did.append(("save", a, b, c, d, e)) or self.answer)
@@ -93,7 +79,7 @@ class PtnRig(SaveRig):
         self.stub(0x40018464, lambda mgr: KIT)
         self.stub(0x40015d04, lambda pattern, name: self.did.append(("pattern named", pattern)) or JUNK)
         self.stub(0x4000ee62, lambda kit, name: self.did.append(("kit named", kit)) or JUNK)
-        for addr in (0x401bea14, 0x401bd86e):                           # a string copied, a string ended
+        for addr in (0x401bea14, 0x401bd86e):  # a string copied, a string ended
             self.stub(addr, lambda: JUNK)
         self.mc.uc.ctl_flush_tb()
 
@@ -110,8 +96,9 @@ class PtnRig(SaveRig):
         return self.mc.call(self.syms["ptn_keep"], *args)
 
     def menu(self, callback, yes=1):
-        """One of the menu's callbacks as stock calls it: (its storage, the answer, a byte), or for the naming
-        screen's (its storage, the name, a long)."""
+        """One of the menu's callbacks as stock calls it: (its storage, the answer, a byte), or for the naming screen's
+        (its storage, the name, a long).
+        """
         self.mc.w32(SCRATCH, MENU)
         self.mc.w32(SCRATCH + 8, 0x41290000)
         if callback == NAMED:
@@ -179,35 +166,37 @@ def test_the_two_whole_pattern_calls_name_ours_and_the_other_three_stocks(stock3
 
 
 def test_stock_takes_the_second_call_for_a_pattern_with_no_name_in_a_project_with_a_place(stock3):
-    """Read from the listing and pinned here: WHOLE PATTERN (0x401834f8) asks whether the pattern has a name, and if
-    not whether the project has a number on the drive; with no name and a number it opens the naming screen, whose
-    callback names the pattern and the kit and saves both to the project. Otherwise the Y/N, whose callback saves."""
+    """Read from the listing and pinned here: WHOLE PATTERN (0x401834f8) asks whether the pattern has a name, and if not
+    whether the project has a number on the drive; with no name and a number it opens the naming screen, whose
+    callback names the pattern and the kit and saves both to the project. Otherwise the Y/N, whose callback saves.
+    """
     at = lambda a, n: stock3[mm.off(a):mm.off(a) + n].hex()
     assert at(mm.PATTERN_MENU_WHOLE + 0x52, 34) == fw.sx("a776c84adbc4a35ec205fc34aafd98613f9c1b4d76ece88267430fe9cc37aec38276e3adaaed")
-    assert mm.PATTERN_MENU_WHOLE + 0x70 + 2 + 0x10c == 0x40183676                   # the branch: the naming screen's part
+    assert mm.PATTERN_MENU_WHOLE + 0x70 + 2 + 0x10c == 0x40183676  # the branch: the naming screen's part
     assert at(0x4018368a, 6) == "203c" + "%08x" % NAMED and at(0x401835f2, 6) == "203c" + "%08x" % YES_NO
     assert at(0x401836f8, 6) == fw.sx("659558fd1c781e22c0ee") and stock3[mm.off(0x4024f1ec):][:25] == fw.sb("d02d08490fc2330247a0a1dbe8e835f86439540b590c0be21cc9d9243c")
     assert at(0x401835aa, 6) == fw.sx("5275f9277a55aaa4728c") and stock3[mm.off(0x4024f205):][:16] == fw.sb("05986526699c89010e42c97ca2c3e6f6704884fb")
     assert at(NAMED + 0x20, 6) == "4eb9" + "%08x" % NAME_AND_SAVE
     for addr, n in ((YES_NO, 1), (NAMED, 1), (KIT_DATA, 1), (SEQ_DATA, 1), (NAME_AND_SAVE, 2), (mm.PATTERN_MENU_WHOLE, 1)):
         assert stock3.count(word(addr)) == n, hex(addr)
-    assert stock3[mm.off(0x4025006d)] == 0                                          # the name a pattern is not named by
+    assert stock3[mm.off(0x4025006d)] == 0  # the name a pattern is not named by
 
 
 def test_stocks_two_tests_run_as_they_are(main):
-    """A pattern is named when its settings' name is not the empty string; a project has a place when its number is
-    not negative. Stock's two routines and the compare under the first, with the pattern's method and the number played."""
+    """A pattern is named when its settings' name is not the empty string; a project has a place when its number is not
+    negative. Stock's two routines and the compare under the first, with the pattern's method and the number played.
+    """
     rig = PtnRig(main)
     mc = rig.mc
     obj, methods, settings, fn = SCRATCH, SCRATCH + 8, 0x40700300, 0x40700200
-    mc.w32(obj, methods - 40), mc.w32(methods, fn)              # the pattern's method at + 40: () -> its settings, or 0
+    mc.w32(obj, methods - 40), mc.w32(methods, fn)  # the pattern's method at + 40: () -> its settings, or 0
     there = [settings]
     rig.stub(fn, lambda o: there[0])
     mc.uc.ctl_flush_tb()
     for name, want in (("", 0), ("A", 1), ("UNTITLED", 1), ("NEW PATTERN NAME", 1)):
         mc.write(settings, name.encode().ljust(20, b"\0"))
         assert mc.call(mm.PATTERN_NAMED, obj) & 0xFF == want, name
-    there[0] = 0                                                # a pattern with no settings: not named
+    there[0] = 0  # a pattern with no settings: not named
     assert mc.call(mm.PATTERN_NAMED, obj) & 0xFF == 0
     for number, want in ((0, 1), (5, 1), (127, 1), (-1, 0)):
         rig.project = number
@@ -224,7 +213,7 @@ def test_the_five_arguments_and_stocks_answer_go_through(main, answer, starts):
     assert rig.ptn(MGR, 0, 37, 1, 1) == answer and rig.did == [("save", MGR, 0, 37, 1, 1)]
     assert rig.ptn(0x11111111, 0x22222222, 0x33333333, 0x44444444, 0x55555555) == answer
     assert rig.did[1] == ("save", 0x11111111, 0x22222222, 0x33333333, 0x44444444, 0x55555555)
-    assert rig.jobs == ([job_of(rig.syms)] if starts else [])                       # the low byte is the answer; one job for the two
+    assert rig.jobs == ([job_of(rig.syms)] if starts else [])  # the low byte is the answer; one job for the two
     assert rig.state == (BUSY if starts else IDLE) and not rig.writes and not rig.saves and not rig.stray
 
 
@@ -243,7 +232,8 @@ def test_nothing_is_written_where_the_pattern_is_saved(main):
 def test_a_whole_pattern_saved_to_the_project_starts_our_job_once(main):
     rig = PtnRig(main)
     assert rig.ptn(MGR, 0, 37, 1, 1) == 1
-    # stock's own work, in its order: the project's number, both halves to the project, both to the temp area, its message
+    # stock's own work, in its order: the project's number, both halves to the project, both to the temp area, its
+    # message
     assert rig.did == [("project", MGR), ("seq", MGR, 0, 37), ("kit", MGR, 0, 37), ("seq", MGR, 1, 37), ("kit", MGR, 1, 37), ("said", "Ptn saved to ")]
     assert rig.jobs == [job_of(rig.syms)] and rig.state == BUSY
     assert not rig.writes and not rig.saves and not rig.stray
@@ -261,14 +251,14 @@ def test_a_failed_pattern_save_starts_nothing(main, why, text):
         rig.protected = 1
     elif why == "old":
         rig.version = 12
-    else:                                                                           # one of the four writes answers 0
+    else:  # one of the four writes answers 0
         nth = {"seq": 0, "kit": 1, "seq to temp": 2, "kit to temp": 3}[why]
         ok = lambda: calls.append(1) or int(len(calls) - 1 != nth)
         rig.stub(SEQ_WRITE, lambda mgr, temp, n: ok())
         rig.stub(KIT_WRITE, lambda mgr, temp, n: ok())
         rig.mc.uc.ctl_flush_tb()
     answer = rig.ptn(MGR, 0, 37, 1, 1)
-    assert answer & 0xFF == 0 and answer == JUNK & ~0xFF                            # the rest of the long is not an answer
+    assert answer & 0xFF == 0 and answer == JUNK & ~0xFF  # the rest of the long is not an answer
     assert rig.writes_of("error") == [(text,)] and not rig.writes_of("said")
     assert not rig.jobs and rig.state == IDLE and not rig.writes and not rig.stray
 
@@ -281,9 +271,9 @@ def test_the_job_writes_the_takes_into_the_loaded_bank(main, bank):
     rig.serve(audio)
     assert rig.ptn(MGR, 0, 9, 1, 1) == 1 and not rig.writes
     assert rig.run() == 0 and rig.state == DONE
-    assert rig.drive == on_drive(takes, bank)                   # the takes' sectors in the loaded bank, and nothing else on the drive
+    assert rig.drive == on_drive(takes, bank)  # the takes' sectors in the loaded bank, and nothing else on the drive
     assert audio.kept == set(takes) and not rig.saves and not rig.loads and not rig.erased and not rig.stray
-    assert rig.mark is None                                     # our sector of the banks is a project save's to write
+    assert rig.mark is None  # our sector of the banks is a project save's to write
 
 
 def test_two_saves_in_a_row_and_a_save_while_the_job_is_busy(main):
@@ -292,14 +282,14 @@ def test_two_saves_in_a_row_and_a_save_while_the_job_is_busy(main):
     audio = Takes(rig, takes)
     rig.serve(audio)
     assert rig.ptn(MGR, 0, 1, 1, 1) == 1 and rig.state == BUSY
-    assert rig.ptn(MGR, 0, 2, 1, 1) == 1                        # the job has not run: the pattern is saved, and no second job
+    assert rig.ptn(MGR, 0, 2, 1, 1) == 1  # the job has not run: the pattern is saved, and no second job
     assert len(rig.jobs) == 1 and rig.writes_of("said") == [("Ptn saved to ",)] * 2 and not rig.writes
     assert rig.run() == 0 and rig.state == DONE and rig.drive == on_drive(takes)
     n = len(rig.writes)
-    assert rig.ptn(MGR, 0, 2, 1, 1) == 1                        # after it: a job again, which finds every take on the drive
+    assert rig.ptn(MGR, 0, 2, 1, 1) == 1  # after it: a job again, which finds every take on the drive
     assert len(rig.jobs) == 2 and rig.state == BUSY
     assert rig.run() == 0 and rig.state == DONE and len(rig.writes) == n and not rig.stray
-    takes[8] = audio.takes[8] = noise(700, 3)                   # a take made since
+    takes[8] = audio.takes[8] = noise(700, 3)  # a take made since
     takes[9] = audio.takes[9] = noise(700, 4)
     assert rig.ptn(MGR, 0, 2, 1, 1) == 1 and rig.run() == 0 and rig.drive == on_drive(takes) and len(rig.jobs) == 3
 
@@ -311,7 +301,7 @@ def test_a_write_that_fails_says_fail_and_the_next_save_tries_again(main, fail_a
     audio = Takes(rig, takes)
     rig.serve(audio)
     rig.fail_at = fail_at
-    assert rig.ptn(MGR, 0, 1, 1, 1) == 1                        # the pattern is saved all the same
+    assert rig.ptn(MGR, 0, 1, 1, 1) == 1  # the pattern is saved all the same
     assert rig.run() == 1 and rig.state == FAIL and audio.kept != set(takes)
     rig.fail_at = None
     assert rig.ptn(MGR, 0, 1, 1, 1) == 1 and len(rig.jobs) == 2 and rig.state == BUSY
@@ -324,11 +314,11 @@ def test_a_take_that_changed_while_it_was_written_is_left_and_the_slots_after_it
     audio = Once(rig, takes, 10)
     rig.serve(audio)
     assert rig.ptn(MGR, 0, 1, 1, 1) == 1
-    assert rig.run() == 1 and rig.state == FAIL                 # not every take is on the drive
-    assert audio.kept == {11, 40, 63} and sector_of(10) not in rig.writes       # no header: the drive's old one stands
+    assert rig.run() == 1 and rig.state == FAIL  # not every take is on the drive
+    assert audio.kept == {11, 40, 63} and sector_of(10) not in rig.writes  # no header: the drive's old one stands
     for slot in (11, 40, 63):
         assert rig.slot(slot) == (header(len(takes[slot]) // 2, slot), takes[slot])
-    assert rig.ptn(MGR, 0, 1, 1, 1) == 1 and rig.run() == 0 and rig.state == DONE      # the next save: the take as it now is
+    assert rig.ptn(MGR, 0, 1, 1, 1) == 1 and rig.run() == 0 and rig.state == DONE  # the next save: the take as it now is
     assert audio.kept == set(takes) and rig.slot(10) == (header(992, 10), audio.takes[10]) and not rig.stray
 
 
@@ -360,7 +350,7 @@ def test_a_project_save_still_writes_the_takes_and_leaves_the_word(main, state):
     audio = Takes(rig, takes)
     rig.serve(audio)
     rig.mc.w32(mm.SAVE_STATE, state)
-    assert rig.keep() == 1 and audio.kept == set(takes) and len(rig.saves) == 1 and rig.saves[0][3] == 0   # the project first
+    assert rig.keep() == 1 and audio.kept == set(takes) and len(rig.saves) == 1 and rig.saves[0][3] == 0  # the project first
     assert all(rig.drive[sector] == raw for sector, raw in on_drive(takes).items())
     assert rig.slot(20) == (header(700, 20), takes[20]) and rig.state == state and not rig.jobs and not rig.did
 
@@ -430,7 +420,8 @@ def test_kit_data_and_sequence_data_are_stocks_and_start_nothing(main, callback,
 
 
 def test_a_save_to_the_temp_area_by_stocks_routine_starts_nothing(main):
-    """What the main screen's call does, (manager, 1, pattern, 1, 1): stock's routine, which ours is not in the way of."""
+    """What the main screen's call does, (manager, 1, pattern, 1, 1): stock's routine, which ours is not in the way of.
+    """
     rig = PtnRig(main)
     assert rig.mc.call(mm.PATTERN_SAVE, MGR, 1, 37, 1, 1) == 1
     assert rig.did == [("seq", MGR, 1, 37), ("kit", MGR, 1, 37), ("said", "Ptn saved to ")] and not rig.jobs and rig.state == IDLE
@@ -453,9 +444,9 @@ def test_the_fifth_place_is_blank_but_after_a_save_that_failed(main, before, sta
     r, old = page(main, state), page(before, state)
     got, was = r.show(), old.show()
     mine = [t for t in got if t[:2] == (33, 12)]
-    assert mine == ([(33, 12, "FAIL")] if state == FAIL else [])            # idle, busy, done: nothing at all
-    assert (33, 12, WORDS[state]) in was                                    # where the solo image has its box's word
-    assert [t for t in got if t[:2] != (33, 12)] == [t for t in was if t[:2] != (33, 12)]      # the rest of the page as it was
+    assert mine == ([(33, 12, "FAIL")] if state == FAIL else [])  # idle, busy, done: nothing at all
+    assert (33, 12, WORDS[state]) in was  # where the solo image has its box's word
+    assert [t for t in got if t[:2] != (33, 12)] == [t for t in was if t[:2] != (33, 12)]  # the rest of the page as it was
     assert not [t for t in got if t[2] in ("SAVE", "BUSY", "DONE")]
     assert (r.dots == old.dots).all() and r.mc.r32(mm.SAVE_STATE) == state and not r.stray
 
@@ -466,7 +457,7 @@ def test_knob_e_turns_nothing(main, state):
     was = (r.mode, r.dest, r.gains, r.box, r.smpl)
     for steps in (1, 3, -1, -5, 0):
         for side in (True, False):
-            assert r.twist(SAVE_KNOB, steps, side) == 1                     # ours, as an empty place's knob is: stock is not asked
+            assert r.twist(SAVE_KNOB, steps, side) == 1  # ours, as an empty place's knob is: stock is not asked
     assert r.mc.r32(mm.SAVE_STATE) == state and not r.saves and not r.turned
     assert (r.mode, r.dest, r.gains, r.box, r.smpl) == was and not r.changes and not r.locked and not r.did and not r.stray
     assert r.redrawn == [PAGE] * 10
@@ -479,7 +470,7 @@ def test_the_pages_other_knobs_are_the_solo_images_turn_for_turn(main, before):
         assert r.twist(knob, steps) == old.twist(knob, steps) and (r.mode, r.dest, r.gains, r.box) == (old.mode, old.dest, old.gains, old.box)
         assert [t for t in r.show() if t[:2] != (33, 12)] == [t for t in old.show() if t[:2] != (33, 12)]
     assert r.changes == old.changes and r.stray == old.stray and not r.saves and not old.saves
-    r.mc.w32(PAGE + mm.PAGE_INDEX, 0), old.mc.w32(PAGE + mm.PAGE_INDEX, 0)              # the first page: the fifth knob is stock's
+    r.mc.w32(PAGE + mm.PAGE_INDEX, 0), old.mc.w32(PAGE + mm.PAGE_INDEX, 0)  # the first page: the fifth knob is stock's
     assert r.twist(SAVE_KNOB, 1) == old.twist(SAVE_KNOB, 1) == r.turn_answer and len(r.turned) == 1
     assert r.show() == old.show() and not [t for t in r.show() if t[2] == "FAIL"]
 
@@ -493,7 +484,7 @@ def test_the_main_program_is_the_solo_images_but_for_two_calls_and_three_runs(ma
     spans += [(x + 2, x + 6) for x in mm.PROJECT_SAVE_CALLS + mm.PATTERN_SAVE_CALLS]
     diff = [k for k in range(len(stock3)) if image[k] != old[k]]
     assert diff and all(any(mm.off(s) <= k < mm.off(e) for s, e in spans) for k in diff)
-    for x in mm.PATTERN_SAVE_CALLS:                                         # each of the two calls did change
+    for x in mm.PATTERN_SAVE_CALLS:  # each of the two calls did change
         assert any(mm.off(x + 2) <= k < mm.off(x + 6) for k in diff)
     for lo, hi in (mm.CAVE_BANK, mm.CAVE_PAGE2, mm.CAVE_PAGE4, mm.CAVE_PAGE5, mm.CAVE_PAGE6, mm.CAVE_SOLO, mm.CAVE_METER, mm.CAVE_RIGHT):
         assert image[mm.off(lo):mm.off(hi)] == old[mm.off(lo):mm.off(hi)]
@@ -504,9 +495,9 @@ def test_the_main_program_is_the_solo_images_but_for_two_calls_and_three_runs(ma
     for name in ours + ("ptn_keep",):
         assert lo + 4 <= syms[name] < hi
     end = syms["ptn_keep"] + 48
-    assert max(syms[n] for n in ours) < syms["ptn_keep"]                    # it is the last routine in the run
+    assert max(syms[n] for n in ours) < syms["ptn_keep"]  # it is the last routine in the run
     assert image[mm.off(end) - 2:mm.off(end)] == b"\x4e\x75" and image[mm.off(end):mm.off(hi)] == b"\x4e\x71" * ((hi - end) // 2)
-    assert hi - end == 106                                                  # the room left in the run
+    assert hi - end == 106  # the room left in the run
     for call in mm.PROJECT_SAVE_CALLS:
         assert image[mm.off(call):mm.off(call) + 6] == b"\x4e\xb9" + word(syms["save_keep"])
     # the page: no routine for a turn of SAVE, and nothing in it names the routine that starts a save
@@ -514,7 +505,7 @@ def test_the_main_program_is_the_solo_images_but_for_two_calls_and_three_runs(ma
     for lo, hi in (mm.CAVE_PAGE, mm.CAVE_PAGE2, mm.CAVE_PAGE3, mm.CAVE_PAGE4, mm.CAVE_PAGE5, mm.CAVE_PAGE6):
         assert image.find(word(syms["save_start"]), mm.off(lo), mm.off(hi)) < 0
     assert old.find(word(was["save_start"]), mm.off(mm.CAVE_PAGE3[0]), mm.off(mm.CAVE_PAGE3[1])) >= 0
-    assert image.count(word(syms["save_start"])) == 0                       # ours calls it from beside it, in the same run
+    assert image.count(word(syms["save_start"])) == 0  # ours calls it from beside it, in the same run
 
 
 def test_ours_is_stocks_call_and_then_the_jobs_start(main):
@@ -524,16 +515,17 @@ def test_ours_is_stocks_call_and_then_the_jobs_start(main):
     calls = [t for t in ops if t.startswith("jsr")]
     assert calls == ["jsr %#x" % mm.PATTERN_SAVE, "jsr %%pc@(%#x)" % syms["save_start"]]
     assert ops[-1] == "rts" and ops.count("rts") == 1
-    assert ops.count("movel %sp@(24),%sp@-") == 5                           # the five it was given, as they came
-    assert "tstb %d0" in ops and ops.index("tstb %d0") > ops.index(calls[0])        # the answer's low byte, nothing above it
+    assert ops.count("movel %sp@(24),%sp@-") == 5  # the five it was given, as they came
+    assert "tstb %d0" in ops and ops.index("tstb %d0") > ops.index(calls[0])  # the answer's low byte, nothing above it
 
 
-ROUTINES = [(0x40182632, 0x401827ea), (mm.PATTERN_MENU_WHOLE, 0x401837cc), (0x40033ee0, 0x40035148)]    # the menu's, and the main screen's keys
+ROUTINES = [(0x40182632, 0x401827ea), (mm.PATTERN_MENU_WHOLE, 0x401837cc), (0x40033ee0, 0x40035148)]  # the menu's, and the main screen's keys
 
 
 def test_nothing_else_in_the_program_goes_into_a_changed_place(stock3):
-    """No address in the program points inside one of the two operands, and no branch of the routines around the
-    calls, or of the main screen's key routine, lands in one or between a call's pushes and the call."""
+    """No address in the program points inside one of the two operands, and no branch of the routines around the calls,
+    or of the main screen's key routine, lands in one or between a call's pushes and the call.
+    """
     inside = [a for call in WHOLE for a in range(call - 13, call + 6)]
     for a in inside:
         assert word(a) not in stock3, hex(a)
@@ -543,7 +535,7 @@ def test_nothing_else_in_the_program_goes_into_a_changed_place(stock3):
             for target in re.findall(r"0x(4[0-9a-f]{7})\b", text):
                 seen += 1
                 assert int(target, 16) not in inside, hex(at)
-    assert seen > 300                                                       # the listing does name its branches' targets
+    assert seen > 300  # the listing does name its branches' targets
 
 
 def test_the_stock_routines_it_leans_on_are_as_they_were(stock3, main):

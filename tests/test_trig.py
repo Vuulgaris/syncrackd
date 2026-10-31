@@ -1,22 +1,4 @@
-"""The trig image: the phone image with four of the maintainer's fixes in one flash.
-
-
-
-
-
-
-
-
-
-
-
-    on a sampler
-    track the TRIG page's E and F are SOLO and REC, turning and locking as the sampling page's did; the sampling page's
-    E is empty.
-
-Held here by running the routines; not held: that the TRIG object's base fields are where the SYN object's are (read
-from its methods' use of + 108, not run), how the knobs feel, how the hits' steps feel on real material.
-"""
+"""The trig image."""
 import shutil
 
 import numpy as np
@@ -35,7 +17,7 @@ from tools import mainmap as mm
 
 pytestmark = pytest.mark.skipif(not shutil.which("m68k-elf-gcc"), reason="no ColdFire cross-compiler")
 
-E, F = 5, 6                                         # the TRIG page's knobs, as a turn names them
+E, F = 5, 6  # the TRIG page's knobs, as a turn names them
 HOLDER = 3
 
 
@@ -54,18 +36,20 @@ def before(stock3):
     return build_main.patched_image(stock3, xfade=22)
 
 
-# ---- the first page -------------------------------------------------------------------------------------------------
+# ---- the first page
+# -------------------------------------------------------------------------------------------------
 
 def test_strt_and_loop_len_and_srr_change_places_and_nothing_else_of_the_pages(main, before):
     new, old = uitable.pages(main[0]), uitable.pages(before[0])
     assert old[-1]["knobs"] == [497, 498, 499, 504, 501, 502, 500, 503]
-    assert new[-1]["knobs"] == [497, 498, 501, 504, 499, 500, 502, 503]     # C LOOP, E STRT, F LEN, G SRR
+    assert new[-1]["knobs"] == [497, 498, 501, 504, 499, 500, 502, 503]  # C LOOP, E STRT, F LEN, G SRR
     assert {k: v for k, v in new.items() if k != -1} == {k: v for k, v in old.items() if k != -1} and new[-1]["level"] == old[-1]["level"]
     rec = mm.SAMP_RECORDS
     assert main[0][mm.off(rec):mm.off(rec + 8 * 0x34)] == before[0][mm.off(rec):mm.off(rec + 8 * 0x34)]
 
 
-# ---- the TRIG page --------------------------------------------------------------------------------------------------
+# ---- the TRIG page
+# --------------------------------------------------------------------------------------------------
 
 def trig(built, track):
     """The page rig with the TRIG class's three methods and its turn going to ours, and TRIG's own played."""
@@ -102,7 +86,7 @@ def test_on_an_analog_track_every_knob_is_stocks(main, track):
 def test_the_page_draws_stocks_then_solo_and_rec_in_the_fifth_and_sixth_places(main):
     r = trig(main, 2)
     texts = r.show()
-    assert r.trig_stock == [("draw", PAGE)] and r.order == ["text"] * 4      # stock's first, then ours
+    assert r.trig_stock == [("draw", PAGE)] and r.order == ["text"] * 4  # stock's first, then ours
     assert texts == [(33, 0, ""), (33, 12, "S OFF"), (59, 0, "REC"), (59, 12, "OFF")]
 
 
@@ -143,16 +127,17 @@ def test_solo_and_rec_lock_as_the_phone_images_sampling_page_did(main, before, h
 
 def test_the_sampling_pages_fifth_place_is_empty_and_its_knob_turns_nothing(main, before):
     r, old = A.page(main, 2), A.page(before, 2)
-    G.geared(r, [256, 256])                         # knob E still goes through stock's change, as every knob of the page
+    G.geared(r, [256, 256])  # knob E still goes through stock's change, as every knob of the page
     G.geared(old, [256, 256])
     assert [t for t in r.show() if t[0] != 33] == [t for t in old.show() if t[0] != 33]
     assert [t for t in r.show() if t[0] == 33 and t[1] < 20] == []
     G.twist(r, SOLO_KNOB, 1)
     assert int.from_bytes(r.mc.read(mm.SOLO_WORD, 4), "big") == 0
-    assert G.twist(r, REC_KNOB, 1) == 1 and G.own(r, 2) == mm.SRR_SIG | 1     # REC stays
+    assert G.twist(r, REC_KNOB, 1) == 1 and G.own(r, 2) == mm.SRR_SIG | 1  # REC stays
 
 
-# ---- the crossfade through a global mute ----------------------------------------------------------------------------
+# ---- the crossfade through a global mute
+# ----------------------------------------------------------------------------
 
 def rig(built):
     r = X.Rig(*built, entry="mix_amute")
@@ -183,7 +168,7 @@ def test_a_globally_muted_digital_holder_comes_in_with_its_crossfade(mix, old, h
     want[holder] = vols[holder] * x // 127
     assert shown == want and levels == want_levels
     a, b = X.mixed(mix, xf=xf, mutes=1 << holder | 1 << 5), X.mixed(old, xf=xf, mutes=1 << holder | 1 << 5)
-    assert a[0][5] == 0 == b[0][5] and a[0][holder] == want[holder] and b[0][holder] == 0     # another muted track stays muted
+    assert a[0][5] == 0 == b[0][5] and a[0][holder] == want[holder] and b[0][holder] == 0  # another muted track stays muted
 
 
 @pytest.mark.parametrize("holder", [8, 10])
@@ -209,7 +194,8 @@ def test_with_no_crossfade_it_is_the_phone_images_mixer(mix, old):
         assert X.mixed(mix, seed=k, xf=[0] * 12, **state) == X.mixed(old, seed=k, xf=[0] * 12, **state)
 
 
-# ---- the hits' steps ------------------------------------------------------------------------------------------------
+# ---- the hits' steps
+# ------------------------------------------------------------------------------------------------
 
 def loud(p):
     s, t = 0, 925
@@ -240,7 +226,8 @@ def test_the_scan_keeps_the_models_hits_by_the_new_steps(official, monkeypatch):
     print("trig: the drums' steps", [s for _, s, _ in got], "where the hits image's were", [s for _, s, _ in H.model(x)])
 
 
-# ---- the image ------------------------------------------------------------------------------------------------------
+# ---- the image
+# ------------------------------------------------------------------------------------------------------
 
 def test_the_image(official_path, official, main):
     quiet = lambda s: None
@@ -255,7 +242,7 @@ def test_the_image(official_path, official, main):
     assert mm.CAVE_TRIG2[0] <= syms["trig_turn"] < mm.CAVE_TRIG2[1]
     spans = [mm.CAVE_PAGE, mm.CAVE_PAGE2, mm.CAVE_PAGE3, mm.CAVE_PAGE4, mm.CAVE_PAGE5, mm.CAVE_PAGE6, mm.CAVE_PAGE7, mm.CAVE_PAGE8,
              mm.CAVE_PAGE9, mm.CAVE_PAGE10, mm.CAVE_TRIG, mm.CAVE_TRIG2, mm.CAVE, mm.CAVE_AMUTE, mm.CAVE_PROF, mm.CAVE_METER, mm.CAVE_REC,
-             (mm.MIX_CALL + 2, mm.MIX_CALL + 6),         # the recorder feed's code moved: the analog mute grew, the profile's run holds its helper
+             (mm.MIX_CALL + 2, mm.MIX_CALL + 6),  # the recorder feed's code moved: the analog mute grew, the profile's run holds its helper
              (mm.TRIG_CLASS, mm.TRIG_CLASS + 0x100), (mm.TRIG_SIDE + 8, mm.TRIG_SIDE + 12)] + [(a + 2, a + 6) for a, *_ in build_main.FIRST_SWAP]
     stray = [hex(mm.BASE + k) for k in range(len(new)) if new[k] != old[k] and not any(mm.off(a) <= k < mm.off(b) for a, b in spans)]
     assert stray == []

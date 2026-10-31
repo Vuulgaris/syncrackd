@@ -1,14 +1,4 @@
-"""The grain image (engine/sampler.h, GRAIN): the slscrub image with a stretch that holds together.
-
-
-a wide look for where a grain lines up, and heads locked onto the scan's hits and a loop's wall. Here:
-  - a low tone stretched half and twice: its level steady, where the slscrub image's goes up and down;
-  - decaying bursts stretched half: nothing of a burst before its time, one attack each, where the slscrub image's
-    come early and twice;
-  - at its own speed the stretched note is still the note;
-  - what eight stretched stereo voices cost, under SWARM's eight;
-  - a note not stretched, and the main CPU, the slscrub image's and the lock image's.
-Emulation only."""
+"""The grain image (engine/sampler.h, GRAIN): the slscrub image with a stretch that holds together."""
 
 import shutil
 
@@ -61,14 +51,15 @@ def bursts(n=N):
 
 
 def run(built, x, speed, blocks, word=None, settle=0):
-    """Track 0 on x once, stretched at `speed`; `settle` blocks of the scan first, so it has gone over the slot.
-    -> its output, and its place at each block's end."""
+    """Track 0 on x once, stretched at `speed`; `settle` blocks of the scan first, so it has gone over the slot. -> its
+    output, and its place at each block's end.
+    """
     e = P.engine(built, pool={0: x, 1: x})
     for slot, v in {SAMPLE: H.PK.knob_of(0), P.MODE: 0, P.TUNE: 64, LENGTH: 127, START: 0, LOOP: 0,
                     24: X.sent24(speed) if word is None else word}.items():
         e.set_slot(0, slot, v)
     e.set_note(0, 60)
-    for _ in range(settle):                     # the scan's blocks: the harness runs the voices only
+    for _ in range(settle):  # the scan's blocks: the harness runs the voices only
         e.mc.call(built[1]["hits_block"])
     st = e.voice(0) + ST
     out, place = [], []
@@ -86,10 +77,10 @@ def rms(y):
 def test_a_low_tone_stays_steady(before, engine, speed):
     ripple = []
     for built in (before, engine):
-        n = int(N * 2 ** ((64 - speed) / 32))      # how long the note is, stretched
+        n = int(N * 2 ** ((64 - speed) / 32))  # how long the note is, stretched
         y, place, _ = run(built, low(), speed, n // 32 + 8)
         mid = y[n // 6:n * 5 // 6]
-        env = np.array([rms(mid[i:i + 686]) for i in range(0, len(mid) - 686, 343)])   # 686: 70 Hz's period
+        env = np.array([rms(mid[i:i + 686]) for i in range(0, len(mid) - 686, 343)])  # 686: 70 Hz's period
         ripple.append(env.std() / env.mean())
     print("70 + 140 Hz at SPD %d: the level's spread %.3f before, %.3f now" % (speed, *ripple))
     assert ripple[1] < 0.04 and ripple[1] < ripple[0] / 3
@@ -97,10 +88,11 @@ def test_a_low_tone_stays_steady(before, engine, speed):
 
 def attacks(y, place):
     """Each burst as heard: (what came before its time against what follows, the most its level rises again after its
-    peak, frames from its time to its peak)."""
+    peak, frames from its time to its peak).
+    """
     out = []
     for h in HITS:
-        b = int(np.argmax(place >= h))              # the block its place reaches it in
+        b = int(np.argmax(place >= h))  # the block its place reaches it in
         t = 32 * b + int(32 * (h - place[b - 1]) / (place[b] - place[b - 1]))
         env = np.array([rms(y[i:i + 64]) for i in range(t - 32, t + 3000, 32)])
         p = int(np.argmax(env[:12]))
@@ -113,7 +105,7 @@ def test_bursts_stretched_half_come_once_and_on_time(before, engine):
     x = bursts()
     _, _, e = run(engine, x, 32, 1, settle=600)
     h = e.mc.read(0x44070000, 20)
-    assert int.from_bytes(h[12:16], "big") == N and h[19] == len(HITS)    # the scan's list: through the slot, five
+    assert int.from_bytes(h[12:16], "big") == N and h[19] == len(HITS)  # the scan's list: through the slot, five
     for built, fixed in ((before, False), (engine, True)):
         y, place, _ = run(built, x, 32, (2 * N) // 32 + 40, settle=600)
         a = attacks(y, place)
@@ -121,7 +113,7 @@ def test_bursts_stretched_half_come_once_and_on_time(before, engine):
         if fixed:
             assert all(pre < 0.05 and rise < 1.25 and -32 <= at <= 96 for pre, rise, at in a)
         else:
-            assert max(pre for pre, _, _ in a) > 0.2 or max(rise for _, rise, _ in a) > 1.5    # the fault, as it was
+            assert max(pre for pre, _, _ in a) > 0.2 or max(rise for _, rise, _ in a) > 1.5  # the fault, as it was
 
 
 def test_at_its_own_speed_and_pitch_it_is_still_the_note(engine):

@@ -1,10 +1,10 @@
 """Reads a profile take (the prof image, engine/prof.S) and says where the main CPU's time went.
 
-    python -m tools.prof_read the_take.wav [more.wav ...]
+python -m tools.prof_read the_take.wav [more.wav ...]
 
 The file is a take recorded on a sampler track whose SRC was SENDS, saved, and brought off with Transfer: 16-bit
-samples, each a word of the record, 32 words a block. It reads files and the official firmware file for names; it
-does not talk to the unit.
+samples, each a word of the record, 32 words a block. It reads files and the official firmware file for names; it does
+not talk to the unit.
 
 Two things come out. The interrupt's time is exact: its start and end by the chip's timer, every block. What it
 stopped is a sample, once a block and always at the same point of a block: code that runs right after the interrupt
@@ -56,7 +56,9 @@ def _stats(x, period):
 
 
 def times(r):
-    """The interrupt's parts in timer counts, for every block whose next block is in the take too. -> (period, {part: counts})."""
+    """The interrupt's parts in timer counts, for every block whose next block is in the take too. -> (period, {part:
+    counts}).
+    """
     a = np.nonzero((r["count"][1:] - r["count"][:-1]) & 0xffff == 1)[0]
     if not len(a):
         raise SystemExit("no two blocks in a row: not a profile take")
@@ -66,7 +68,7 @@ def times(r):
     parts = {"whole": d(r["exit"][b], r["entry"][a]), "before the mixer": d(r["mix_in"][a], r["entry"][a]),
              "the mixer and our links": d(r["mix_out"][a], r["mix_in"][a]), "the takes and the meter": d(r["fed"][b], r["mix_out"][a]),
              "after": d(r["exit"][b], r["fed"][b])}
-    if split(r):                                # the mixtime image: the first lap is stock's mixer's start, the sixth stack long its end
+    if split(r):  # the mixtime image: the first lap is stock's mixer's start, the sixth stack long its end
         s = [r["s%d" % k][a] for k in range(6)]
         for name, x, y in (("  to the wait: the first call, events and knobs", s[1], r["entry"][a]),
                            ("  the wait for the audio CPU", s[2], s[1]), ("  inputs, to our last call", s[3], s[2]),
@@ -74,13 +76,13 @@ def times(r):
                            ("  our links before stock's mixer", s[0], r["mix_in"][a]), ("  stock's mixer", s[5], s[0]),
                            ("  our links after it", r["mix_out"][a], s[5])):
             parts[name] = d(x, y)
-    elif laps(r):                               # the lap image: the way to the mixer in six parts
+    elif laps(r):  # the lap image: the way to the mixer in six parts
         s = [r["s%d" % k][a] for k in range(5)]
         for name, x, y in (("  to the routine's first call", s[0], r["entry"][a]), ("  events and knobs, to the wait", s[1], s[0]),
                            ("  the wait for the audio CPU", s[2], s[1]), ("  inputs, to our last call", s[3], s[2]),
                            ("  our transfers made whole", s[4], s[3]), ("  the FX level, to the mixer", r["mix_in"][a], s[4])):
             parts[name] = d(x, y)
-    if laps(r) and evlap(r):                    # the evtime tool: events and knobs in five, a lap not reached taken as the one before
+    if laps(r) and evlap(r):  # the evtime tool: events and knobs in five, a lap not reached taken as the one before
         dd = lambda x, y: (x - y).astype(np.uint32).astype(np.int64)
         lo, hi = r["s0"][a], r["s1"][a]
         width = dd(hi, lo)
@@ -92,7 +94,7 @@ def times(r):
         at.append(hi)
         for k, name in enumerate(EV_NAMES):
             parts["    " + name] = d(at[k + 1], at[k])
-    ok = parts["whole"] < 4 * period            # a block the mixer was not called in leaves old counts: left out
+    ok = parts["whole"] < 4 * period  # a block the mixer was not called in leaves old counts: left out
     for k in list(parts):
         ok &= parts[k] <= parts["whole"]
     return period, {k: v[ok] for k, v in parts.items()}, int(ok.sum()), len(a)
@@ -100,7 +102,8 @@ def times(r):
 
 def split(r):
     """Is this the mixtime image's record: the lap image's second to fifth readings before the mixer's call, the first
-    after it and the sixth stack long after that, both before the mixer stretch's end, in nine blocks of ten or more."""
+    after it and the sixth stack long after that, both before the mixer stretch's end, in nine blocks of ten or more.
+    """
     d = lambda x, y: (x - y).astype(np.uint32).astype(np.int64)
     span, out = d(r["mix_in"], r["entry"]), d(r["mix_out"], r["entry"])
     at = [d(r["s%d" % k], r["entry"]) for k in range(6)]
@@ -109,7 +112,7 @@ def split(r):
     return r["rows"] > 0 and np.count_nonzero(good) >= 0.9 * r["rows"]
 
 
-EV_FIELDS = ("sp", "pc", "s5", "task")         # the evtime tool's four laps, in order
+EV_FIELDS = ("sp", "pc", "s5", "task")  # the evtime tool's four laps, in order
 EV_NAMES = ("head, to the USB receive's clear", "the clear of 0x400 bytes", "the packets' read and after, to 0x4010d7a2",
             "the tracks' events, to 0x4011a4c0", "the sent block, the envelope, to the wait")
 
@@ -117,7 +120,8 @@ EV_NAMES = ("head, to the USB receive's clear", "the clear of 0x400 bytes", "the
 def evlap(r):
     """Is this the evtime tool's record: in nine blocks of ten or more at least one of the four laps lies between the
     events stretch's two ends, and none of them anywhere else but where the interrupt's start left a PC, a stack
-    pointer, a stack long or a task."""
+    pointer, a stack long or a task.
+    """
     d = lambda x, y: (x - y).astype(np.uint32).astype(np.int64)
     width = d(r["s1"], r["s0"])
     inside = [(d(r[n], r["s0"]) >= 0) & (d(r[n], r["s0"]) <= width) & (width < 1 << 24) for n in EV_FIELDS]
@@ -133,7 +137,8 @@ def ev_hits(r):
 
 def laps(r):
     """Is this the lap image's record: the first five stack longs are readings of the timer, in order, between the
-    interrupt's start and the mixer's call, in nine blocks of ten or more."""
+    interrupt's start and the mixer's call, in nine blocks of ten or more.
+    """
     d = lambda x, y: (x - y).astype(np.uint32).astype(np.int64)
     span = d(r["mix_in"], r["entry"])
     at = [d(r["s%d" % k], r["entry"]) for k in range(5)]
@@ -197,11 +202,11 @@ def report(r, code=None, top=12):
     out.append("What the interrupt stopped, by its level (0: a task): " + ", ".join(
         "%d: %.1f%%" % (k, 100.0 * np.count_nonzero(level == k) / r["rows"]) for k in sorted(set(level.tolist()))))
     out.append("")
-    if laps(r) and evlap(r):                    # the evtime tool: its record has no PC, stack or task to report
+    if laps(r) and evlap(r):  # the evtime tool: its record has no PC, stack or task to report
         out.append("The evtime tool: each lap's call made in %s of the blocks; no PC, stack or task in its record." %
                    ", ".join("%.0f%%" % h for h in ev_hits(r)))
         return "\n".join(out)
-    stacks = (np.zeros((r["rows"], 1), dtype=np.uint32) if split(r)       # the mixtime image: no stack long is left
+    stacks = (np.zeros((r["rows"], 1), dtype=np.uint32) if split(r)  # the mixtime image: no stack long is left
               else np.stack([r["s%d" % k] for k in (range(5, 6) if laps(r) else range(6))], axis=1))
     tasks = sorted(set(r["task"].tolist()), key=lambda t: -np.count_nonzero(r["task"] == t))
     out.append("By task (the running task's block), then the routines it was in and who called them:")

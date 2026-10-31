@@ -1,18 +1,4 @@
-"""The feed image: the ptn image with the record feed made cheap on the main CPU.
-
-The fault it is for: on the unit the screen, the lights and the keys drag with REC on, and only then. What REC on
-adds on the main CPU is the feed (engine/recfeed.c), inside the per-block interrupt. The feed image writes a block
-of a take with a routine of its own (engine/feed.S): no call a sample, no divide a sample, and what a take is chosen
-before the loop. What it has to be, and what is held here: the ptn image's feed to the bit. Both programs are run
-from their built images on the same blocks, one after another, and after every block the whole window, the meter's
-numbers, the page object stock's redraw request marks and the answer are compared; for the take itself also with
-the rule worked out here (tests/test_recorder.py, tests/test_gain.py). Then what a block costs, before and after.
-
-The page: a drawing asks which step is held once where it asked three times, and draws what the ptn image draws but
-FAIL, which is gone.
-
-Emulation only. The main CPU's load has never been measured on the unit: that the drag goes is not shown here.
-"""
+"""The feed image: the ptn image with the record feed made cheap on the main CPU."""
 import numpy as np
 import pytest
 from unicorn import UC_HOOK_CODE, UC_HOOK_MEM_READ, UC_HOOK_MEM_WRITE
@@ -36,7 +22,7 @@ from tools import mainmap as mm
 SOURCES = range(len(PLACE))
 P_REC = m.PARAM_KNOBS + 2 * m.K_REC
 BANK_BUSY = mm.CAVE_BANK[0] + 8
-FIFTH = (33, 12)                            # where the fifth place's value goes
+FIFTH = (33, 12)  # where the fifth place's value goes
 TOP32, LOW32 = 0x7fffffff, -0x80000000
 
 
@@ -59,8 +45,9 @@ def before(stock3):
 # ---- the two feeds, side by side ------------------------------------------------------------------------
 
 class Feed(GainFeed):
-    """The feed's rig, with the feed image's run loaded when the image has one, every access of the window noted, and
-    the divides that run counted (in the feed's runs: both images' whole feed)."""
+    """The feed's rig, with the feed image's run loaded when the image has one, every access of the window noted, and the
+    divides that run counted (in the feed's runs: both images' whole feed).
+    """
 
     def __init__(self, image, syms):
         super().__init__(image, syms)
@@ -81,7 +68,7 @@ class Feed(GainFeed):
         mc.uc.ctl_flush_tb()
 
     def _window(self, uc, access, address, size, value, user):
-        write = access == 17 or access & 1                      # UC_MEM_WRITE is 17, UC_MEM_READ 16
+        write = access == 17 or access & 1  # UC_MEM_WRITE is 17, UC_MEM_READ 16
         self.window.append((bool(write), address - mm.SHARED, size, value & (256 ** size - 1) if write else None))
 
     def _divide(self, uc, address, size, user):
@@ -89,7 +76,8 @@ class Feed(GainFeed):
 
     def marks(self):
         """Everything the feed keeps or leaves outside the window: the meter's numbers and the gain's, the page object
-        and its owner as stock's redraw request left them."""
+        and its owner as stock's redraw request left them.
+        """
         mc = self.mc
         return (bytes(mc.read(mm.METER_PAGE, mm.GAIN_VARS)), bytes(mc.read(FEED_PAGE, 0x200)), bytes(mc.read(OWNER, 0x100)))
 
@@ -114,7 +102,7 @@ def both(pair, block, frame, window=None, gains=None):
     assert after == was[1], "the window"
     assert access == was[3], "what is read and written in the window, in order"
     assert (ret, marks) == (was[0], was[2])
-    assert all(size in (2, 4) for _, _, size, _ in access)      # the window stores words: never a byte
+    assert all(size in (2, 4) for _, _, size, _ in access)  # the window stores words: never a byte
     return after
 
 
@@ -138,8 +126,9 @@ def picks(block):
 
 
 def spec(window, frame, n, db, stereo):
-    """The window after a block of a take, by the rule and not by either program: a mono take is half of the one
-    channel and half of the other on both sides, the gain is put on, each sample is made 16 bits with its own dither."""
+    """The window after a block of a take, by the rule and not by either program: a mono take is half of the one channel
+    and half of the other on both sides, the gain is put on, each sample is made 16 bits with its own dither.
+    """
     left, right = PLACE[n]
     one, two = frame[:, left].astype(np.int64), frame[:, right].astype(np.int64)
     if not stereo:
@@ -155,15 +144,16 @@ def spec(window, frame, n, db, stereo):
 
 
 def edges(db):
-    """Samples at every edge there is: nothing, the ends of 32 bits, the ends of 16 bits' halves, and the last
-    sample a gain takes whole and the first it does not, on both sides."""
+    """Samples at every edge there is: nothing, the ends of 32 bits, the ends of 16 bits' halves, and the last sample a
+    gain takes whole and the first it does not, on both sides.
+    """
     lim = 0x7fffffff // TABLE[db]
     out = [0, 1, -1, 255, 256, -256, -257, 0x7fff, 0x8000, 0xffff, 0x10000, -0x8000, -0x8001, -0x10000, -0x10001,
            TOP32, TOP32 - 1, TOP32 - 0x7fff, TOP32 - 0x8000, TOP32 - 0xffff, TOP32 - 0x10000, 0x7ffe8000, 0x7fff0000, 0x40000000, 0x3fffffff,
            LOW32, LOW32 + 1, LOW32 + 0x7fff, LOW32 + 0x8000, LOW32 + 0xffff, LOW32 + 0x10000, LOW32 + 0x17fff, LOW32 + 0x18000, -0x40000000, -0x40000001]
     for v in (lim - 1, lim, lim + 1, -lim + 1, -lim, -lim - 1):
         out += [v * 256, v * 256 + 255, v * 256 + 128]
-        out += [2 * v * 256, 2 * v * 256 + 511]                 # twice it: a mono take's half is at the edge
+        out += [2 * v * 256, 2 * v * 256 + 511]  # twice it: a mono take's half is at the edge
     return np.array([v for v in out if LOW32 <= v <= TOP32], dtype=np.int64)
 
 
@@ -175,7 +165,8 @@ def edge_frames(db, seed):
 
 def kinds(db, seed):
     """Blocks of every kind for one gain: noise at full scale, noise well under it, noise that just clips at this gain,
-    silence, each end of 32 bits on every sample, and samples at the edges."""
+    silence, each end of 32 bits on every sample, and samples at the edges.
+    """
     full = frames(seed=seed)
     yield full
     yield full >> 6
@@ -190,9 +181,8 @@ def kinds(db, seed):
 @pytest.mark.parametrize("stereo", [True, False])
 @pytest.mark.parametrize("db", range(TOP + 1))
 def test_every_gain_and_both_kinds_of_take_leave_what_the_ptn_images_feed_leaves(pair, db, stereo):
-    """Eight kinds of block, the window going from one to the next as on the unit: so the dither's number is each
-    block's own, and the ring goes round. A source and a track a block."""
-    window = start(pair, seq=(0xfffc + db) & 0xffff)                    # the counter goes through nought on the way
+    """A source and a track a block."""
+    window = start(pair, seq=(0xfffc + db) & 0xffff)  # the counter goes through nought on the way
     for k, frame in enumerate(kinds(db, 7 * db + stereo)):
         n, track = (5 * db + 3 * k + stereo) % len(PLACE), (db + k) % 8
         gains = [db if t == track else (db + 5 + t) % (TOP + 1) for t in range(8)]
@@ -205,7 +195,8 @@ def test_every_gain_and_both_kinds_of_take_leave_what_the_ptn_images_feed_leaves
 @pytest.mark.parametrize("n", SOURCES)
 def test_every_source(pair, n, stereo):
     """The main mix, the input, each track (one channel), the FX track, the delay and reverb: at 0 dB, at a gain that
-    clips some, and at the most."""
+    clips some, and at the most.
+    """
     window = start(pair)
     for k, db in enumerate((0, 9, TOP, 0, 17)):
         frame = frames(seed=20 + n + k) >> (k % 3) if k < 3 else edge_frames(db, n + k)
@@ -216,8 +207,9 @@ def test_every_source(pair, n, stereo):
 
 @pytest.mark.parametrize("db", [1, 6, 12, 13, 24])
 def test_a_sample_at_a_gains_limit_and_one_past_it(pair, db):
-    """The edge by itself, on a track's one channel: what the gain takes whole is the 24 bits times it, the next one
-    is the end of 32 bits, on either side of nought. Stereo, and mono with twice it so that its half is there."""
+    """The edge by itself, on a track's one channel: what the gain takes whole is the 24 bits times it, the next one is
+    the end of 32 bits, on either side of nought. Stereo, and mono with twice it so that its half is there.
+    """
     g, lim = TABLE[db], 0x7fffffff // TABLE[db]
     assert lim * g <= TOP32 < (lim + 1) * g
     vals = [lim * 256, lim * 256 + 255, (lim + 1) * 256, -lim * 256, -lim * 256 - 1, (-lim - 1) * 256, -lim * 256 + 255]
@@ -232,8 +224,9 @@ def test_a_sample_at_a_gains_limit_and_one_past_it(pair, db):
 
 
 def test_the_ends_of_32_bits_come_out_as_the_ends_of_16_whatever_the_dither(pair):
-    """Where the sum of a sample and its dither does not fit 32 bits: the new routine holds the sum, the old one held
-    the 16 bits after. 400 blocks of each end and of the samples next to them, every random number its own."""
+    """Where the sum of a sample and its dither does not fit 32 bits: the new routine holds the sum, the old one held the
+    16 bits after. 400 blocks of each end and of the samples next to them, every random number its own.
+    """
     for value, least, most in ((TOP32, 32767, 32767), (LOW32, -32768, -32767), (TOP32 - 0x10000, 32766, 32767), (LOW32 + 0x7fff, -32768, -32767)):
         frame = np.full((BLOCK, mm.FRAME_CH), value, dtype=np.int64).astype(np.int32)
         window, seen = start(pair), set()
@@ -253,11 +246,11 @@ def test_with_rec_off_nothing_is_written_by_either(pair):
     for t in range(12):
         b[STRIDE * t + P_REC:STRIDE * t + P_REC + 2] = bytes(2)
     assert picks(b) is None and both(pair, bytes(b), frame, window, [12] * 8) == window
-    assert not [a for a in pair[0].window if a[0]]              # no write at all
-    b[STRIDE * 3 + P_REC] = m.REC_LOCK_OFF                      # a step locked off on a track with REC on
+    assert not [a for a in pair[0].window if a[0]]  # no write at all
+    b[STRIDE * 3 + P_REC] = m.REC_LOCK_OFF  # a step locked off on a track with REC on
     b[STRIDE * 3 + P_MODE] |= REC
     assert picks(b) is None and both(pair, bytes(b), frame, window, [12] * 8) == window
-    other = bytearray(make_block([8] * 12, [REC] * 12))         # REC's bit on tracks that are not the sampler
+    other = bytearray(make_block([8] * 12, [REC] * 12))  # REC's bit on tracks that are not the sampler
     assert both(pair, bytes(other), frame, window, [12] * 8) == window
 
 
@@ -271,10 +264,10 @@ def test_of_two_tracks_with_rec_on_the_first_picks_the_source_the_gain_and_the_k
     assert picks(b) == 2
     after = both(pair, bytes(b), frame, window, gains)
     assert after == spec(window, frame, 9, 7, False)
-    b[STRIDE * 2 + P_MODE] = src(9)       # the first one's REC off: the second's take
+    b[STRIDE * 2 + P_MODE] = src(9)  # the first one's REC off: the second's take
     assert picks(b) == 5 and both(pair, bytes(b), frame, after, gains) == spec(after, frame, 1, 19, True)
     b[STRIDE * 7 + P_REC:STRIDE * 7 + P_REC + 2] = m.REC_WORD_ON.to_bytes(2, "big")
-    b[STRIDE * 5 + P_REC] = m.REC_LOCK_OFF                      # a step's REC: off on the one, on on a track whose REC is off
+    b[STRIDE * 5 + P_REC] = m.REC_LOCK_OFF  # a step's REC: off on the one, on on a track whose REC is off
     assert picks(b) == 7 and both(pair, bytes(b), frame, after, gains) == spec(after, frame, 0, 3, False)
 
 
@@ -323,7 +316,8 @@ def test_no_feed_while_the_audio_cpu_is_down_or_a_bank_is_loaded(pair):
 @pytest.mark.parametrize("shown", [0, 12, 24])
 def test_the_meter_goes_as_it_did_with_a_take_running_and_without(pair, shown):
     """300 blocks with the page on show: the level, the count of blocks, the drawings asked for, with the feed running
-    for some of them. And 300 more after its last drawing, where it stops."""
+    for some of them. And 300 more after its last drawing, where it stops.
+    """
     window = start(pair, page=FEED_PAGE, source=1, shown=shown)
     loud = frames(seed=9)
     asked = 0
@@ -333,12 +327,12 @@ def test_the_meter_goes_as_it_did_with_a_take_running_and_without(pair, shown):
         window = both(pair, block, frame, window, [shown] * 8 if k == 0 else None)
         if pair[0].asked:
             asked += 1
-            for r in pair:                                      # the page is drawn: its mark and its owner's are taken down
+            for r in pair:  # the page is drawn: its mark and its owner's are taken down
                 r.mc.write(FEED_PAGE + 20, bytes(1)), r.mc.write(OWNER + 32, bytes(1))
             if k < 300:
                 for r in pair:
                     r.mc.w32(mm.METER_QUIET, 0)
-    assert asked == 3 + 3 and pair[0].vars[2] == m.METER_STOP   # every 96 blocks while it is drawn, and three more after
+    assert asked == 3 + 3 and pair[0].vars[2] == m.METER_STOP  # every 96 blocks while it is drawn, and three more after
 
 
 # ---- what a block costs ---------------------------------------------------------------------------------
@@ -355,14 +349,15 @@ def cost(r, block, frame, gains, idle=None):
 
 
 CASES = {"0 dB STER": (0, True), "0 dB MONO": (0, False), "+12 dB STER": (12, True), "+12 dB MONO": (12, False)}
-WAS = {"0 dB STER": (3993, 0), "0 dB MONO": (4441, 0), "+12 dB STER": (4569, 64), "+12 dB MONO": (5017, 64)}     # the ptn image
-NOW = {"0 dB STER": (1126, 0), "0 dB MONO": (1285, 0), "+12 dB STER": (1515, 1), "+12 dB MONO": (1483, 1)}      # this one
-CEILING = 1800                              # a block of a take, whatever it is and whatever is in it (the heaviest found: 1,722)
+WAS = {"0 dB STER": (3993, 0), "0 dB MONO": (4441, 0), "+12 dB STER": (4569, 64), "+12 dB MONO": (5017, 64)}  # the ptn image
+NOW = {"0 dB STER": (1126, 0), "0 dB MONO": (1285, 0), "+12 dB STER": (1515, 1), "+12 dB MONO": (1483, 1)}  # this one
+CEILING = 1800  # a block of a take, whatever it is and whatever is in it (the heaviest found: 1,722)
 
 
 @pytest.mark.parametrize("case", CASES)
 def test_what_a_block_of_a_take_costs_before_and_after(pair, case):
-    """The first track records the main mix, noise that no gain here clips. Instructions the take adds, divides run."""
+    """The first track records the main mix, noise that no gain here clips. Instructions the take adds, divides run.
+    """
     db, stereo = CASES[case]
     new, old = pair
     block, frame = block_of(0, REC | (STEREO if stereo else 0)), frames(seed=2) >> 6
@@ -375,7 +370,8 @@ def test_what_a_block_of_a_take_costs_before_and_after(pair, case):
 @pytest.mark.parametrize("db", [0, 1, 12, 24])
 def test_the_ceiling_holds_for_the_heaviest_block_there_is(pair, db, stereo):
     """The last track records (the longest look through the tracks), and every sample is past the gain's limit on the
-    side that takes longest, or on the other, or noise at full scale."""
+    side that takes longest, or on the other, or noise at full scale.
+    """
     new, old = pair
     block = block_of(7, REC | src(15) | (STEREO if stereo else 0))
     worst = 0
@@ -387,7 +383,7 @@ def test_the_ceiling_holds_for_the_heaviest_block_there_is(pair, db, stereo):
         assert n < cost(old, block, frame, [db] * 8)[0] / 2.5
     assert worst <= CEILING
     if (db, stereo) == (1, True):
-        assert worst == 1722                                                # every sample past the limit below nought
+        assert worst == 1722  # every sample past the limit below nought
 
 
 def test_the_new_routine_has_no_call_and_one_divide_outside_its_loops(main):
@@ -404,7 +400,7 @@ def test_the_new_routine_has_no_call_and_one_divide_outside_its_loops(main):
     assert len(divides) == 1
     # every branch back is a loop's: four loops, and the divide is before the first of them
     back = [(at, int(text.split()[-1], 16)) for at, op, text in body if op[0] == "b" and op[1:3] in ("ne", "ra", "eq", "gt", "lt") and int(text.split()[-1], 16) < at]
-    loops = sorted({(to, at) for at, to in back if code[at - lo] == 0x66})         # bne: a block's end
+    loops = sorted({(to, at) for at, to in back if code[at - lo] == 0x66})  # bne: a block's end
     assert len(loops) == 4 and divides[0] < loops[0][0]
     assert names.count("satsl") == 8 and names.count("mulul") == 16 and names.count("mulsl") == 3
     # the window: one long read and one long written (the dither's number), words otherwise
@@ -454,9 +450,9 @@ def same_drawing(r, old):
 def test_the_fifth_place_is_blank_whatever_a_save_did(main, before, state):
     r, old = page(main, state), page(before, state)
     got, was = r.show(), old.show()
-    assert not [t for t in got if t[:2] == FIFTH]                           # nothing at all, FAIL neither
+    assert not [t for t in got if t[:2] == FIFTH]  # nothing at all, FAIL neither
     assert [t for t in was if t[:2] == FIFTH] == ([FIFTH + ("FAIL",)] if state == FAIL else [])
-    assert got == [t for t in was if t[:2] != FIFTH]                        # the rest of the page as it was, in its order
+    assert got == [t for t in was if t[:2] != FIFTH]  # the rest of the page as it was, in its order
     assert not [t for t in got if t[2] in ("SAVE", "BUSY", "DONE", "FAIL")]
     assert (r.dots == old.dots).all() and r.mc.r32(mm.SAVE_STATE) == state and not r.stray
 
@@ -474,7 +470,7 @@ def test_the_word_and_its_routine_are_not_in_the_image(main, before):
     assert not any(mm.SAVE_STATE.to_bytes(4, "big") in image[mm.off(lo):mm.off(hi)] for lo, hi in runs)
     assert any(mm.SAVE_STATE.to_bytes(4, "big") in old[mm.off(lo):mm.off(hi)] for lo, hi in runs)
     used = lambda built: sum(len(built[0][mm.off(lo):mm.off(hi)].rstrip(b"\x4e\x71")) for lo, hi in runs)
-    assert used(before) - used(main) >= 74                                  # FAIL's 74 bytes and more are room again
+    assert used(before) - used(main) >= 74  # FAIL's 74 bytes and more are room again
 
 
 @pytest.mark.parametrize("state", [IDLE, BUSY, DONE, FAIL])
@@ -497,7 +493,7 @@ def test_a_write_that_fails_leaves_the_takes_for_the_next_save_and_the_page_says
     audio = Takes(rig, takes)
     rig.serve(audio)
     rig.fail_at = fail_at
-    assert rig.ptn(MGR, 0, 1, 1, 1) == 1                                    # the pattern is saved all the same
+    assert rig.ptn(MGR, 0, 1, 1, 1) == 1  # the pattern is saved all the same
     assert rig.run() == 1 and rig.state == FAIL and audio.kept != set(takes)
     assert not [t for t in page(main, rig.state).show() if t[:2] == FIFTH]
     rig.fail_at = None
@@ -543,10 +539,10 @@ def test_a_drawing_is_the_ptn_images_dot_for_dot_and_word_for_word(main, before,
         r.twist(DEST_KNOB, 5 + track)
     r, old = rigs
     first = same_drawing(r, old)
-    assert (r.passes, old.passes) == (1, 3)                                 # which step is held: asked once, where it was thrice
-    assert len(r.read) < len(old.read)                                      # and MODE read once where it was twice
+    assert (r.passes, old.passes) == (1, 3)  # which step is held: asked once, where it was thrice
+    assert len(r.read) < len(old.read)  # and MODE read once where it was twice
     assert r.ours < old.ours
-    for q in rigs:                                                          # the meter moves and a second drawing follows
+    for q in rigs:  # the meter moves and a second drawing follows
         q.mc.w32(mm.METER_LEVEL, 20000)
     assert same_drawing(r, old)["dots"] != first["dots"]
 
@@ -558,7 +554,7 @@ def test_what_a_drawing_costs_of_ours_before_and_after(main, before):
     assert (old.ours, r.ours) == DRAW and old.ours - r.ours > 1800
 
 
-DRAW = (4376, 1861)                         # instructions of ours a drawing, the ptn image's and this one's
+DRAW = (4376, 1861)  # instructions of ours a drawing, the ptn image's and this one's
 
 
 def test_the_pages_knobs_are_the_ptn_images_turn_for_turn(main, before):
@@ -567,23 +563,23 @@ def test_the_pages_knobs_are_the_ptn_images_turn_for_turn(main, before):
                         (TAKE_KNOB, 1), (8, 2), (SAVE_KNOB, 1)):
         assert r.twist(knob, steps) == old.twist(knob, steps) and (r.mode, r.dest, r.gains, r.box) == (old.mode, old.dest, old.gains, old.box)
         assert r.show() == old.show()
-    for q in (r, old):                                                      # and with steps held: locks made and moved
+    for q in (r, old):  # and with steps held: locks made and moved
         q.hold(4, 17)
     for knob, steps in ((REC_KNOB, 1), (TAKE_KNOB, 1), (SRC_KNOB, 2), (REC_KNOB, -1), (GAIN_KNOB, 3)):
         assert r.twist(knob, steps) == old.twist(knob, steps) and (r.mode, r.locks, r.locked, r.rec_locks) == (old.mode, old.locks, old.locked, old.rec_locks)
         assert r.show() == old.show()
     assert r.changes == old.changes and r.stray == old.stray and not r.saves and not old.saves
-    r.mc.w32(PAGE + mm.PAGE_INDEX, 0), old.mc.w32(PAGE + mm.PAGE_INDEX, 0)              # the first page is stock's and the stops image's
+    r.mc.w32(PAGE + mm.PAGE_INDEX, 0), old.mc.w32(PAGE + mm.PAGE_INDEX, 0)  # the first page is stock's and the stops image's
     assert r.twist(SAVE_KNOB, 1) == old.twist(SAVE_KNOB, 1) == r.turn_answer and r.show() == old.show()
 
 
 # ---- the image ------------------------------------------------------------------------------------------
 
-# the feed's three runs and its new one; the page's first three, and its sixth for one operand (the turn of SMPL goes on
-# to the page's own turn, which is ten bytes down)
+# the feed's three runs and its new one; the page's first three, and its sixth for one operand (the turn of SMPL goes
+# on to the page's own turn, which is ten bytes down)
 RUNS = [mm.CAVE_AMUTE, mm.CAVE_REC, mm.CAVE_METER, mm.CAVE_FEED, mm.CAVE_PAGE, mm.CAVE_PAGE2, mm.CAVE_PAGE3, mm.CAVE_PAGE6]
-# the operands of the two calls that name a routine in the run the old feed's gain routine left: a muted track's trigs and a
-# step's REC. Both routines are 116 bytes up
+# the operands of the two calls that name a routine in the run the old feed's gain routine left: a muted track's trigs
+# and a step's REC. Both routines are 116 bytes up
 POINTERS = (mm.TRIG_MUTE, mm.HOLD_WRITE)
 
 
@@ -593,7 +589,7 @@ def test_the_main_program_is_the_ptn_images_but_for_its_declared_places(main, be
     diff = [k for k in range(len(stock3)) if image[k] != old[k]]
     spans = RUNS + [(a + 2, a + 6) for a in POINTERS]
     assert diff and all(any(mm.off(s) <= k < mm.off(e) for s, e in spans) for k in diff)
-    for s, e in spans:                                                      # and each of them did change
+    for s, e in spans:  # and each of them did change
         assert image[mm.off(s):mm.off(e)] != old[mm.off(s):mm.off(e)], hex(s)
     for lo, hi in (mm.CAVE, mm.CAVE_KEEP, mm.CAVE_BANK, mm.CAVE_PAGE4, mm.CAVE_PAGE5, mm.CAVE_SOLO, mm.CAVE_RIGHT, mm.CAVE_HALVES, mm.CAVE_TEXT):
         assert image[mm.off(lo):mm.off(hi)] == old[mm.off(lo):mm.off(hi)]

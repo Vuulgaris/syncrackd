@@ -1,14 +1,4 @@
-"""The wipe image (engine/phone.c, WIPE): the newproj image with the unit emptying the slots the phone names.
-
-On the unit (2026-10-27, the phone app's log) the phone's clear and every write after it went unanswered while NEW
-PROJECT's job waited on the phone, its reads served; then the unit stayed on INITIALIZING PROJECT. 
-Here, with stock's routines
-around it played (test_phone's rig):
-  - 0x6A while a job waits: the slots to empty, given to the wait as the done frame's are; not while none waits;
-  - NEW PROJECT: after the wait each named slot's first sector is written with zeros, the headers read again, then the
-    slots loaded; LOAD PROJECT the same before the load, but only on the bank the phone was asked about;
-  - the image: the newproj image's but for the phone's runs, the new runs and the SysEx entry.
-Emulation only."""
+"""The wipe image (engine/phone.c, WIPE): the newproj image with the unit emptying the slots the phone names."""
 import shutil
 
 import pytest
@@ -34,12 +24,12 @@ def rig(built, project_bank=2, now=0, answer=True):
     """The phone's 0x6A comes while the job waits (the wait's stub puts what wipe_sysex would)."""
     r = F.rig(built, now_project=9, project_bank=project_bank, now=now)
     mc = r.mc
-    mc.map(0x4d94f000, 0x1000)                  # the zeros' place: keeptakes.c's SLOT_AT
+    mc.map(0x4d94f000, 0x1000)  # the zeros' place: keeptakes.c's SLOT_AT
     r.stub(mm.PROJECT_MAKE, lambda m, p: r.log.append(("make",)))
     r.stub(r.syms["new_slots"], lambda: r.log.append(("slots", mc.r32(r.syms["phone_mask"]), mc.r32(r.syms["phone_mask"] + 4))))
     r.stub(STORE_WRITE, lambda store, sector, n, src: r.log.append(("zero", sector, n, mc.read(src, n) == bytes(n))) or 0)
 
-    def wait(sem):                              # (the rig's own hook on the wait logs it)
+    def wait(sem):  # (the rig's own hook on the wait logs it)
         if answer:
             mc.w32(r.syms["phone_mask"], MASK & 0xffffffff)
             mc.w32(r.syms["phone_mask"] + 4, MASK >> 32)
@@ -100,7 +90,7 @@ def test_load_project_empties_them_before_the_load_on_the_bank_asked_about(wipe)
 
 
 def test_load_project_onto_another_bank_empties_nothing(wipe):
-    r = rig(wipe, project_bank=2, now=0)        # the wait on bank 2, the drive put back on 0 before the load
+    r = rig(wipe, project_bank=2, now=0)  # the wait on bank 2, the drive put back on 0 before the load
     r.log.clear()
     assert r.mc.call(r.syms["fresh_load"], 0x1234, 5, 0x5678) == 7
     assert "zero" not in [e[0] for e in r.log] and r.log[-1][0] == "load" and r.var("wipe_on") == 0

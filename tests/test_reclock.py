@@ -1,31 +1,4 @@
-"""The "reclock" image: a step's REC is a lock of its own, not a lock of MODE.
-
-
-REC, SRC and the
-stereo switch are three bits of the one MODE parameter, and a lock holds a parameter's whole
-value: locking REC on a step froze that step's stereo switch and source as they stood.
-
-The unit keeps a lock for each of 71 knob slots of a track, with or without a knob behind the
-slot, and plays whatever locks a step has (read in the listing, and run here). Slot 24 has no knob
-on a digital track. So a step's REC is a lock there, at one of two marks, and anything else in the
-slot leaves the track's own REC, the bit of MODE, to decide.
-
-Three pieces, each emulated on its own:
-
-  the page (engine/recpage.c built with RECLOCK): our routines on a page object of the test's,
-    with **the stock routines that read, make and remove a lock by slot run as they are** on a
-    lock table laid out the way they index it, and then stock's own routine that gathers a step's
-    locks into an event and the one that applies an event's locks, run as they are, to see the
-    word arrive where the audio CPU is sent it from. Played by the test, as in tests/test_page.py:
-    the holder's methods for MODE, the steps' trigs, the keys object.
-  the sound engine (engine/sampler.c built with RECLOCK), inside the real voice loop hook.
-  the feed (engine/recfeed.c built with RECLOCK), with the mixer stubbed.
-
-Not emulated: the routine between the two, which builds the block the audio CPU is sent and
-smooths every word on the way (its arithmetic does not run here, docs/FINDINGS.md); what slot 24
-holds on a track of the unit that has no lock (anything but the two marks leaves REC as it was);
-whether a lock on that slot is saved with a pattern; the unit.
-"""
+"""The "reclock" image: a step's REC is a lock of its own, not a lock of MODE."""
 import shutil
 
 import numpy as np
@@ -50,15 +23,14 @@ SLOT = m.K_REC
 ON, OFF = m.REC_WORD_ON, m.REC_WORD_OFF
 NONE = 0xFFFF
 MODE = 23
-P_REC = m.PARAM_KNOBS + 2 * SLOT            # where slot 24 is in a track's 142 bytes
+P_REC = m.PARAM_KNOBS + 2 * SLOT  # where slot 24 is in a track's 142 bytes
 # knob ids on the pages, as a turn names them
 SRC_KNOB, REC_KNOB, MODE_KNOB = 1, 3, 6
-# the lock table as stock indexes it: 9287 bytes a track at an odd address, as on the unit (the pattern's data + 15301)
 TABLE_AT, TABLE = 0x41100000, 0x41100001
 PATTERN_OBJ, PATTERN_METHODS, DATA_FN, NOTIFY_FN = HEAP + 0xc000, HEAP + 0xc100, HEAP + 0xc200, HEAP + 0xc210
-LOCKS, WORDS = HEAP + 0xd000, HEAP + 0xd400     # an event's locks; the words LOCKS_APPLY writes
-FILTER, LOCKED = 0x8000e9b0, 0x4550f1cc         # stock's: the smoothing's state, a long a word; which slots of a track hold a lock
-NOTE = 0x401c48cc                               # what stock tells the pattern's listeners of a lock made or removed
+LOCKS, WORDS = HEAP + 0xd000, HEAP + 0xd400  # an event's locks; the words LOCKS_APPLY writes
+FILTER, LOCKED = 0x8000e9b0, 0x4550f1cc  # stock's: the smoothing's state, a long a word; which slots of a track hold a lock
+NOTE = 0x401c48cc  # what stock tells the pattern's listeners of a lock made or removed
 
 
 @pytest.fixture(scope="module")
@@ -104,8 +76,8 @@ class LockRig(Rig):
         mc.map(TABLE_AT, 0x20000)
         mc.map(FILTER & ~0xFFF, 0x2000)
         mc.map(LOCKED & ~0xFFF, 0x1000)
-        mc.write(TABLE, ((b"\xff\xff" * 71 + bytes(2)) * 64 + bytes(71)) * 13)     # no lock anywhere
-        mc.w32(STEPS + 44, PATTERN_OBJ)                     # the steps object: its pattern, and which track it is
+        mc.write(TABLE, ((b"\xff\xff" * 71 + bytes(2)) * 64 + bytes(71)) * 13)  # no lock anywhere
+        mc.w32(STEPS + 44, PATTERN_OBJ)  # the steps object: its pattern, and which track it is
         mc.w32(STEPS + 56, track)
         mc.w32(PATTERN_OBJ, PATTERN_METHODS)
         mc.w32(PATTERN_METHODS + 40, DATA_FN)
@@ -161,7 +133,7 @@ class LockRig(Rig):
 
 def page_rig(main, track=0, **kw):
     r = LockRig(main, {track: SAMPLER}, track=track, index=1, **kw)
-    r.mc.w32(0x40196aba, 0), r.mc.w32(0x40196abe, 0)        # the bank numbers the page also draws
+    r.mc.w32(0x40196aba, 0), r.mc.w32(0x40196abe, 0)  # the bank numbers the page also draws
     return r
 
 
@@ -171,16 +143,17 @@ def test_rec_with_a_step_held_makes_a_lock_on_slot_24_and_none_of_mode(main, tra
     r = page_rig(main, track=track, mode=mode)
     r.hold(5)
     assert r.twist(REC_KNOB, 1) == 1
-    assert r.rec_locks == {5: ON} and not r.others          # the step's REC, in stock's own table, for this track only
-    assert not r.locks and not r.locked and not r.changes and r.mode == mode    # no lock of MODE, and the track is as it was
-    assert r.count(5) == 1                                  # stock counts it among the step's locks
-    assert r.notes[0] == (NOTE, SLOT, track)                # and tells the pattern's listeners, as for any lock
-    assert r.edited and r.done and not r.stray              # the keys object is told, so letting go does not take the trig
+    assert r.rec_locks == {5: ON} and not r.others  # the step's REC, in stock's own table, for this track only
+    assert not r.locks and not r.locked and not r.changes and r.mode == mode  # no lock of MODE, and the track is as it was
+    assert r.count(5) == 1  # stock counts it among the step's locks
+    assert r.notes[0] == (NOTE, SLOT, track)  # and tells the pattern's listeners, as for any lock
+    assert r.edited and r.done and not r.stray  # the keys object is told, so letting go does not take the trig
 
 
 def test_stocks_own_routines_read_it_back_and_play_it(main):
-    """The lock is read by stock's routine for a slot; the routine that gathers a step's locks for an event finds it;
-    and the one that applies an event's locks puts it in slot 24's word of the track, and in the smoothing's state."""
+    """The lock is read by stock's routine for a slot; the routine that gathers a step's locks for an event finds it; and
+    the one that applies an event's locks puts it in slot 24's word of the track, and in the smoothing's state.
+    """
     track = 3
     r = page_rig(main, track=track)
     r.hold(9)
@@ -193,18 +166,18 @@ def test_stocks_own_routines_read_it_back_and_play_it(main):
     assert mc.r32(LOCKS + 8) == 1 and bytes(mc.read(LOCKS + 20, 4)) == SLOT.to_bytes(2, "big") + ON.to_bytes(2, "big")
     mc.write(WORDS, bytes(0x800))
     mc.call(mm.LOCKS_APPLY, track, LOCKS, WORDS)
-    place = STRIDE * track + P_REC                          # where the block the audio CPU is sent has slot 24 of the track
+    place = STRIDE * track + P_REC  # where the block the audio CPU is sent has slot 24 of the track
     words = bytes(mc.read(WORDS, 0x800))
     assert words[place:place + 2] == ON.to_bytes(2, "big") and words.count(0) == 0x800 - 2
-    assert mc.r32(FILTER + 2 * place) == ON << 16           # at once, not smoothed toward
-    assert mc.r32(LOCKED + 12 * track) == 1 << SLOT         # and marked to be put back at the track's next event
-    assert P_REC == 0x4c                                    # the word the audio CPU's voice loop copies into the hold flag
+    assert mc.r32(FILTER + 2 * place) == ON << 16  # at once, not smoothed toward
+    assert mc.r32(LOCKED + 12 * track) == 1 << SLOT  # and marked to be put back at the track's next event
+    assert P_REC == 0x4c  # the word the audio CPU's voice loop copies into the hold flag
 
 
 def test_the_step_is_given_no_lock_when_it_is_to_do_what_the_track_does(main):
     r = page_rig(main, mode=MONO)
     r.hold(5)
-    r.twist(REC_KNOB, -1)                                   # the track's REC is off, and so is this
+    r.twist(REC_KNOB, -1)  # the track's REC is off, and so is this
     assert not r.rec_locks and not r.table_writes and not r.locked
     r = page_rig(main, mode=REC)
     r.hold(5)
@@ -216,11 +189,11 @@ def test_turning_it_back_takes_the_lock_away(main):
     r = page_rig(main)
     r.hold(5)
     r.twist(REC_KNOB, 1)
-    r.twist(REC_KNOB, 3)                                    # again: the same lock
+    r.twist(REC_KNOB, 3)  # again: the same lock
     assert r.rec_locks == {5: ON} and r.count(5) == 1
     r.twist(REC_KNOB, -1)
     assert not r.rec_locks and r.count(5) == 0 and not r.others
-    assert r.notes[-1] is None or r.notes[-2] == (NOTE, SLOT, 0)    # stock told the listeners of the removal too
+    assert r.notes[-1] is None or r.notes[-2] == (NOTE, SLOT, 0)  # stock told the listeners of the removal too
     assert not r.locks and not r.changes and not r.stray
 
 
@@ -236,10 +209,10 @@ def test_on_a_track_in_record_a_step_can_be_locked_off(main):
 def test_every_held_step_gets_its_own_and_a_step_with_no_trig_gets_one_first(main):
     r = page_rig(main)
     r.hold(2, 3, 40)
-    r.trigs = {2, 40}                                       # step 3 is held with no trig on it
+    r.trigs = {2, 40}  # step 3 is held with no trig on it
     r.twist(REC_KNOB, 1)
     assert r.rec_locks == {2: ON, 3: ON, 40: ON}
-    assert r.locked == [("trig", 3, 0)] and r.trigs == {2, 3, 40}   # as stock does before it makes a lock
+    assert r.locked == [("trig", 3, 0)] and r.trigs == {2, 3, 40}  # as stock does before it makes a lock
     assert [r.count(s) for s in (2, 3, 40)] == [1, 1, 1]
     r.hold(3)
     r.twist(REC_KNOB, -1)
@@ -268,16 +241,16 @@ def test_the_page_shows_the_held_steps_rec_and_the_tracks_otherwise(main):
     assert r.rec() == "OFF"
     r.hold(5)
     r.twist(REC_KNOB, 1)
-    assert r.rec() == "ON"                                  # the held step's
+    assert r.rec() == "ON"  # the held step's
     r.hold()
-    assert r.rec() == "OFF"                                 # the track's
+    assert r.rec() == "OFF"  # the track's
     r.hold(6)
-    assert r.rec() == "OFF"                                 # a step with no lock: the track's
+    assert r.rec() == "OFF"  # a step with no lock: the track's
     r.mode = REC
     assert r.rec() == "ON"
     r.put(6, OFF)
     assert r.rec() == "OFF"
-    r.put(6, 0x1234)                                        # not one of the two marks: the track's
+    r.put(6, 0x1234)  # not one of the two marks: the track's
     assert r.rec() == "ON"
     assert not r.stray
 
@@ -312,8 +285,9 @@ def test_a_turn_of_the_tracks_rec_or_src_goes_into_every_lock_of_mode(main, knob
 
 
 def test_a_lock_of_mode_made_by_the_build_before_stops_being_a_lock_of_rec(main):
-    """What is on the unit now: a step whose REC was locked has a lock of MODE with the record bit in it. One turn of
-    the track's REC and back, and it is a lock of the stereo switch as it stood, saying what the track says."""
+    """One turn of the track's REC and back, and it is a lock of the stereo switch as it stood, saying what the track
+    says.
+    """
     r = page_rig(main, mode=MONO)
     r.locks, r.trigs = {4: REC, 8: REC | EXT | STEREO}, {4, 8}
     r.twist(REC_KNOB, 1)
@@ -334,14 +308,14 @@ def test_a_track_that_is_no_sampler_any_more_loses_its_rec_locks(main, machine):
     r = LockRig(main, {2: machine}, track=2, index=0)
     for step, word in ((1, ON), (40, OFF), (63, ON), (7, 0x1000)):
         r.put(step, word)
-    r.put(1, 0x3300, slot=20)                               # a lock of something else on the same step
+    r.put(1, 0x3300, slot=20)  # a lock of something else on the same step
     r.table_writes = []
     r.show()
-    assert r.rec_locks == {7: 0x1000}                       # ours are gone; a value that is not ours is not touched
+    assert r.rec_locks == {7: 0x1000}  # ours are gone; a value that is not ours is not touched
     assert r.lock_at(1, 20) == 0x3300 and not r.stray
     r.table_writes = []
     r.show()
-    assert not r.table_writes                               # and nothing more is done once they are
+    assert not r.table_writes  # and nothing more is done once they are
 
 
 @pytest.mark.parametrize("track, machine", [(2, MIDI), (8, 20), (11, 30), (12, 0xFFFFFFFF), (2, SAMPLER)])
@@ -389,8 +363,8 @@ def test_a_step_locked_off_plays_though_the_tracks_rec_is_on(audio):
     word(e, 4, OFF)
     data = noise(14, 4)
     out = np.concatenate([fed(e, data[b], trig=0b10000 if b == 0 else 0, release=0b10000 if b == 10 else 0) for b in range(14)], axis=1)
-    assert np.any(out[4])                                   # it plays the sample SMPL is on
-    assert all(slot_entry(e, k)[1] != m.REC_BASE + m.REC_STRIDE * k for k in range(m.SLOTS))    # and nothing is taped over
+    assert np.any(out[4])  # it plays the sample SMPL is on
+    assert all(slot_entry(e, k)[1] != m.REC_BASE + m.REC_STRIDE * k for k in range(m.SLOTS))  # and nothing is taped over
 
 
 @pytest.mark.parametrize("value", [0, 0x0100, 0x7f00, 0x5180, 0x51ff, 0x5300, 0x2880, 0x2a00, 0x8000, 0xffff])
@@ -486,7 +460,7 @@ def test_what_it_costs_on_the_audio_cpu(audio, floor):
     assert (count(audio, False) - count(floor, False), count(audio, True) - count(floor, True)) == COST
 
 
-COST = (112, 208)           # eight voices: 14 instructions a voice a block for the test, 12 more where a note starts
+COST = (112, 208)  # eight voices: 14 instructions a voice a block for the test, 12 more where a note starts
 
 
 # ---- the feed --------------------------------------------------------------------------------------
@@ -533,9 +507,9 @@ def test_the_first_track_in_record_by_either_way_picks_the_source(rig):
     frame = frames()
     window = junk(0x0105)
     _, after = rig.run(block([0, REC, EXT, 0, REC] + [0] * 7, {1: OFF, 2: ON}), frame, window)
-    assert after == fed_from(window, frame, mm.F_EXT_L)     # track 2 is locked off, track 3 on: its source is the external input
+    assert after == fed_from(window, frame, mm.F_EXT_L)  # track 2 is locked off, track 3 on: its source is the external input
     _, after = rig.run(block([0, REC, EXT, 0, REC] + [0] * 7, {1: OFF, 2: OFF}), frame, window)
-    assert after == fed_from(window, frame, mm.F_MAIN_L)    # then track 5, by its own REC
+    assert after == fed_from(window, frame, mm.F_MAIN_L)  # then track 5, by its own REC
 
 
 def test_a_mark_on_a_track_that_is_no_sampler_feeds_nothing(rig):

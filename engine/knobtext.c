@@ -1,43 +1,38 @@
-/* Main CPU (section 3, OS 1.42 only): what SMPL, LOOP and MODE read on screen.
- * The "screen" image only.
+/* Main CPU (section 3, OS 1.42 only): what SMPL, LOOP and MODE read on screen. The "screen" image only.
  *
- * A knob's value is turned into text by a function object in the display table
- * (tools/uitable.py), called as (the object, the value in 8.8, where to write).
- * Stock has one for the sample selectors: it shows the name of the slot the knob
- * is on, or NO SAMPLE. It does not know MODE, so with a stereo sample on slots
- * 2n-1 and 2n it shows slot n.
+ * A knob's value is turned into text by a function object in the display table (tools/uitable.py), called as (the
+ * object, the value in 8.8, where to write). Stock has one for the sample selectors: it shows the name of the slot
+ * the knob is on, or NO SAMPLE. It does not know MODE, so with a stereo sample on slots 2n-1 and 2n it shows slot n.
  *
- * knob_text takes that function's place in its object, and the build points
- * LOOP's and MODE's text at the same object. Which knob it is asked about it
- * reads from the object's address: the copy in the table's entry for the record.
+ * knob_text takes that function's place in its object, and the build points LOOP's and MODE's text at the same
+ * object. Which knob it is asked about it reads from the object's address: the copy in the table's entry for the
+ * record.
  *
- *   SMPL  when MODE counts stereo samples (PAIRS): the name of the left slot,
- *         2n-1, through the stock function, without a last " L", "_L", "-L" or
- *         ".L". Past 32 there is no stereo sample: NO SAMPLE. Otherwise stock's
- *         text, untouched.
- *   LOOP  OFF, FWD, PING.
- *   MODE  MONO, STEREO, REC MAIN, REC EXT, CHAIN, ST CHAIN.
- *         Built with PAGE (the page image), where MODE's value is three switches
- *         and record and its source have knobs on the sampling page: MONO or
- *         STEREO, from the value's lowest bit, whatever the others say.
- *         Built with METER too (the meter image), where the source is a number
- *         in the same value: the same two words, up to 63.
+ * SMPL  when MODE counts stereo samples (PAIRS): the name of the left slot,
+ * 2n-1, through the stock function, without a last " L", "_L", "-L" or
+ * ".L". Past 32 there is no stereo sample: NO SAMPLE. Otherwise stock's
+ * text, untouched.
+ * LOOP  OFF, FWD, PING.
+ * MODE  MONO, STEREO, REC MAIN, REC EXT, CHAIN, ST CHAIN.
+ * Built with PAGE (the page image), where MODE's value is three switches
+ * and record and its source have knobs on the sampling page: MONO or
+ * STEREO, from the value's lowest bit, whatever the others say.
+ * Built with METER too (the meter image), where the source is a number
+ * in the same value: the same two words, up to 63.
  *
- * MODE is read the way the page reads any knob it draws: the manager's routine
- * gives the object that holds the active track's values, and that object's
- * method gives the value (the page's own getter, 0x40037f40 on, does the same
- * with the record it is drawing).
+ * MODE is read the way the page reads any knob it draws: the manager's routine gives the object that holds the active
+ * track's values, and that object's method gives the value (the page's own getter, 0x40037f40 on, does the same with
+ * the record it is drawing).
  *
- * An object that is not one of the table's, or a value out of range, gets what
- * stock would have shown: the slot's name, or the number.
+ * An object that is not one of the table's, or a value out of range, gets what stock would have shown: the slot's
+ * name, or the number.
  *
- * Built with AUTO (the mode image) SMPL always counts the 32 samples, whatever MODE
- * says: a sample is mono or stereo by what its slots hold (engine/sampler.h), and a
- * mono one is its first slot. MODE has no knob on the first page there.
+ * Built with AUTO (the mode image) SMPL always counts the 32 samples, whatever MODE says: a sample is mono or stereo
+ * by what its slots hold (engine/sampler.h), and a mono one is its first slot. MODE has no knob on the first page
+ * there.
  *
- * Built with PACK (the pack image) SMPL past 32 is no longer nothing: 33 to 64 are the
- * slots of those numbers, each a mono sample, and read the slot's own name, whole.
- */
+ * Built with PACK (the pack image) SMPL past 32 is no longer nothing: 33 to 64 are the slots of those numbers, each a
+ * mono sample, and read the slot's own name, whole. */
 #define RECORDER
 #include "sampler.h"
 

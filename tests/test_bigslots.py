@@ -1,11 +1,4 @@
-"""The "big" image: sample slots of 1 MB. Section 3, OS 1.42.
-
-The main CPU's own routines, patched, run here against a drive that is a Python
-dictionary: the three routines that touch the real drive are replaced by
-stubs that read and record. What is shown is where the patched code looks and
-what it accepts. Nothing here says how the unit's drive behaves in the part
-stock never wrote, or how the boot exchange with the audio CPU goes.
-"""
+"""The "big" image: sample slots of 1 MB. Section 3, OS 1.42."""
 import shutil
 
 import numpy as np
@@ -21,15 +14,15 @@ from tools import fw
 pytestmark = pytest.mark.skipif(not shutil.which("m68k-elf-gcc"), reason="no ColdFire cross-compiler")
 
 SLOTS = 64
-SECTORS = build_main.BIG_SLOT_SECTORS                      # 2048 a slot
-MAX_FRAMES = build_main.BIG_SLOT_MAX_BYTES // 2            # 524,256
+SECTORS = build_main.BIG_SLOT_SECTORS  # 2048 a slot
+MAX_FRAMES = build_main.BIG_SLOT_MAX_BYTES // 2  # 524,256
 FIRST, END = mm.SAMPLE_SECTOR0, mm.SAMPLE_SECTOR0 + SLOTS * SECTORS
 STORE, SCRATCH = 0x41000000, 0x41080000
 HEADER_READ, RENAME = 0x401132ec, 0x40111ed4
-ROOM = SLOTS * (4 + 2 * mm.SAMPLE_MAX_FRAMES)              # what stock could stage after marker and length
+ROOM = SLOTS * (4 + 2 * mm.SAMPLE_MAX_FRAMES)  # what stock could stage after marker and length
 # where the arithmetic of the routines we cannot run whole is run by itself: (start, stop)
 SNIP_RENAME = (0x40111f52, 0x40111f64)
-SNIP_ROUTE = (0x400b9ed0, 0x400b9f20)                      # right after its moveq #8,d1: that address ends the snippet below
+SNIP_ROUTE = (0x400b9ed0, 0x400b9f20)  # right after its moveq #8,d1: that address ends the snippet below
 SNIP_ROUTE_SIZE = (0x400b9eb6, 0x400b9ece)
 SNIP_LIST_SIZE = (0x400ba1c2, 0x400ba1dc)
 
@@ -60,20 +53,20 @@ class Rig:
         mc = self.mc = Machine()
         mc.map(0x40000000, 0x800000)
         mc.map(STORE, 0x100000)
-        mc.map(0x4d800000, 0x2200000)                      # the pool's block and its neighbours
+        mc.map(0x4d800000, 0x2200000)  # the pool's block and its neighbours
         mc.write(mm.BASE, image)
         mc.set_stack(0x407ff000, 0x40000100)
         mc.set_exits([0x40000100] + [s[1] for s in (SNIP_RENAME, SNIP_ROUTE, SNIP_ROUTE_SIZE, SNIP_LIST_SIZE)])
         self.drive, self.reads = {}, []
         self.stub(mm.DRIVE_READ, lambda sector, n, dest: self.read(sector, n, dest))
         self.stub(mm.STORE_READ, lambda store, sector, n, dest, ctx: self.read(sector, n, dest))
-        for addr in (0x4016e92e, 0x4016e954, 0x4016dc10, 0x40111216):     # the lock, a callback's end, a notice
+        for addr in (0x4016e92e, 0x4016e954, 0x4016dc10, 0x40111216):  # the lock, a callback's end, a notice
             self.stub(addr, None)
         mc.uc.ctl_flush_tb()
 
     def stub(self, addr, fn):
         mc = self.mc
-        mc.write(addr, b"\x4e\x75")                        # rts
+        mc.write(addr, b"\x4e\x75")  # rts
 
         def hook(uc, address, size, user):
             if fn is not None:
@@ -132,12 +125,12 @@ def test_a_slot_now_holds_up_to_a_megabyte_less_its_header(rig, frames, kept):
     rig.mc.call(mm.SAMPLE_SCAN, STORE, 9)
     assert rig.mc.r32(STORE + mm.SAMPLE_TABLE + 24 * 9 + 20) == (frames if kept else 0)
     hdr = SCRATCH
-    assert (rig.mc.call(HEADER_READ, 9, hdr) == 0) == kept          # the reader's own check agrees
+    assert (rig.mc.call(HEADER_READ, 9, hdr) == 0) == kept  # the reader's own check agrees
     assert rig.mc.r32(hdr + 8) == frames
 
 
 def test_a_header_where_stock_kept_its_odd_slots_is_not_a_sample_any_more(rig):
-    rig.put(mm.SAMPLE_SECTOR0 + mm.SAMPLE_SECTORS * 5, header(300))        # stock slot 5: the middle of our slot 2
+    rig.put(mm.SAMPLE_SECTOR0 + mm.SAMPLE_SECTORS * 5, header(300))  # stock slot 5: the middle of our slot 2
     rig.mc.write(STORE, bytes(0x20000))
     for slot in range(SLOTS):
         rig.mc.call(mm.SAMPLE_SCAN, STORE, slot)
@@ -149,15 +142,15 @@ def test_every_routine_agrees_on_where_a_slot_is(rig):
     for slot in range(SLOTS):
         want = sector_of(slot)
         rig.reads.clear()
-        mc.call(HEADER_READ, slot, SCRATCH)                             # the header reader
+        mc.call(HEADER_READ, slot, SCRATCH)  # the header reader
         assert rig.reads == [(want, 512)]
-        mc.set_reg(6, slot)                                             # rename: its sector, in d6
+        mc.set_reg(6, slot)  # rename: its sector, in d6
         mc.uc.reg_write(UC_M68K_REG_A7, 0x407fe000)
         mc.run(*SNIP_RENAME)
         assert mc.reg(6) == want
-        frame = SCRATCH + 0x1000                                        # the /samples/<slot> route: a byte address
+        frame = SCRATCH + 0x1000  # the /samples/<slot> route: a byte address
         mc.w32(SCRATCH, SCRATCH + 0x2000)
-        mc.w32(frame - 516, slot + 1)                                   # the route counts slots from 1
+        mc.w32(frame - 516, slot + 1)  # the route counts slots from 1
         mc.set_reg(6, slot + 1)
         mc.set_reg(1, 8)
         mc.set_reg(8 + 2, SCRATCH)
@@ -165,7 +158,7 @@ def test_every_routine_agrees_on_where_a_slot_is(rig):
         mc.run(*SNIP_ROUTE)
         assert mc.r32(frame - 500) == want * 512 and mc.r32(frame - 492) == slot + 1
     assert sector_of(0) == mm.SAMPLE_SECTOR0 and sector_of(SLOTS - 1) + SECTORS == END == 139264
-    assert mm.DRIVE_FREE[0] <= mm.SAMPLE_SECTOR0 + 64 * mm.SAMPLE_SECTORS and END <= mm.DRIVE_FREE[1]   # the new half is in the unused stretch
+    assert mm.DRIVE_FREE[0] <= mm.SAMPLE_SECTOR0 + 64 * mm.SAMPLE_SECTORS and END <= mm.DRIVE_FREE[1]  # the new half is in the unused stretch
 
 
 @pytest.mark.parametrize("snip,reg", [(SNIP_ROUTE_SIZE, 0), (SNIP_LIST_SIZE, 4)])
@@ -201,8 +194,8 @@ def test_pool_builder_stages_what_is_in_the_slots(rig):
                17: noise(32768 - 32, 4), 18: noise(1, 5), 62: noise(240000, 6), 63: noise(480000, 7)}
     for slot, x in samples.items():
         rig.put_sample(slot, x)
-    rig.put(sector_of(30), b"JUNK" + bytes(60))                         # not a sample
-    rig.put_sample(31, [], frames=MAX_FRAMES + 1)                       # a header that claims too much
+    rig.put(sector_of(30), b"JUNK" + bytes(60))  # not a sample
+    rig.put_sample(31, [], frames=MAX_FRAMES + 1)  # a header that claims too much
     rig.mc.call(build_main.POOL_STAGE[0])
     got, total = staged(rig)
     for slot in range(SLOTS):
@@ -217,15 +210,16 @@ def test_pool_builder_stages_what_is_in_the_slots(rig):
 
 
 def test_pool_builder_never_stages_more_than_stock_could(rig):
-    """36 slots of 10 s are more than the block holds. The ones that fit are staged whole, in order; one
-    that does not fit is left out, and a short one after it still goes in. Nothing past the room is written."""
+    """36 slots of 10 s are more than the block holds. The ones that fit are staged whole, in order; one that does not
+    fit is left out, and a short one after it still goes in. Nothing past the room is written.
+    """
     mc = rig.mc
     lengths = {slot: 480000 for slot in range(36)}
     lengths.update({40: 5000, 41: 480000, 63: 77})
     for slot, n in lengths.items():
         rig.put_sample(slot, noise(n, 100 + slot))
     end = mm.POOL_STAGE + 5 + ROOM
-    mc.write(end, b"\x5a" * (mm.AUDIO_IMAGE_STAGE + 0x100 - end))        # what lies behind, the audio CPU's program included
+    mc.write(end, b"\x5a" * (mm.AUDIO_IMAGE_STAGE + 0x100 - end))  # what lies behind, the audio CPU's program included
     mc.call(build_main.POOL_STAGE[0])
     got, total = staged(rig)
     used, want = 0, {}
@@ -249,7 +243,7 @@ def test_a_drive_laid_out_by_stock_boots_without_reading_outside_the_samples(rig
         rig.put(mm.SAMPLE_SECTOR0 + mm.SAMPLE_SECTORS * k, header(mm.SAMPLE_MAX_FRAMES - k) + noise(mm.SAMPLE_MAX_FRAMES - k, k).astype(">i2").tobytes())
     rig.mc.call(build_main.POOL_STAGE[0])
     got, total = staged(rig)
-    for slot in range(32):                                              # stock's even slots show up as our first 32
+    for slot in range(32):  # stock's even slots show up as our first 32
         assert np.array_equal(got[slot], noise(mm.SAMPLE_MAX_FRAMES - 2 * slot, 2 * slot))
     assert all(len(got[slot]) == 0 for slot in range(32, 64))
     assert total <= ROOM and all(FIRST <= s < END for s in rig.sectors_read())
@@ -281,7 +275,7 @@ def test_big_image_builds_and_the_others_do_not_contain_it(official_path, offici
     raw, _, built, regions, syms = build.build(official_path, log=quiet, big=True)
     assert sorted(regions) == [3, 7] and built.section(3) == big[0]
     rec = build.build(official_path, log=quiet, rec=True)[2]
-    assert built.section(7) == rec.section(7)                           # nothing changes on the audio CPU
+    assert built.section(7) == rec.section(7)  # nothing changes on the audio CPU
     for sid in official.ids:
         if sid not in (3, 7):
             assert built.container.by_id(sid).stored == official.container.by_id(sid).stored

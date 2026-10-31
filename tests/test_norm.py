@@ -1,11 +1,4 @@
-"""The norm image: the eucl image with every take normalized to -1 dB once it ends.
-
-
-and the choices: the take itself rewritten, always on, -1 dB. A take's loudest frame is followed while it runs;
-at its end its slot (a stereo take's two) is scaled up, NORM_STEP frames a block, by at most 30 dB and never down; a
-request of the keep box for a part not yet scaled is not answered till it is (engine/sampler.c, norm_block, norm_keep).
-The hook's harness runs the voice loop's hook alone; norm_block is called after it, as the interrupt's end calls it.
-"""
+"""The norm image: the eucl image with every take normalized to -1 dB once it ends."""
 import shutil
 
 import numpy as np
@@ -50,8 +43,9 @@ def rec(built, track, place):
 
 
 def take(e, built, track, blocks, count=100):
-    """A take of the blocks (n, BLOCK, 2) on a track, let go on the last. -> its slot, frames, and its two buffers as
-    the take left them, before anything is scaled."""
+    """A take of the blocks (n, BLOCK, 2) on a track, let go on the last. -> its slot, frames, and its two buffers as the
+    take left them, before anything is scaled.
+    """
     tick(e, built, 1 << track)
     for b, x in enumerate(blocks[:-1]):
         write(e, count + b, {track: x})
@@ -94,7 +88,7 @@ def test_a_stereo_take_is_scaled_to_minus_1_db_both_sides_by_one_gain(built, amp
     assert n > 15 * BLOCK and peak
     assert np.array_equal(taken(e, k, n), scaled(left, peak)) and np.array_equal(taken(e, k + 1, n), scaled(right, peak))
     got = loudest(taken(e, k, n), taken(e, k + 1, n))
-    assert got <= TOP and (got >= TOP - 2 or peak * 32 < TOP)        # 30 dB up at most
+    assert got <= TOP and (got >= TOP - 2 or peak * 32 < TOP)  # 30 dB up at most
     assert P.slot_entry(e, k) == (n, PK.buf(k)) and e.mc.r32(KEPT + 4 * k) == e.mc.r32(KEPT + 4 * k + 4) == 0
 
 
@@ -125,10 +119,10 @@ def test_the_keep_box_waits_for_a_part_not_yet_scaled(built):
     want = scaled(left, loudest(left, right))
     assert n >= 1024
     ack = e.mc.r32(m.KEEP_BOX + 8)
-    ask(e, k, 2 * 768, (ack + 1) & 0xffff)                           # frames 768 to 1,024: scaled by the fourth block
+    ask(e, k, 2 * 768, (ack + 1) & 0xffff)  # frames 768 to 1,024: scaled by the fourth block
     for b in range(3):
         e.block()
-        assert e.mc.r32(m.KEEP_BOX + 8) == ack, b                    # no answer while that part is not scaled
+        assert e.mc.r32(m.KEEP_BOX + 8) == ack, b  # no answer while that part is not scaled
         e.mc.call(built[1]["norm_block"])
     e.block()
     assert e.mc.r32(m.KEEP_BOX + 8) == (ack + 1) & 0xffff
@@ -142,7 +136,7 @@ def test_a_new_take_in_the_slot_stops_the_scaling(built):
     settle(e, built, 1)
     _, n2, (left, right) = take(e, built, 3, sine(6, 30000, 7), count=300)
     settle(e, built, 8)
-    assert np.array_equal(taken(e, k, n2), left) and np.array_equal(taken(e, k + 1, n2), right)     # loud: as it is
+    assert np.array_equal(taken(e, k, n2), left) and np.array_equal(taken(e, k + 1, n2), right)  # loud: as it is
 
 
 def test_the_interrupt_calls_it(built):

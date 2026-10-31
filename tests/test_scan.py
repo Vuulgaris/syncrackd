@@ -1,16 +1,4 @@
-"""The scan image: the xcarry image with the hits found another way, in SD BASIC's room.
-
-
-
-for the room.
-
-A window is looked at by its loudest frame and its loudest step from one frame to the next, each with its own follower;
-a hit is either past its follower by half again, by more than 42 dB under the slot's loudest; its step is its place
-among the slot's hits by how sharp it is (engine/sampler.h, HITSCAN). Held here: the engine keeps the model's hits to
-the frame, the step and the end; a quiet take has a loud one's hits; hats over a held bass are found (the switch
-image's scan, run here too, does not find them); a held low note is one hit; DEL takes the hits in even shares.
-Not held: how it sounds, and where the slices land by the maintainer's ear.
-"""
+"""The scan image: the xcarry image with the hits found another way, in SD BASIC's room."""
 import hashlib
 import shutil
 
@@ -112,7 +100,7 @@ def test_the_scan_keeps_the_models_hits(engine, which):
     print("scan, %s:" % which, len(got), "hits, steps", [s for _, s, _ in got])
 
 
-@pytest.mark.parametrize("gain", [0.03, 0.01])                    # -30 and -40 dB
+@pytest.mark.parametrize("gain", [0.03, 0.01])  # -30 and -40 dB
 def test_a_quiet_take_has_a_loud_ones_hits(engine, gain):
     x = H.drums()
     loud = S.scanned(engine, x)[0]
@@ -124,9 +112,9 @@ def test_hats_over_a_held_bass_are_found(engine, switch):
     x, at = hats_over_bass()
     got = [f for f, _, _ in S.scanned(engine, x)[0]]
     assert got[0] == 0 and all(any(0 <= k - f < 64 or 0 <= f - k < 64 for f in got) for k in at)
-    assert len(got) == len(at) + 1                              # the bass's start and each hat, nothing else
+    assert len(got) == len(at) + 1  # the bass's start and each hat, nothing else
     old = [f for f, _, _ in S.scanned(switch, x)[0]]
-    assert len(old) <= 2                                        # the switch image's scan: the start, a hat at most
+    assert len(old) <= 2  # the switch image's scan: the start, a hat at most
     print("scan: hats over a bass, found", len(got) - 1, "of", len(at), "where the switch image found", len(old) - 1)
 
 
@@ -140,7 +128,7 @@ def test_del_takes_the_hits_in_even_shares(engine):
     got = S.scanned(engine, clicks())[0]
     steps = [s for _, s, _ in got]
     assert len(got) == 30 and steps[0] == 15 and min(steps) >= 1
-    assert all(a >= b for a, b in zip(steps, steps[1:]))       # louder clicks, sharper rises: never a lower step first
+    assert all(a >= b for a, b in zip(steps, steps[1:]))  # louder clicks, sharper rises: never a lower step first
     passed = [sum(s >= 15 - ((dl - 1) * 15 >> 7) for s in steps) for dl in range(1, 128)]
     assert passed[0] <= 2 and passed[-1] == 30 and 12 <= passed[63] <= 18
     print("scan: hits DEL lets through at 1, 32, 64, 96, 127:", [passed[d - 1] for d in (1, 32, 64, 96, 127)])
@@ -150,7 +138,7 @@ def test_the_image(official_path, engine):
     quiet = lambda s: None
     raw, _, built, _, _ = build.build(official_path, log=quiet, xfade=46, prof=True)
     was_raw, _, was, _, _ = build.build(official_path, log=quiet, xfade=45, prof=True)
-    assert hashlib.sha256(was_raw).hexdigest().startswith("e9fdaa32")      # the xcarry image, as it is
+    assert hashlib.sha256(was_raw).hexdigest().startswith("e9fdaa32")  # the xcarry image, as it is
     assert built.section(3) == was.section(3)
     a7, b7 = built.section(7), was.section(7)
     assert a7 == engine[0]
@@ -158,6 +146,6 @@ def test_the_image(official_path, engine):
     table = [(t + 4 * m.SDB_ENGINE, t + 4 * m.SDB_ENGINE + 4) for t in (m.UPDATE_TABLE, m.RENDER_TABLE)]
     stray = [hex(m.BASE + k) for k in range(len(a7)) if a7[k] != b7[k] and not any(m.off(lo) <= k < m.off(hi) for lo, hi in runs + table)]
     assert stray == []
-    for t in (m.UPDATE_TABLE, m.RENDER_TABLE):                  # a track on SD BASIC is handed SWARM's stand-ins
+    for t in (m.UPDATE_TABLE, m.RENDER_TABLE):  # a track on SD BASIC is handed SWARM's stand-ins
         assert m.u32(a7, t + 4 * m.SDB_ENGINE) == m.u32(a7, t + 4 * m.SWARM_ENGINE) != m.u32(b7, t + 4 * m.SDB_ENGINE)
     print("scan image", hashlib.sha256(raw).hexdigest())

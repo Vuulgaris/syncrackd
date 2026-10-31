@@ -1,10 +1,4 @@
-"""The main CPU's mixer run whole (section 3, OS 1.42): which sum goes where, and what it costs.
-
-The real 0x4008f242 on marked track buffers. Not run: its five effect helpers (delay, reverb
-and their set-up work on state made elsewhere) and the scale routine (the EMAC in integer
-mode, which emu/ does not model); each is a return here, so nothing below reads a level
-after the scale, only whether a place moves. Everything else is stock code as it is.
-"""
+"""The main CPU's mixer run whole (section 3, OS 1.42): which sum goes where, and what it costs."""
 import numpy as np
 import pytest
 from unicorn import UC_HOOK_CODE
@@ -15,11 +9,11 @@ from tools import fw
 
 RTS = b"\x4e\x75"
 PARAMS, STRUCTS, STRIDE = 0x80002000, 0x40700000, 142
-OUT_FRAME = 0x80000000                      # the output frame, 8 slots of 32 frames, with the ring index at 0
-SEND_PAIR_DONE = 0x4008f81a                 # after the first two kernel calls
+OUT_FRAME = 0x80000000  # the output frame, 8 slots of 32 frames, with the ring index at 0
+SEND_PAIR_DONE = 0x4008f81a  # after the first two kernel calls
 CALLS = dict(k8=mm.MIX_KERNEL, k9=mm.MIX_KERNEL9, k10=mm.MIX_KERNEL10, copy=mm.MIX_COPY,
              gain=mm.MIX_GAIN, pan=mm.PAN_LAW, level=mm.MIX_LEVEL, scale=mm.MIX_SCALE)
-COST = 20820                                # instructions a block; the three scale calls would add 3 x 187
+COST = 20820  # instructions a block; the three scale calls would add 3 x 187
 
 
 @pytest.fixture(scope="module")
@@ -37,15 +31,15 @@ class Mixer:
         mc.write(mm.BASE, sec3)
         for a, b in ((mm.MIX_GAIN, mm.MIX_GAIN_END), (mm.MIX_GAIN2, mm.MIX_KERNEL_END), (mm.MIX_COPY, mm.MIX_END),
                      (mm.MIX_LEVEL, 0x4008ff8a), (mm.PAN_HELPER, mm.PAN_END),
-                     (0x400955f8, 0x40095608),          # two accessors
-                     (0x40097b08, 0x40097b22)):         # a level curve
+                     (0x400955f8, 0x40095608),  # two accessors
+                     (0x40097b08, 0x40097b22)):  # a level curve
             mc.load_code(a, sec3[mm.off(a):mm.off(b)])
         mc.set_stack(0x407ff000, 0x40000100)
         for a in mm.MIX_EFFECTS + (mm.MIX_SCALE,):
             mc.write(a, RTS)
-        mc.w32(0x800030b8, STRUCTS)                     # the kit: 291 bytes a track, byte 205 the level curve
+        mc.w32(0x800030b8, STRUCTS)  # the kit: 291 bytes a track, byte 205 the level curve
         mc.write(STRUCTS, bytes(291 * 12))
-        mc.write(0x454e4c18, (0x7fffffff).to_bytes(4, "big") * 16)   # what 0x4008ee30 leaves there with its source off
+        mc.write(0x454e4c18, (0x7fffffff).to_bytes(4, "big") * 16)  # what 0x4008ee30 leaves there with its source off
         mc.write(mm.LEVEL2, (127 << 8).to_bytes(2, "big") * 16)
         self.snaps, self.calls = {}, {}
         mc.uc.hook_add(UC_HOOK_CODE, self._snap, ("send", mm.BUS_L), begin=SEND_PAIR_DONE, end=SEND_PAIR_DONE)
@@ -67,7 +61,7 @@ class Mixer:
         b = bytearray(0x800)
         for t in range(12):
             p = STRIDE * t
-            b[2 * t:2 * t + 2] = (100 << 8).to_bytes(2, "big")          # the level words at the block's head
+            b[2 * t:2 * t + 2] = (100 << 8).to_bytes(2, "big")  # the level words at the block's head
             b[p + 62] = 44 if t < 8 else 0
             for at, v in ((mm.P_DELAY_SEND, delay), (mm.P_REVERB_SEND, reverb), (mm.P_PAN, pan), (mm.P_VOL, 100)):
                 b[p + at:p + at + 2] = (v << 8).to_bytes(2, "big")
@@ -94,21 +88,21 @@ def test_the_dry_mix_is_at_dad0_and_dbd0_is_the_delay_send(sec3):
     tracks = one_track()
     dry = Mixer(sec3)
     cost, slots = dry.run(tracks)
-    assert not dry.snaps["send"].any()                               # nothing on the bus the notes called the main one
+    assert not dry.snaps["send"].any()  # nothing on the bus the notes called the main one
     left, right = dry.snaps["dry"][:, 0], dry.snaps["dry"][:, 1]
-    assert left.any() and not right.any()                            # hard left: the right side exactly empty
+    assert left.any() and not right.any()  # hard left: the right side exactly empty
     assert np.corrcoef(left, tracks[0])[0, 1] > 0.999999
-    assert slots == [7]                                              # the left side of the output frame
-    assert Mixer(sec3).run(tracks, pan=127)[1] == [2]                # hard right is slot 2
+    assert slots == [7]  # the left side of the output frame
+    assert Mixer(sec3).run(tracks, pan=127)[1] == [2]  # hard right is slot 2
 
     delay = Mixer(sec3)
     delay.run(tracks, delay=127)
     assert delay.snaps["send"][:, 0].any() and not delay.snaps["send"][:, 1].any()
-    assert np.array_equal(delay.snaps["dry"], dry.snaps["dry"])      # the send takes nothing from the dry mix
+    assert np.array_equal(delay.snaps["dry"], dry.snaps["dry"])  # the send takes nothing from the dry mix
 
     reverb = Mixer(sec3)
     reverb.run(tracks, reverb=127)
-    assert not reverb.snaps["send"].any()                            # after the first pair: the reverb's sum comes later
+    assert not reverb.snaps["send"].any()  # after the first pair: the reverb's sum comes later
     assert np.array_equal(reverb.snaps["dry"], dry.snaps["dry"])
 
 
@@ -135,9 +129,9 @@ def test_a_kernel_replaces_its_destination(sec3):
         assert mc.insns - start == 686
         got.append(np.frombuffer(mc.read(dest, 256), dtype=">i4").reshape(32, 2))
     assert np.array_equal(got[0][:, 0], got[1][:, 0]) and got[0][:, 0].any()
-    assert (got[1][:, 1] == 0x12345678).all()                        # the other side is not touched
+    assert (got[1][:, 1] == 0x12345678).all()  # the other side is not touched
     after = np.frombuffer(mc.read(gains, 32), dtype=">i4")
-    assert (after == -(2 ** 29) + 32 * 4096).all()                   # the ramped gains are written back
+    assert (after == -(2 ** 29) + 32 * 4096).all()  # the ramped gains are written back
 
 
 def test_what_the_mixer_costs_without_its_effects(sec3):

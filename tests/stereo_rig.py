@@ -1,8 +1,8 @@
 """The audio CPU's whole interrupt, stopped at three places: what the stereo image's tests are built on.
 
-A Rig is emu.engine.Board with pauses after the voice loop, before the interrupt's call of its
-last stage and after it. A stock one can be fed any signal in place of what the voices made, so
-that "what stock makes of this signal on a track" can be asked for and held against.
+A Rig is emu.engine.Board with pauses after the voice loop, before the interrupt's call of its last stage and after
+it. A stock one can be fed any signal in place of what the voices made, so that "what stock makes of this signal on a
+track" can be asked for and held against.
 """
 import numpy as np
 from unicorn import UC_HOOK_CODE
@@ -56,8 +56,9 @@ class Rig(E.Board):
         return self._tracks(addr)
 
     def block(self, trig=0, release=0, feed=None):
-        """One interrupt. feed: 8 x 32 in place of what the voices made.
-        -> (the voices' buffers, the right channels waiting, the left after the last stage)"""
+        """One interrupt. feed: 8 x 32 in place of what the voices made. -> (the voices' buffers, the right channels
+        waiting, the left after the last stage)
+        """
         mc = self.mc
         mc.write(E.HOST, self.host_block(trig, release))
         mc.write(E.TCD47 + 0x1e, b"\x00\x80")
@@ -88,8 +89,9 @@ class Rig(E.Board):
 
 
 def stock_of(image, script, feeds):
-    """What stock's four stages make of `feeds` (blocks x 8 x 32) on its eight tracks, the knobs and trigs
-    those of `script`: a list of (set-up routine or None, trig, release) a block."""
+    """What stock's four stages make of `feeds` (blocks x 8 x 32) on its eight tracks, the knobs and trigs those of
+    `script`: a list of (set-up routine or None, trig, release) a block.
+    """
     r = Rig(image)
     out = []
     for (prepare, trig, release), feed in zip(script, feeds):

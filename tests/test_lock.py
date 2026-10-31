@@ -1,12 +1,4 @@
-"""The lock image (engine/sampler.h, LOCK): the stretch image with a stretched note locked to the tempo.
-
-
-to auto-snap. KEYS's CHLK and SLLK stretch a note's region to the power of two of steps nearest its
-length at the tempo (stock's 0x402d7360, BPM times 120), SPD a ratio on that. Here, through what crosses:
-  - the per-block routine sends SPD, a step's frames in two halves and the lock in turn, a track's own count each;
-  - the note's place stops where the snapped length says, at 120 and 100 BPM, and SPD halves it;
-  - KEYS's six settings; KEYS off the back image's sound.
-Emulation only."""
+"""The lock image (engine/sampler.h, LOCK): the stretch image with a stretched note locked to the tempo."""
 
 import shutil
 
@@ -53,7 +45,7 @@ class Word(R.Word):
         self.mc.load_code(lo, image[mm.off(lo):mm.off(hi)])
         self.mc.map(TEMPO & ~0xfff, 0x1000)
         self.mc.w32(TEMPO, tempo)
-        self.spd = None                 # a word put in track 3's slot 52 as the routine starts (run fills the kit afresh)
+        self.spd = None  # a word put in track 3's slot 52 as the routine starts (run fills the kit afresh)
         self.mc.uc.hook_add(UC_HOOK_CODE, self._put, None, begin=self.entry, end=self.entry)
         self.mc.uc.ctl_flush_tb()
 
@@ -70,16 +62,16 @@ def test_the_routine_sends_spd_the_step_and_the_lock_in_turn(main, bpm):
     for _ in range(8):
         r = w.run(3, R.signed(9, 0) | 8 | 16)
         v = int.from_bytes(w.mc.read(R.KIT + mm.KIT_TRACK * 3 + mm.KIT_WORDS + 104, 2), "big")
-        spd = min((v + 0x80) >> 8, 127)                          # to the nearest: the knob shown at 64 sends 64
+        spd = min((v + 0x80) >> 8, 127)  # to the nearest: the knob shown at 64 sends 64
         tag = r["sent"] >> 4 & 3
         assert r["sent"] & 0x80cf == 0x8049 and r["own"] == R.signed(9, 0) | 24
         got[tag] = r["sent"] >> 8 & 0x7f
         if tag == 0:
             assert got[0] == spd
-    port = w.mc.read(R.KIT + mm.KIT_TRACK * 3 + mm.KIT_WORDS + 106, 1)[0] >= 64        # as the rig left slot 53
+    port = w.mc.read(R.KIT + mm.KIT_TRACK * 3 + mm.KIT_WORDS + 106, 1)[0] >= 64  # as the rig left slot 53
     assert sorted(got) == [0, 1, 2, 3]
     assert got[1] | got[2] << 7 == half and got[3] == 1 | (2 if port else 0)
-    r = w.run(3, R.signed(9, 1) | 8 | 16)                        # REC on: the mark, untouched
+    r = w.run(3, R.signed(9, 1) | 8 | 16)  # REC on: the mark, untouched
     assert r["sent"] >> 8 == R.ON
 
 
@@ -120,11 +112,11 @@ def stops(image, factory, x, bpm, spd=64, locked=True, blocks=1500, port=False):
 
 
 @pytest.mark.parametrize("bpm, spd, frames, want", [
-    (120, 64, 26000, 24000),        # 4.33 steps: four, 6,000 frames a step
-    (100, 64, 26000, 28800),        # 3.61 steps: four, 7,200
-    (120, 64, 9000, 12000),         # 1.5 steps: two
-    (120, 96, 26000, 12000),        # and SPD doubles it
-    (120, 32, 26000, 48000),        # or halves it
+    (120, 64, 26000, 24000),  # 4.33 steps: four, 6,000 frames a step
+    (100, 64, 26000, 28800),  # 3.61 steps: four, 7,200
+    (120, 64, 9000, 12000),  # 1.5 steps: two
+    (120, 96, 26000, 12000),  # and SPD doubles it
+    (120, 32, 26000, 48000),  # or halves it
 ])
 def test_a_locked_note_takes_the_snapped_length(engine, official, bpm, spd, frames, want):
     factory = S.factory.__wrapped__(official)
@@ -148,7 +140,7 @@ def test_port_off_spd_is_heard_again(engine, official):
 
 def test_unlocked_it_is_the_stretch_images(engine, official):
     factory = S.factory.__wrapped__(official)
-    assert abs(stops(engine, factory, X.tone(n=26000), 120, 96, locked=False) - 13000) <= 64     # half the sample, to the block
+    assert abs(stops(engine, factory, X.tone(n=26000), 120, 96, locked=False) - 13000) <= 64  # half the sample, to the block
 
 
 def test_keys_off_is_the_back_images_to_the_bit(engine, official):
@@ -170,7 +162,7 @@ def test_h_turns_keys_through_four_settings_and_drops_an_old_lock(main):
         X.G.twist(r, 8, 1)
         assert X.G.own(r, t) == R.signed(4, 0) | bits and name in says()
     r.mc.write(X.G.KIT + mm.KIT_TRACK * t + mm.KIT_WORDS + 2 * mm.REC_SLOT, (R.signed(4, 0) | 26).to_bytes(2, "big"))
-    assert "SLST" in says() and not {"CHLK", "SLLK"} & set(says())       # a word from the first builds reads as its stretch
+    assert "SLST" in says() and not {"CHLK", "SLLK"} & set(says())  # a word from the first builds reads as its stretch
     for bits, name in ((8, "CHST"), (2, "SLCE"), (0, "CHRO"), (0, "CHRO")):
         X.G.twist(r, 8, -1)
         assert X.G.own(r, t) == R.signed(4, 0) | bits and name in says()
@@ -182,7 +174,6 @@ def test_the_image(official_path, engine, main):
     print("lock image", __import__("hashlib").sha256(raw).hexdigest())
 
 
-# ---- the portamento gate (the fourth build) -------------------------------------------------------------------------
 
 def gate(main, mtype, own, port, kit=True, t=3):
     """port_gate as the pitch routine calls it. -> (d0, whether stock's bgts glides, d1, a1, a4 after)."""
@@ -201,7 +192,7 @@ def gate(main, mtype, own, port, kit=True, t=3):
     mc.write(block + 134, port.to_bytes(2, "big"))
     mc.w32(mm.KIT_POINTER, R.KIT if kit else 0)
     mc.write(R.KIT + mm.KIT_TRACK * t + mm.KIT_WORDS + 48, own.to_bytes(2, "big"))
-    caller = 0x80008000                 # as stock: jsr port_gate ; bgts, here to d2 = 1 (glides) or 0
+    caller = 0x80008000  # as stock: jsr port_gate ; bgts, here to d2 = 1 (glides) or 0
     mc.load_code(caller, b"\x4e\xb9" + syms["port_gate"].to_bytes(4, "big") + bytes.fromhex("6e04" "7400" "4e75" "7401" "4e75"))
     for n, v in ((1, t), (2, 7), (9, 0x12345678), (12, block)):
         mc.set_reg(n, v)
@@ -213,17 +204,17 @@ ON, OFF = 64 << 8, 63 << 8
 
 
 @pytest.mark.parametrize("mtype, own, port, kit, glides", [
-    (44, R.signed(4, 0) | 8, ON, True, False),          # a stretched sampler track: no glide, PORT on
-    (44, R.signed(4, 0) | 24, ON, True, False),         # locked too
-    (44, R.signed(4, 0) | 2, ON, True, True),           # SLCE: portamento on
-    (44, R.signed(4, 0), ON, True, True),               # CHRO: portamento on
-    (44, R.signed(4, 0) | 8, OFF, True, False),         # stretched: off, PORT either way
-    (44, R.signed(4, 0), OFF, True, True),              # not stretched: on, whatever PORT says
+    (44, R.signed(4, 0) | 8, ON, True, False),  # a stretched sampler track: no glide, PORT on
+    (44, R.signed(4, 0) | 24, ON, True, False),  # locked too
+    (44, R.signed(4, 0) | 2, ON, True, True),  # SLCE: portamento on
+    (44, R.signed(4, 0), ON, True, True),  # CHRO: portamento on
+    (44, R.signed(4, 0) | 8, OFF, True, False),  # stretched: off, PORT either way
+    (44, R.signed(4, 0), OFF, True, True),  # not stretched: on, whatever PORT says
     (44, R.signed(4, 0) | 2, OFF, True, True),
-    (4, R.signed(4, 0), OFF, True, False),              # another machine, PORT off: stock's
-    (4, R.signed(4, 0) | 8, ON, True, True),            # another machine: stock's
-    (44, 0x0008, ON, True, True),                       # a word not signed: stock's
-    (44, R.signed(4, 0) | 8, ON, False, True),          # no kit yet: stock's
+    (4, R.signed(4, 0), OFF, True, False),  # another machine, PORT off: stock's
+    (4, R.signed(4, 0) | 8, ON, True, True),  # another machine: stock's
+    (44, 0x0008, ON, True, True),  # a word not signed: stock's
+    (44, R.signed(4, 0) | 8, ON, False, True),  # no kit yet: stock's
 ])
 def test_portamento_follows_keys_on_a_sampler_track(main, mtype, own, port, kit, glides):
     d0, g, d1, a1, a4 = gate(main, mtype, own, port, kit)

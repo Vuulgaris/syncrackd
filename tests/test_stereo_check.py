@@ -1,14 +1,4 @@
-"""tools/stereo_check.py: the check samples for one-track stereo on the unit, and what a recording of them says.
-
-
-Eight stereo samples, one a track: by ear each is a
-low tone on the left and a high one on the right, then a blip of hiss in the middle. Measured, one recording
-of the unit playing them says for every sample which channel is on which side and whether its sides are in
-step to the frame, and for each side whether anything was added.
-
-Here the recordings are made up, each with one thing wrong, and the tool has to name it. One is not made
-up: the built stereo image's own voice playing a sample.
-"""
+"""tools/stereo_check.py."""
 import os
 import shutil
 import wave
@@ -35,7 +25,8 @@ def recorded(left, right, gain=0.2, lead=7000, tail=9000, seed=1):
 
 
 def mix(ks=ALL, change=None):
-    """The samples ks playing together. change: {k: f(left, right) -> (left, right)}, what the unit got wrong for one."""
+    """The samples ks playing together. change: {k: f(left, right) -> (left, right)}, what the unit got wrong for one.
+    """
     left, right = np.zeros(4 * RATE), np.zeros(4 * RATE)
     for k in ks:
         l, r = (x.astype(float) for x in sc.sample(k))
@@ -49,26 +40,26 @@ def mix(ks=ALL, change=None):
 def test_a_sample_is_a_low_tone_left_a_high_tone_right_then_hiss_that_is_the_same_on_both(k):
     left, right = sc.sample(k)
     assert len(left) == len(right) == 4 * RATE and left.dtype == np.int16
-    assert max(np.abs(left).max(), np.abs(right).max()) <= 1.5 * sc.LEVEL + 1          # far from full scale
-    a, b = RATE // 4, 7 * RATE // 4                                                     # inside the tones
+    assert max(np.abs(left).max(), np.abs(right).max()) <= 1.5 * sc.LEVEL + 1  # far from full scale
+    a, b = RATE // 4, 7 * RATE // 4  # inside the tones
     for x, own, other in ((left, sc.F_LEFT[k], sc.F_RIGHT[k]), (right, sc.F_RIGHT[k], sc.F_LEFT[k])):
         (got, leak), rest = sc._fit(x[a:b].astype(float), [own, other])
-        assert abs(got - sc.LEVEL) < 2 and leak < 0.1 and np.abs(rest).max() < 1.5     # one tone a side, and nothing else
+        assert abs(got - sc.LEVEL) < 2 and leak < 0.1 and np.abs(rest).max() < 1.5  # one tone a side, and nothing else
     h = 2 * RATE
     at = int((sc.HISS_AT + k * sc.HISS_EVERY) * RATE)
     assert np.array_equal(left[h:], right[h:]) and left[at:at + int(sc.HISS_LONG * RATE)].any()
     quiet = np.r_[left[h:at], left[at + int(sc.HISS_LONG * RATE):]]
-    assert not quiet.any()                                                              # its own moment, and silence around it
+    assert not quiet.any()  # its own moment, and silence around it
 
 
 def test_the_sixteen_tones_and_the_eight_bursts_keep_out_of_each_others_way():
     tones = sc.F_LEFT + sc.F_RIGHT
-    assert len(set(tones)) == 16 and max(sc.F_LEFT) < min(sc.F_RIGHT)                   # every left tone is under every right one
+    assert len(set(tones)) == 16 and max(sc.F_LEFT) < min(sc.F_RIGHT)  # every left tone is under every right one
     for f in tones:
         for g in tones:
             assert f == g or abs(f - g) >= 45
-            assert all(abs(h * f - g) >= 25 for h in range(2, 8))                       # no harmonic of one lands on another
-    assert sc.HISS_EVERY - sc.HISS_LONG > 0.049 and sc.HISS_AT + 7 * sc.HISS_EVERY + sc.HISS_LONG < sc.SECONDS     # 50 ms between bursts
+            assert all(abs(h * f - g) >= 25 for h in range(2, 8))  # no harmonic of one lands on another
+    assert sc.HISS_EVERY - sc.HISS_LONG > 0.049 and sc.HISS_AT + 7 * sc.HISS_EVERY + sc.HISS_LONG < sc.SECONDS  # 50 ms between bursts
 
 
 def test_the_files_are_what_transfer_takes(tmp_path):
@@ -82,7 +73,7 @@ def test_the_files_are_what_transfer_takes(tmp_path):
                 assert np.array_equal(np.frombuffer(w.readframes(4 * RATE), dtype="<i2"), want)
     text = open(sheet).read()
     assert "track 1   SMPL 25   slots 49 and 50" in text and "track 8   SMPL 32   slots 63 and 64" in text
-    again, _ = sc.write_samples(str(tmp_path), first=1)                                 # another run replaces the files of the last
+    again, _ = sc.write_samples(str(tmp_path), first=1)  # another run replaces the files of the last
     assert sorted(f for f in os.listdir(tmp_path) if f.endswith(".wav")) == sorted(os.path.basename(p) for p in again)
     assert os.path.basename(again[0]) == "01_STCHECK1_L.wav" and "track 8   SMPL  8   slots 15 and 16" in open(sheet).read()
     for bad in (2, 0, 51, 63):
@@ -146,7 +137,7 @@ def test_noise_and_distortion_on_one_side_are_named():
     left, right = mix()
     verdict, lines = sc.check(*recorded(left, right + np.random.default_rng(5).normal(0, 1500, len(right))))
     assert verdict == "fault" and any(s.startswith("Noise on the right side") for s in lines)
-    bent = mix(change={3: lambda l, r: (l, 6000 * np.tanh(r / 6000))})                  # one track's right channel pushed into a curve
+    bent = mix(change={3: lambda l, r: (l, 6000 * np.tanh(r / 6000))})  # one track's right channel pushed into a curve
     verdict, lines = sc.check(*recorded(*bent))
     assert verdict == "fault" and any(s.startswith("Distortion on the right side") for s in lines)
     assert not any("on the left side" in s for s in lines)
@@ -190,7 +181,7 @@ def test_without_the_hiss_the_timing_is_not_called_good():
 def test_the_folder_a_recording_is_dropped_in(tmp_path):
     paths, _ = sc.write_samples(str(tmp_path), first=1)
     with pytest.raises(SystemExit):
-        sc.find(str(tmp_path))                                                          # sixteen files are not one recording
+        sc.find(str(tmp_path))  # sixteen files are not one recording
     for p in paths[2:]:
         os.remove(p)
     assert sc.find(str(tmp_path)) == paths[:2]
@@ -199,13 +190,14 @@ def test_the_folder_a_recording_is_dropped_in(tmp_path):
 @pytest.mark.skipif(not shutil.which("m68k-elf-gcc"), reason="no ColdFire cross-compiler")
 def test_the_built_engines_own_voice_playing_one(official):
     """The stereo image's sampler playing the first sample from slots 1 and 2 on the last track: the left out of the
-    track's buffer, the right out of where it waits for the stages. Cut to 16 bits as a take is."""
+    track's buffer, the right out of where it waits for the stages. Cut to 16 bits as a take is.
+    """
     from test_pagerec import HookEngine
     image, syms = build_engine.patched_image(official.section(7), stereo=True)
     e = HookEngine(image, loop_entry=syms["sampler_hook"])
     e.mc.map(0, 0x2000)
     left, right = sc.sample(0)
-    keep = np.r_[0:int(1.5 * RATE), int(2.0 * RATE):int(2.6 * RATE)]             # less to play: most of the tones, the silence, the hiss
+    keep = np.r_[0:int(1.5 * RATE), int(2.0 * RATE):int(2.6 * RATE)]  # less to play: most of the tones, the silence, the hiss
     e.load_pool({0: left[keep], 1: right[keep]})
     for t in range(8):
         e.set_machine(t, 44)

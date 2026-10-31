@@ -1,13 +1,13 @@
 /* Main CPU (section 3, OS 1.42 only): the long image, 128 steps as two patterns played as one.
  *
- * Patterns 1..64 are long, 65..128 are only their tails. Stock plays
- * from a queue of 24-byte entries, (pattern data, kit, ...), looping (docs/FINDINGS.md, "128 steps as two patterns
- * played as one"). Every cue of a pattern goes through the routine that sets that queue; ours calls it and then
- * puts, after each entry of a head, an entry of its tail with the head's kit. So n plays, then n + 64, then n.
+ * Patterns 1..64 are long, 65..128 are only their tails. Stock plays from a queue of 24-byte entries, (pattern data,
+ * kit, ...), looping (docs/FINDINGS.md, "128 steps as two patterns played as one"). Every cue of a pattern goes
+ * through the routine that sets that queue; ours calls it and then puts, after each entry of a head, an entry of its
+ * tail with the head's kit. So n plays, then n + 64, then n.
  *
  * The UI's kit is pointed at the playing pattern's own kit when the pattern changes (0x40019c84, by the number
- * 0x400c2154 gives). Ours gives the head's number while a tail plays with the head's kit, so a knob turned in
- * the second half is heard. A tail cued by hand plays with its own kit and is left as stock's. */
+ * 0x400c2154 gives). Ours gives the head's number while a tail plays with the head's kit, so a knob turned in the
+ * second half is heard. A tail cued by hand plays with its own kit and is left as stock's. */
 typedef unsigned char u8;
 typedef unsigned int u32;
 typedef int s32;
@@ -99,14 +99,12 @@ __attribute__((section(".cave.l"), noinline)) s32 long_kitnum(void *any)
     return n;
 }
 
-/* The seam (the long image's second build): a live trig goes to the half it was played for.
- *
- * Live record asks the sequencer for a hit's step (0x4008dae6(time, track, out)): out[0] the nearer step, out[1]
- * the micro timing, out[2] the number of the pattern that step belongs to, the next one's when the next step is
- * nearer at a pattern's end. Stock drops out[2]: the trig is written later, by the main task (0x4001ecb6), into
- * whatever pattern plays by then. A hit just before step 65 went to n's step 1, one just before the loop's start
- * to the tail's. Here a hit whose pattern is of the playing pair carries its half in the step's byte (bit 6: a half
- * is given, bit 7: the tail; stock's step is 0..63), and the writer is pointed at that half of the pair playing. */
+/* Live record asks the sequencer for a hit's step (0x4008dae6(time, track, out)): out[0] the nearer step, out[1] the
+ * micro timing, out[2] the number of the pattern that step belongs to, the next one's when the next step is nearer at
+ * a pattern's end. Stock drops out[2]: the trig is written later, by the main task (0x4001ecb6), into whatever
+ * pattern plays by then. A hit just before step 65 went to n's step 1, one just before the loop's start to the
+ * tail's. Here a hit whose pattern is of the playing pair carries its half in the step's byte (bit 6: a half is
+ * given, bit 7: the tail; stock's step is 0..63), and the writer is pointed at that half of the pair playing. */
 #define step_of_hit ((void (*)(u32, s32, s8 *))0x4008dae6)    /* (time, track, out) */
 #define write_live ((void (*)(s32, s32, s32, s32, s32, s32, s32, s32, s32, s32))0x4001ecb6)
 #define now_pattern ((u32 (*)(u32))0x40019000)               /* (manager) -> the selected pattern's object */
@@ -155,14 +153,11 @@ LONG __attribute__((noinline)) s32 long_num(void *any)
     return long_target >= 0 ? long_target : playing_number(any);
 }
 
-/* The long image's third build: clear, copy and paste of a head carry its tail (
- * ).
- *
- * Stock's clear (0x4001f7c0) and paste (0x4001fa0e) take a list of pattern numbers, a vector (begin, end). Ours
- * give stock the list with each head's tail after it, so the undo, the clear, the paste and the message take the
- * tails too. Stock's copy (0x4001e2a8) keeps one pattern and its kit; ours keeps the tail's data beside it, and a
- * paste puts that on each head's tail where stock had put the head's, its number its own. A copy of a tail, or of
- * anything that is not a head, forgets the kept tail: pasting it is stock's. */
+/* Stock's clear (0x4001f7c0) and paste (0x4001fa0e) take a list of pattern numbers, a vector (begin, end). Ours give
+ * stock the list with each head's tail after it, so the undo, the clear, the paste and the message take the tails
+ * too. Stock's copy (0x4001e2a8) keeps one pattern and its kit; ours keeps the tail's data beside it, and a paste
+ * puts that on each head's tail where stock had put the head's, its number its own. A copy of a tail, or of anything
+ * that is not a head, forgets the kept tail: pasting it is stock's. */
 #define clear_patterns ((void (*)(u32, s32 **, s32, s32, s32))0x4001f7c0)    /* (manager, list, sequence, kit, undo) */
 #define paste_patterns ((void (*)(u32, s32 **, s32))0x4001fa0e)              /* (manager, list, undo) */
 #define copy_pattern ((u32 (*)(u32, s32))0x4001e2a8)                         /* (manager, n) -> a byte, true when copied */

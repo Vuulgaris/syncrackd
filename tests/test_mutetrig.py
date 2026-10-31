@@ -1,22 +1,4 @@
-"""The "mute" image: a muted track's trigs still fire (engine/mutetrig.c). OS 1.42 only.
-
-Stock drops an event the sequencer made for a muted track, in the event loop of the routine
-that runs every block. Our images already silence a muted track at the mixer and at the analog
-voices' level words, so on this image that test is skipped for every track that makes sound,
-and kept for a MIDI track.
-
-Emulated here: the stock event loop itself, from where it takes up an event for a track to
-where it has decided to keep it or drop it, as it is in the image, with our routine called from
-inside it. It is run for every track against every mix of event, mute, solo, pattern mute and
-MIDI track, next to the same code of the image before (the bank image's main program), which is
-what says what "not muted" and "stock's mute" are. The UI's own routine for "is this a MIDI
-track" is run on the same kit. And the recorder's feed with the mixer link under it, for a
-track that is muted and in record.
-
-Nothing here says what a unit does with it: that every event the sequencer makes for a muted
-track comes through this one test, what the trig keys show for a muted track, that a note
-started under a mute is silent from its first frame. See docs/FINDINGS.md.
-"""
+"""The "mute" image: a muted track's trigs still fire (engine/mutetrig.c). OS 1.42 only."""
 import itertools
 import shutil
 
@@ -34,14 +16,14 @@ from tools import fw
 pytestmark = pytest.mark.skipif(not shutil.which("m68k-elf-gcc"), reason="no ColdFire cross-compiler")
 
 P_VOL = 124
-KIT = 0x41000000                 # a kit
-EVENT = 0x41010000               # an event
-KIT_OBJECT = 0x41020000          # the UI's object for a kit, for its own "is a MIDI track"
-FRAME = 0x407e0000               # the per-block routine's frame: fp
+KIT = 0x41000000  # a kit
+EVENT = 0x41010000  # an event
+KIT_OBJECT = 0x41020000  # the UI's object for a kit, for its own "is a MIDI track"
+FRAME = 0x407e0000  # the per-block routine's frame: fp
 STACK = 0x407f0000
-OWNERS = 0x43bdd34c              # 28 bytes a track, read by the check after the mute tests
-HELD = 0x43bdf43e                # a word, a bit a track: a note-on is dropped while it is set
-MASK, UI_GLOBAL, UI_PATTERN = -56, -74, -70     # in the frame: the mute mask, and the muted trigs the UI is told of
+OWNERS = 0x43bdd34c  # 28 bytes a track, read by the check after the mute tests
+HELD = 0x43bdf43e  # a word, a bit a track: a note-on is dropped while it is set
+MASK, UI_GLOBAL, UI_PATTERN = -56, -74, -70  # in the frame: the mute mask, and the muted trigs the UI is told of
 TRACKS = 12
 NOTE_ON, SEQUENCER, HAS_NOTE = 1, 1, 0x80
 
@@ -72,9 +54,9 @@ class Loop:
         mc.map(0x80000000, 0x10000)
         mc.map(mm.PATTERN_MUTES & ~0xffff, 0x10000)
         mc.write(mm.BASE, image)
-        mc.write(KIT_OBJECT, (KIT_OBJECT + 0x100).to_bytes(4, "big"))                       # its method table
-        mc.w32(KIT_OBJECT + 0x100 + 52, KIT_OBJECT + 0x200)                                 # + 52: where the kit is
-        mc.write(KIT_OBJECT + 0x200, b"\x20\x3c" + KIT.to_bytes(4, "big") + b"\x4e\x75")    # movel #KIT,%d0 ; rts
+        mc.write(KIT_OBJECT, (KIT_OBJECT + 0x100).to_bytes(4, "big"))  # its method table
+        mc.w32(KIT_OBJECT + 0x100 + 52, KIT_OBJECT + 0x200)  # + 52: where the kit is
+        mc.write(KIT_OBJECT + 0x200, b"\x20\x3c" + KIT.to_bytes(4, "big") + b"\x4e\x75")  # movel #KIT,%d0 ; rts
         mc.set_stack(STACK, 0x40000100)
         mc.set_exits([mm.TRIG_KEPT, mm.TRIG_NEXT, 0x40000100])
 
@@ -102,7 +84,7 @@ class Loop:
         mc.uc.emu_start(mm.TRIG_EVENT, 0)
         pc = mc.uc.reg_read(UC_M68K_REG_PC)
         assert pc in (mm.TRIG_KEPT, mm.TRIG_NEXT)
-        assert mc.reg(15) == STACK - 0x400                                 # the stack is where it was
+        assert mc.reg(15) == STACK - 0x400  # the stack is where it was
         assert (mc.reg(2), mc.reg(10), mc.reg(14)) == (track, EVENT, FRAME)
         assert (mc.reg(3), mc.reg(5), mc.reg(6)) == (0x33333333, 0x55555555, 0x66666666)
         word = lambda at: int.from_bytes(mc.read(FRAME + at, 2), "big")
@@ -125,7 +107,7 @@ def test_a_muted_tracks_trig_is_kept(loops, track):
     was, now = loops
     bit = 1 << track
     for mutes, pattern in ((bit, 0), (0, bit), (bit, bit), (0x1fff, 0x1fff)):
-        assert was.event(track, mutes=mutes, pattern=pattern)[0] is False     # the image before drops it
+        assert was.event(track, mutes=mutes, pattern=pattern)[0] is False  # the image before drops it
         assert now.event(track, mutes=mutes, pattern=pattern) == (True, 0, 0)  # this one runs it, and tells the UI of no muted trig
 
 
@@ -143,10 +125,10 @@ def test_a_muted_midi_tracks_trig_is_dropped_as_it_was(loops, track):
     was, now = loops
     bit = 1 << track
     for mutes, pattern in ((bit, 0), (0, bit), (bit, bit)):
-        want = (False, bit if mutes else 0, bit if pattern else 0)             # dropped, and the UI told by which mute
+        want = (False, bit if mutes else 0, bit if pattern else 0)  # dropped, and the UI told by which mute
         assert was.event(track, mutes=mutes, pattern=pattern, midi=bit) == want
         assert now.event(track, mutes=mutes, pattern=pattern, midi=bit) == want
-    assert now.event(track, midi=bit) == (True, 0, 0)                          # and plays when it is not muted
+    assert now.event(track, midi=bit) == (True, 0, 0)  # and plays when it is not muted
 
 
 def test_every_kind_of_event_is_let_through_not_only_a_note_on(loops):
@@ -177,7 +159,7 @@ def test_a_track_that_makes_sound_is_treated_as_the_image_before_treats_an_unmut
         for mutes, pattern in MUTES:
             assert now.event(track, mutes=mutes, pattern=pattern, **case) == unmuted
             seen.add((was.event(track, mutes=mutes, pattern=pattern, **case)[0], unmuted[0]))
-    assert seen == {(True, True), (False, False), (False, True)}      # the cases do hold events a mute alone dropped
+    assert seen == {(True, True), (False, False), (False, True)}  # the cases do hold events a mute alone dropped
 
 
 @pytest.mark.parametrize("track", range(TRACKS))
@@ -225,7 +207,7 @@ def test_the_kits_word_is_the_one_the_ui_calls_a_midi_track(loops):
 
 def test_the_fx_tracks_own_test_is_left_alone(stock3, built):
     image, _ = built
-    at = 0x400a3d5e                                    # moveq #1,%d7 ; cmpl %d1,%d7 ; bnes ; tstl %fp@(-44) ; bnes ; movew PATTERN_MUTES,%d1
+    at = 0x400a3d5e  # moveq #1,%d7 ; cmpl %d1,%d7 ; bnes ; tstl %fp@(-44) ; bnes ; movew PATTERN_MUTES,%d1
     code = bytes.fromhex(fw.sx("d2a3052ef6e9ec4bad7208fb540f64782b18f99eb15f"))
     assert stock3[mm.off(at):mm.off(at) + len(code)] == code == image[mm.off(at):mm.off(at) + len(code)]
 
@@ -236,9 +218,9 @@ def test_the_main_program_differs_from_the_bank_images_in_one_call_and_the_routi
     site = range(mm.TRIG_MUTE, mm.TRIG_MUTE + 6)
     routine = range(syms["mute_trig"], syms["mute_trig"] + 34)
     assert all(a in site or a in routine for a in changed) and set(site) <= set(changed)
-    assert mm.CAVE_REC[0] <= routine[0] and routine[-1] < mm.CAVE_REC[1]            # in the feed's run, after the feed
+    assert mm.CAVE_REC[0] <= routine[0] and routine[-1] < mm.CAVE_REC[1]  # in the feed's run, after the feed
     assert syms["mix_rec"] == mm.CAVE_REC[0] and routine[0] >= syms["mix_rec"] + 166
-    assert was[mm.off(routine[0]):mm.off(routine[-1]) + 1] == b"\x4e\x71" * 17       # where the bank image has nothing
+    assert was[mm.off(routine[0]):mm.off(routine[-1]) + 1] == b"\x4e\x71" * 17  # where the bank image has nothing
     assert image[mm.off(mm.TRIG_MUTE):mm.off(mm.TRIG_MUTE) + 6] == b"\x4e\xb9" + syms["mute_trig"].to_bytes(4, "big")
 
 
@@ -261,7 +243,7 @@ def test_nothing_else_in_the_program_goes_into_the_six_bytes(stock3):
     routine = stock3[mm.off(0x400a38ce):mm.off(0x400a5700)]
     for at in range(0, len(routine) - 4, 2):
         op = routine[at]
-        if op >> 4 != 6:                                   # a branch, short or word
+        if op >> 4 != 6:  # a branch, short or word
             continue
         disp = routine[at + 1]
         target = None
@@ -285,11 +267,11 @@ def test_the_feed_runs_for_a_track_that_is_muted_and_in_record(built, mode, left
     start = junk(6)
     _, window = rig.run(block, frame, start)
     want = bytearray(start)
-    want[m.MAILBOX:m.MAILBOX + 2] = (7).to_bytes(2, "big")                                 # one block went to the audio CPU
+    want[m.MAILBOX:m.MAILBOX + 2] = (7).to_bytes(2, "big")  # one block went to the audio CPU
     pair, rnd = to16(frame[:, left:left + 2], rnd_of(start))
     want[ring_at(7):ring_at(7) + 4 * BLOCK] = pair.astype(">i2").tobytes()
     want[RND:RND + 4] = rnd.to_bytes(4, "big")
     assert window == bytes(want)
     seen = rig.seen["params"]
-    assert seen[STRIDE * 3 + P_VOL:STRIDE * 3 + P_VOL + 2] == b"\0\0"                      # and the mixer is shown none of the track
+    assert seen[STRIDE * 3 + P_VOL:STRIDE * 3 + P_VOL + 2] == b"\0\0"  # and the mixer is shown none of the track
     assert seen[STRIDE * 2 + P_VOL:STRIDE * 2 + P_VOL + 2] == block[STRIDE * 2 + P_VOL:STRIDE * 2 + P_VOL + 2]

@@ -1,12 +1,8 @@
 /* Main CPU (section 3, OS 1.42 only): the hits image. A long sample's hits start the filter's envelope again.
  *
- * 
- *
- * 
- *
  * The filter's envelope is this CPU's (docs/FINDINGS.md, "The filter's envelope is the main CPU's"): stock's
- * 0x400965a4 (the block's params, the trigs, the releases, the tracks it skips), once a block, eight tracks, called at
- * 0x400a4ccc. The call comes here. The sound engine has said, in the window's long at 0x5b4, how loud a hit each
+ * 0x400965a4 (the block's params, the trigs, the releases, the tracks it skips), once a block, eight tracks, called
+ * at 0x400a4ccc. The call comes here. The sound engine has said, in the window's long at 0x5b4, how loud a hit each
  * track's playhead will reach in two blocks (four bits a track, 0 none, 1 to 15 in 3 dB steps up to -3 dB:
  * engine/sampler.h, HITS). On a sampler track DEL is that hit's threshold: 0 off, 1 the loudest only, 127 all of
  * them. A hit DEL lets through is a trig of the envelope's alone, in the argument this call hands it and nowhere
@@ -27,11 +23,10 @@ typedef unsigned int u32;
 #define SAMPLER (44 << 8)
 
 #ifdef SOLOEND
-/* The soloend image. A solo lock ends with its trig's length.
- * A step's solo lock stays in the lock block till the track's next trig; here the track's bit of solo_gone is
- * set at its note's release (the trig's LEN, or the key let go) and cleared at its next trig, and the solos
- * (engine/amute.c, solo_now) pass over a lock whose bit is set. Twelve bytes, first in the run: the long, then the
- * mark each sampler track had the block before. */
+/* The soloend image. A solo lock ends with its trig's length. A step's solo lock stays in the lock block till the
+ * track's next trig; here the track's bit of solo_gone is set at its note's release (the trig's LEN, or the key let
+ * go) and cleared at its next trig, and the solos (engine/amute.c, solo_now) pass over a lock whose bit is set.
+ * Twelve bytes, first in the run: the long, then the mark each sampler track had the block before. */
 __asm__(".section .cave.o,\"ax\"\n"
         "        .globl solo_gone\n"
         "solo_gone:  .long 0, 0, 0\n"
@@ -77,17 +72,17 @@ __attribute__((section(".cave.o"))) void hits_env(u8 *params, u32 trig, u32 rele
 }
 
 #ifdef HITUI
-/* The hitui image: on a sampler track the filter pages say what DEL is now. 
- * 
+/* The hitui image: on a sampler track the filter pages say what DEL is now.
+ *
  *
  * Stock's filter page (class 0x401c9da0) draws FLTR1 (pages 7, 9, 11) and FLTR2 (page 10) with loops of their own,
  * not the base page's. Three places, each a call of ours:
- *   - FLTR2's loop takes a knob's name from the descriptors by its record (0x4004232e): DEL's record (0x3f) on a
- *     sampler track is named HITS (hit_short);
- *   - the base turn routine's pop-up, "%s=%s", takes the name from the knob's holder (0x4003bc28, where its two ways
- *     join): the same (hit_popname);
- *   - FLTR1's picture of the envelope asks DEL's value of the routine in a3 (0x4004268a): on a sampler track it is
- *     handed 0, and the picture has no delay (hit_deldraw).
+ * - FLTR2's loop takes a knob's name from the descriptors by its record (0x4004232e): DEL's record (0x3f) on a
+ * sampler track is named HITS (hit_short);
+ * - the base turn routine's pop-up, "%s=%s", takes the name from the knob's holder (0x4003bc28, where its two ways
+ * join): the same (hit_popname);
+ * - FLTR1's picture of the envelope asks DEL's value of the routine in a3 (0x4004268a): on a sampler track it is
+ * handed 0, and the picture has no delay (hit_deldraw).
  * DEL's knob on FLTR2 still shows its number, 0 to 127: the hits' threshold. Every other machine is stock's. */
 #define active_track ((u32 (*)(void *))0x4001ff74)
 #define machine_of ((int (*)(void *, u32))0x4000f692)
@@ -159,15 +154,13 @@ __asm__(
 );
 #ifdef TRANS
 /* The trans image: on a sampler track FLTR2 draws DEL's record as a plain knob named TRANS, TRANSIENT in the pop-up. The
- * owner, 2026-10-24: "the env delay setting which is now transient trigs needs to ahve its grpahic redone to be a knob
  * that soays transient". A knob's picture and name are drawn by the page's + 180 (0x4003842c): with its last argument 0
  * it calls the record's graphic from the display table (DEL's and the analog page's 0x89: the delay's, 0x400706ac; a
- * plain knob's 0x400701b4, same arguments), with 1 none at all (the first build of this image: "no graphic at all");
  * the name under it is the descriptor's, by 0x40012b24 at 0x400385c6 (FLTR2's own name place, 0x4004232e, is for a knob
  * it greys out). So:
- *   - FLTR2's test of DEL (0x400424bc) jumps to del_knob, which keeps stock's way (0) and marks a sampler track's DEL;
- *   - the delay's graphic, at its start, draws a plain knob once when marked (del_gfx);
- *   - the name's call at 0x400385c6 goes through trans_label: TRANS on a sampler track's DEL.
+ * - FLTR2's test of DEL (0x400424bc) jumps to del_knob, which keeps stock's way (0) and marks a sampler track's DEL;
+ * - the delay's graphic, at its start, draws a plain knob once when marked (del_gfx);
+ * - the name's call at 0x400385c6 goes through trans_label: TRANS on a sampler track's DEL.
  * In a run of its own (the hits' run is full). d0 is not read before it is set again past the test. */
 extern const char trans_long[];
 

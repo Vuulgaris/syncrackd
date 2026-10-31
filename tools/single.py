@@ -1,14 +1,11 @@
 """The single-file patcher: one .py a release, the patcher, its container code and the bundle in it.
 
-    python -m tools.single stream          # build/bundle/stream.json -> build/dist/syncrackd_stream.py
-    python -m tools.single stream --bundle X.json -o Y.py
-    python -m tools.single stream --site   # and into site/ with its release.json, for the browser patcher
+python -m tools.single stream          # build/bundle/stream.json -> build/dist/syncrackd_stream.py
+python -m tools.single stream --bundle X.json -o Y.py
+python -m tools.single stream --site   # and into site/ with its release.json, for the browser patcher
 
-What the user runs: `python3 syncrackd_stream.py Syntakt_OS1.42.syx`. Python 3.9 or later and nothing else (run
-as macOS's own 3.9.6 with -I -S, 2026-10-28):
-tools/syx.py, ele3.py, fw.py and patch.py and the aplib codec (MIT, elektron-model-tweaks) go in as source, each
-made a module at the start, and the bundle as zlib and base85. The bundle is checked for Elektron's code when it
-is made (tools/bundle.py); nothing here adds any.
+What the user runs: `python3 syncrackd_stream.py Syntakt_OS1.42.syx`. The bundle is checked for Elektron's code when
+it is made (tools/bundle.py); nothing here adds any.
 """
 import argparse
 import base64

@@ -1,14 +1,14 @@
 """Seal the stock bytes written in our source, so the repository holds none of Elektron's.
 
-    python -m tools.seal tools/build_main.py tests/test_x.py ...   # rewrite in place
-    python -m tools.seal --check FILE...                           # list what would be sealed, change nothing
-    python -m tools.seal --show TOKEN                              # the hex a sealed run opens to
+python -m tools.seal tools/build_main.py tests/test_x.py ...   # rewrite in place
+python -m tools.seal --check FILE...                           # list what would be sealed, change nothing
+python -m tools.seal --show TOKEN                              # the hex a sealed run opens to
 
 A hex string or bytes literal of 4 bytes or more whose bytes are found in the official sections 3 or 7 becomes
-fw.sx("...") or fw.sb("..."), which opens to the same value with the official file's key (tools/fw.py). Shorter
-runs (one instruction) and plain ASCII (magic words) are left as they are. The container, SysEx and file
-protocol modules (ele3, syx, rpc) and the EMAC encoding tests hold facts of a format, not code: not sealed.
-Needs the official file, as every build does.
+fw.sx("...") or fw.sb("..."), which opens to the same value with the official file's key (tools/fw.py). Shorter runs
+(one instruction) and plain ASCII (magic words) are left as they are. The container, SysEx and file protocol modules
+(ele3, syx, rpc) and the EMAC encoding tests hold facts of a format, not code: not sealed. Needs the official file, as
+every build does.
 """
 import ast
 import re

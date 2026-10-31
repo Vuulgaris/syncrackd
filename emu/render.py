@@ -1,9 +1,9 @@
 """Render every stock digital machine through the real voice loop.
 
-    python -m emu.render firmware/path/to/Syntakt_OS1.42.syx
+python -m emu.render firmware/path/to/Syntakt_OS1.42.syx
 
-Writes 32-bit mono WAVs to build/renders/ (made from Elektron code: never
-commit them) and prints level, pitch, decay and instruction counts.
+Writes 32-bit mono WAVs to build/renders/ (made from Elektron code: never commit them) and prints level, pitch, decay
+and instruction counts.
 """
 import os
 import sys

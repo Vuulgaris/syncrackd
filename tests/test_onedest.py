@@ -1,14 +1,4 @@
-"""The onedest image (engine/recpage.c, ONEDEST): the gainup image with DEST only SMPL.
-
-
-Here, on the sampling page:
-  - B reads DEST SMPL whatever it is turned to, and every track's take goes to its SMPL place (the box says DEST_SMPL);
-  - a NEXT left from before (the page's own numbers are not cleared by a start) is dropped by a turn of B, and the poll
-    holds no place for it;
-  - C is still the track's KIND;
-  - the image: only the page's runs differ from the gainup image's, and outside them addresses into them; section 7
-    the gainup image's.
-Emulation only."""
+"""The onedest image (engine/recpage.c, ONEDEST): the gainup image with DEST only SMPL."""
 import shutil
 
 import pytest
@@ -49,11 +39,11 @@ def test_a_next_left_from_before_goes_at_a_turn_of_b(main):
     t = 2
     r = N.rig(main, t, N.bank(stereo=(1, 2)))
     N.turns(r, 1, 1)
-    G.twist(r, B_, 1)                                           # the page's numbers made
-    r.mc.write(G.STATE + 4 + 5, b"\x01")                        # track 6 on NEXT, as a build before left it
+    G.twist(r, B_, 1)  # the page's numbers made
+    r.mc.write(G.STATE + 4 + 5, b"\x01")
     N.on(r, main, 5)
     N.poll(r, main)
-    assert N.dest(r, 5) == 2                                    # held a place, as on the gainup image
+    assert N.dest(r, 5) == 2  # held a place, as on the gainup image
     G.twist(r, B_, 1)
     assert nx_on(r, main) == [0] * 8 and r.mc.read(G.STATE + 4, 8) == bytes(8)
     N.poll(r, main)

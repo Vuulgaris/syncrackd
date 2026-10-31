@@ -1,13 +1,4 @@
-"""The gfade image: the xfade image with one crossfade for the whole unit.
-
-
-
-
-)
-
-The eight numbers of the xfade image hold the one crossfade in the place of the track that last turned it, the rest 0,
-so the mixer's rule and the analog voices' are the xfade image's own code, tested there.
-"""
+"""The gfade image: the xfade image with one crossfade for the whole unit."""
 import pytest
 
 import test_xfade as X
@@ -54,7 +45,7 @@ def test_a_turn_never_leaves_all_eight_at_0_on_the_way(main):
     r.twist(G, 1)
     assert r.xf == [0, 0, 0, 0, 0, 0, 91, 0]
     first = r.xf_writes[0]
-    assert first[0] in (4, 6), r.xf_writes          # the long that holds track 7's byte (or the byte itself) comes first
+    assert first[0] in (4, 6), r.xf_writes  # the long that holds track 7's byte (or the byte itself) comes first
 
 
 def test_the_other_knobs_and_the_image(official_path, official, main, before):
@@ -71,7 +62,7 @@ def test_the_other_knobs_and_the_image(official_path, official, main, before):
     diff = [k for k in range(len(new)) if new[k] != old[k]]
     runs = [mm.CAVE_PAGE, mm.CAVE_PAGE2, mm.CAVE_PAGE3, mm.CAVE_PAGE4, mm.CAVE_PAGE5, mm.CAVE_PAGE6]
     stray = [k for k in diff if not any(mm.off(lo) <= k < mm.off(hi) for lo, hi in runs)]
-    assert len(stray) <= 64, len(stray)             # outside the page's runs only operands that name a routine that moved
+    assert len(stray) <= 64, len(stray)  # outside the page's runs only operands that name a routine that moved
     for sid in official.ids:
         if sid not in (3, 7):
             assert built.container.by_id(sid).stored == official.container.by_id(sid).stored

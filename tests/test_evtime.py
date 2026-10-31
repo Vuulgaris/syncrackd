@@ -1,13 +1,4 @@
-"""The evtime tool: the fast image with the profile cutting the events and knobs stretch in five, the mixer not timed.
-
-
-
-). engine/evlap.S: four of stock's calls in the stretch go to stubs that read the profile's timer into
-the record's places for the stopped code's stack pointer, PC, last stack long and task, and jump on to the routine.
-tools/prof_read.py reads the five parts and how often each call was made.
-
-Held here by running the stubs with the routine played; not held: the counts on the unit.
-"""
+"""The evtime tool: the fast image with the profile cutting the events and knobs stretch in five, the mixer not timed."""
 import hashlib
 import shutil
 
@@ -67,7 +58,7 @@ def test_a_lap_reads_the_timer_and_the_routine_finds_everything_as_its_caller_le
     sp = 0x41008000
     for j, v in enumerate((0xa1, 0xa2, 0xa3)):
         mc.w32(sp + 4 + 4 * j, v)
-    mc.w32(sp, 0x41009000)                      # where the routine returns to
+    mc.w32(sp, 0x41009000)  # where the routine returns to
     mc.write(0x41009000, b"\x4e\x75")
     mc.uc.reg_write(UC_M68K_REG_A7, sp)
     mc.uc.reg_write(UC_M68K_REG_D0, 0xdeadbeef)
@@ -93,7 +84,7 @@ def test_prof_read_cuts_the_stretch_in_five_and_takes_a_lap_not_reached_as_the_o
     assert prof_read.laps(r) and prof_read.evlap(r) and not prof_read.split(r)
     _, parts, _, _ = prof_read.times(r)
     assert [int(parts["    " + nm][0]) for nm in prof_read.EV_NAMES] == [100] * 5
-    r["s5"][:] = 0x405fcc8c                     # the third call not made: what the interrupt's start left
+    r["s5"][:] = 0x405fcc8c  # the third call not made: what the interrupt's start left
     _, parts, _, _ = prof_read.times(r)
     assert [int(parts["    " + nm][0]) for nm in prof_read.EV_NAMES] == [100, 100, 0, 200, 100]
     assert prof_read.ev_hits(r) == [100.0, 100.0, 0.0, 100.0]

@@ -1,20 +1,4 @@
-"""The meter image: the sampling page's level meter, and every track as a source. Builds and
-emulation only.
-
-SRC was a switch, MAIN or EXT, a bit of MODE's value. It is a number in that value now, above the
-stereo and record switches: the main mix, the external input, tracks 1..12, the FX track's return,
-the delay and reverb. The feed (engine/recfeed.c) takes a take's two sides from where the number
-says in the main CPU's frame of 20 channels; a track is one channel and goes to both sides.
-
-The meter is a bar two dots high along the bottom of the screen. The feed keeps its level: the
-largest sample of the source the page is showing, falling by a 1024th of itself a block, and it
-asks for the page to be drawn again every 96 blocks while the page keeps being drawn. The page
-(engine/recpage.c) draws the bar with stock's own rectangle routine, which runs here as it is, on
-a surface of the test's, as does stock's redraw request on a page object of the test's.
-
-What this cannot show: where the bar lands on the real screen, what else stock draws there, and
-what sixteen drawings a second cost the main CPU.
-"""
+"""The meter image: the sampling page's level meter, and every track as a source. Builds and"""
 import shutil
 
 import numpy as np
@@ -40,10 +24,10 @@ SOURCES = range(len(NAMES))
 # where each source is in the frame: (left, right)
 PLACE = [(mm.F_MAIN_L, mm.F_MAIN_R), (mm.F_EXT_L, mm.F_EXT_R)] + [(mm.F_T1 + t, mm.F_T1 + t) for t in range(12)] \
     + [(mm.F_FX_L, mm.F_FX_R), (mm.F_SENDS_L, mm.F_SENDS_R)]
-DOTS = HEAP + 0x8100                    # the surface's dots: 128 columns of two longs
+DOTS = HEAP + 0x8100  # the surface's dots: 128 columns of two longs
 W, H = 128, 64
 VARS = (mm.METER_PAGE, mm.METER_SRC, mm.METER_QUIET, mm.METER_LEVEL)
-FEED_PAGE, OWNER = 0x40700000, 0x40700100       # a page object for the feed's rig, and the object at its + 44
+FEED_PAGE, OWNER = 0x40700000, 0x40700100  # a page object for the feed's rig, and the object at its + 44
 
 
 def src(n):
@@ -117,13 +101,14 @@ class MeterRig(LockRig):
 
 def page_rig(main, track=0, **kw):
     r = MeterRig(main, {track: SAMPLER}, track=track, index=1, **kw)
-    r.mc.w32(0x40196aba, 0), r.mc.w32(0x40196abe, 0)        # the bank numbers the page also draws
+    r.mc.w32(0x40196aba, 0), r.mc.w32(0x40196abe, 0)  # the bank numbers the page also draws
     return r
 
 
 def bar_dots(level):
-    """The bar's length for a level, as specified: 16 places to a halving (the highest bit and the four
-    under it), 104 dots at the largest sample, 5 dots to every 8 places."""
+    """The bar's length for a level, as specified: 16 places to a halving (the highest bit and the four under it), 104
+    dots at the largest sample, 5 dots to every 8 places.
+    """
     v = level & 0x7fff
     e = max(v.bit_length() - 1, 0)
     u = 16 * e + ((v << 4 >> e) & 15)
@@ -141,9 +126,9 @@ def bar_picture(level, under=None):
 
 def test_the_bars_scale():
     assert bar_dots(32767) == m.BAR_W and bar_dots(0) == 0 and bar_dots(1) == 0
-    for k in range(1, 10):                                  # ten dots to a halving
+    for k in range(1, 10):  # ten dots to a halving
         assert bar_dots(32767 >> k) == m.BAR_W - 10 * k
-    assert bar_dots(26) == 0 and bar_dots(27) == 1          # the first dot: 62 dB under the largest sample
+    assert bar_dots(26) == 0 and bar_dots(27) == 1  # the first dot: 62 dB under the largest sample
     lengths = [bar_dots(v) for v in range(32768)]
     assert lengths == sorted(lengths) and set(lengths) == set(range(m.BAR_W + 1))
 
@@ -157,7 +142,7 @@ def test_src_goes_through_every_source_and_stops_at_both_ends(main, track):
         assert r.mode == STEREO | src(n) and r.src() == NAMES[n] and r.popped[-1] == ("SRC", NAMES[n])
     shown = len(r.popped)
     r.twist(SRC_KNOB, 1), r.twist(SRC_KNOB, 5)
-    assert r.mode == STEREO | src(15) and len(r.popped) == shown        # the last one: nothing moves, nothing pops up
+    assert r.mode == STEREO | src(15) and len(r.popped) == shown  # the last one: nothing moves, nothing pops up
     for n in reversed(list(SOURCES)[:-1]):
         r.twist(SRC_KNOB, -1)
         assert r.mode == STEREO | src(n) and r.src() == NAMES[n] and r.popped[-1] == ("SRC", NAMES[n])
@@ -183,7 +168,7 @@ def test_the_source_and_the_two_switches_leave_each_other_alone(main, mode):
     assert r.mode == mode | src(11)
     r.twist(REC_KNOB, -1 if mode & REC else 1)
     assert r.mode == (mode ^ REC) | src(11) and r.src() == "T10"
-    r = MeterRig(main, {0: SAMPLER}, index=0, mode=mode | src(9))       # the first page: MODE is the stereo switch
+    r = MeterRig(main, {0: SAMPLER}, index=0, mode=mode | src(9))  # the first page: MODE is the stereo switch
     r.twist(MODE_KNOB, -1 if mode & STEREO else 1)
     assert r.mode == (mode ^ STEREO) | src(9)
 
@@ -196,7 +181,7 @@ def test_what_an_earlier_build_saved_still_means_what_it_did(main):
 def test_src_is_still_the_tracks_alone_and_goes_into_every_lock_of_mode(main):
     r = page_rig(main, mode=STEREO | src(2))
     r.locks = {3: src(2), 9: REC | STEREO | src(5), 40: STEREO | src(2)}
-    r.hold(3)                                                           # a held step changes nothing: no lock of SRC
+    r.hold(3)  # a held step changes nothing: no lock of SRC
     r.twist(SRC_KNOB, 3)
     assert r.mode == STEREO | src(5) and not r.rec_locks
     # a lock of MODE carries the track's source and record, as on the reclock image: its stereo switch is its own
@@ -214,7 +199,7 @@ def test_the_page_draws_the_bar_along_the_bottom_with_stocks_rectangle_routine(m
     r.set(level=level)
     r.show()
     assert (r.dots == bar_picture(level, under)).all()
-    assert r.order[0] == "stock" and not r.stray                        # after stock's own drawing, over it
+    assert r.order[0] == "stock" and not r.stray  # after stock's own drawing, over it
 
 
 def test_a_drawing_tells_the_feed_what_to_watch_and_that_the_page_is_on_show(main):
@@ -309,7 +294,7 @@ def test_the_feed_takes_a_takes_two_sides_from_where_the_source_is_in_the_frame(
     window = junk(0x0105)
     ret, after = rig.run(make_block(ALL, [0] * track + [switches | src(n)] + [0] * (11 - track)), frame, window)
     assert ret == 0x8000DBD0 and after == fed_pair(window, frame, *PLACE[n])
-    assert rig.vars == (0, 0, 0, 0) and not rig.asked                   # no page has been drawn: no meter
+    assert rig.vars == (0, 0, 0, 0) and not rig.asked  # no page has been drawn: no meter
 
 
 def test_the_places_are_the_frames_own(rig):
@@ -334,8 +319,9 @@ def test_a_step_locked_on_records_the_tracks_source_and_the_first_track_in_recor
 
 
 def level_after(level, frame, n):
-    """The meter's level after a block, as specified: it falls by a 1024th of itself and one more, and
-    is never under the block's largest sample, a negative one counted one less, top 16 bits."""
+    """The meter's level after a block, as specified: it falls by a 1024th of itself and one more, and is never under the
+    block's largest sample, a negative one counted one less, top 16 bits.
+    """
     l, r = PLACE[n]
     x = np.asarray(frame)[:, [l, r]].astype(np.int64)
     top = int(np.where(x < 0, ~x, x).max()) >> 16
@@ -378,7 +364,8 @@ def test_a_silent_source_lets_the_bar_fall_to_nothing(rig):
         assert rig.vars[3] == level
         seen.append(level)
         blocks += 1
-    # 13 dB a second: a halving in about 0.47 s, 710 blocks. Followed here for its first 200 blocks, then by the rule alone.
+    # 13 dB a second: a halving in about 0.47 s, 710 blocks. Followed here for its first 200 blocks, then by the rule
+    # alone.
     while level:
         level = level_after(level, frame, 0)
         seen.append(level)
@@ -410,7 +397,7 @@ def test_a_drawing_is_asked_for_every_96_blocks_with_stocks_own_request(rig):
         rig.run(block, frame)
         if rig.asked:
             asked.append(k)
-    assert asked == [m.METER_EVERY, 2 * m.METER_EVERY, 3 * m.METER_EVERY]      # the last as it stops
+    assert asked == [m.METER_EVERY, 2 * m.METER_EVERY, 3 * m.METER_EVERY]  # the last as it stops
     assert rig.vars[2] == m.METER_STOP
 
 
@@ -420,7 +407,7 @@ def test_it_stops_when_the_page_is_not_drawn_any_more_and_starts_when_it_is(rig)
         rig.reset(page=FEED_PAGE, source=3, quiet=quiet, level=777)
         rig.run(block, frame)
         assert rig.vars == (FEED_PAGE, 3, quiet, 777) and not rig.asked
-    rig.reset(page=FEED_PAGE, source=3, quiet=0, level=777)                 # what a drawing leaves
+    rig.reset(page=FEED_PAGE, source=3, quiet=0, level=777)  # what a drawing leaves
     rig.run(block, frame)
     assert rig.vars == (FEED_PAGE, 3, 1, level_after(777, frame, 3))
 
@@ -463,7 +450,8 @@ def test_what_it_costs_the_main_cpu_a_block(rig, before):
     assert (off - was, stopped - off, on - off, count(rig, taking) - count(old, taking)) == COST
 
 
-# more than the image before a block: with no page drawn yet; with the page gone; with the meter running; and a block of a take
+# more than the image before a block: with no page drawn yet; with the page gone; with the meter running; and a block
+# of a take
 COST = (12, 3, 641, 223)
 
 
@@ -509,7 +497,7 @@ def test_the_image_is_the_pitch_image_but_for_the_main_cpus_page_feed_and_range(
     was = build.build(official_path, log=quiet, pitch=True)[2]
     raw, _, built, regions, syms = build.build(official_path, log=quiet, meter=True)
     assert sorted(regions) == [3, 7] and built.section(3) == main[0] and was.section(3) == before[0]
-    assert built.section(7) == was.section(7)                       # the audio CPU's program is the pitch image's
+    assert built.section(7) == was.section(7)  # the audio CPU's program is the pitch image's
     for sid in official.ids:
         if sid not in (3, 7):
             assert built.container.by_id(sid).stored == official.container.by_id(sid).stored
@@ -517,10 +505,10 @@ def test_the_image_is_the_pitch_image_but_for_the_main_cpus_page_feed_and_range(
     spans = [mm.CAVE_PAGE, mm.CAVE_PAGE2, mm.CAVE_PAGE3, mm.CAVE_METER, mm.CAVE_REC, mm.CAVE_AMUTE, mm.CAVE_TEXT, (mode_max, mode_max + 4)]
     spans += [(mm.SYN_CLASS + k, mm.SYN_CLASS + k + 4) for k in (mm.PAGE_KNOB_METHOD, mm.PAGE_DRAW_METHOD, mm.PAGE_TURN_METHOD)]
     spans += [(x, x + 4) for x in (mm.SYN_SIDE + mm.SYN_SIDE_TURN, mm.SYN_BUILD + 6, mm.MIX_CALL + 2, mm.TRIG_MUTE + 2, mm.TEXT_SLOT_SITE + 2)]
-    spans += [(mm.HOLD_WRITE, mm.HOLD_WRITE + 8)]                   # and a step's REC is put past stock's hold flag (tests/test_save.py)
+    spans += [(mm.HOLD_WRITE, mm.HOLD_WRITE + 8)]  # and a step's REC is put past stock's hold flag (tests/test_save.py)
     diff = [k for k in range(len(stock3)) if before[0][k] != main[0][k]]
     assert diff and all(any(mm.off(s) <= k < mm.off(e) for s, e in spans) for k in diff)
-    for lo, hi in (mm.CAVE_METER, mm.CAVE_PAGE3):                   # the two new runs are stock's own in the image before
+    for lo, hi in (mm.CAVE_METER, mm.CAVE_PAGE3):  # the two new runs are stock's own in the image before
         assert before[0][mm.off(lo):mm.off(hi)] == stock3[mm.off(lo):mm.off(hi)]
 
 

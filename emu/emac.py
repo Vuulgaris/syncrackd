@@ -1,18 +1,17 @@
 """ColdFire EMAC, the part the Syntakt audio engine uses.
 
-Unicorn's own EMAC multiplies unsigned in signed fractional mode, which is
-the mode this engine runs in, so every EMAC instruction is executed here.
+Unicorn's own EMAC multiplies unsigned in signed fractional mode, which is the mode this engine runs in, so every EMAC
+instruction is executed here.
 
-Source: ColdFire Family Programmer's Reference Manual rev 3, chapter 6
-(instruction formats, MOVCLR and MOVE from ACC pseudocode, MOVE to ACC text).
+Source: ColdFire Family Programmer's Reference Manual rev 3, chapter 6 (instruction formats, MOVCLR and MOVE from ACC
+pseudocode, MOVE to ACC text).
 
-Supported: signed fractional mode (MACSR F/I = 1, S/U = 0, R/T = 0), longword
-MAC and MSAC with and without load, MOVE to and from ACC, MOVCLR, MOVE to and
-from MACSR. Anything else raises: section 7 code never does it, and an
-unverified mode must not run silently.
+Supported: signed fractional mode (MACSR F/I = 1, S/U = 0, R/T = 0), longword MAC and MSAC with and without load, MOVE
+to and from ACC, MOVCLR, MOVE to and from MACSR. Anything else raises: section 7 code never does it, and an unverified
+mode must not run silently.
 
-Accumulator in fractional mode, 48 bits: [47:40] extension, [39:8] the
-32-bit value (Q31), [7:0] extra fraction. Kept here as a signed Python int.
+Accumulator in fractional mode, 48 bits: [47:40] extension, [39:8] the 32-bit value (Q31), [7:0] extra fraction. Kept
+here as a signed Python int.
 """
 from dataclasses import dataclass
 
@@ -32,7 +31,7 @@ class Emac:
     def __init__(self):
         self.acc = [0, 0, 0, 0]
         self.macsr = 0
-        self.overflows = 0     # 48-bit accumulation overflows seen
+        self.overflows = 0  # 48-bit accumulation overflows seen
 
     def _need_fractional(self):
         if (self.macsr & (FI | SU | RT)) != FI:
@@ -56,16 +55,14 @@ class Emac:
         self._need_fractional()
         pav = PAV0 << n
         if self.macsr & OMC and self.macsr & pav:
-            self.macsr |= V            # a saturated accumulator ignores MAC
+            self.macsr |= V  # a saturated accumulator ignores MAC
             return
-        # Q31 * Q31 << 1 is Q63; the accumulator takes the top 40 bits,
-        # truncated. -1 * -1 gives exactly +1.0 (2**39).
+        # Q31 * Q31 << 1 is Q63; the accumulator takes the top 40 bits, truncated. -1 * -1 gives exactly +1.0 (2**39).
         p = (s32(x) * s32(y)) >> 23
         r = self.acc[n] - p if sub else self.acc[n] + p
         if not ACC_MIN <= r <= ACC_MAX:
-            # Constants from memory of the device manual, not from the
-            # chapter cited above. `overflows` lets callers prove this
-            # path never ran.
+            # Constants from memory of the device manual, not from the chapter cited above. `overflows` lets callers
+            # prove this path never ran.
             self.overflows += 1
             self.macsr |= pav
             if self.macsr & OMC:
@@ -88,7 +85,7 @@ class Emac:
         a = self.acc[n]
         v = (a >> 8) & 0xFFFFFFFF
         if self.macsr & OMC:
-            top = a >> 39                # ACC[47:39] must be all 0 or all 1
+            top = a >> 39  # ACC[47:39] must be all 0 or all 1
             if top not in (0, -1):
                 v = 0x7FFFFFFF if a >= 0 else 0x80000000
         if clear:
@@ -99,16 +96,16 @@ class Emac:
 
 @dataclass(frozen=True)
 class Insn:
-    kind: str            # mac, load, store, to_macsr, from_macsr
-    size: int            # bytes
+    kind: str  # mac, load, store, to_macsr, from_macsr
+    size: int  # bytes
     acc: int = 0
-    rx: int = 0          # register numbers: 0..7 = D0..D7, 8..15 = A0..A7
+    rx: int = 0  # register numbers: 0..7 = D0..D7, 8..15 = A0..A7
     ry: int = 0
     rw: int = 0
     sub: bool = False
     clear: bool = False
-    mem: tuple = None    # (mode, areg, d16) for MAC with load
-    src: tuple = None    # ("reg", n) or ("imm", value)
+    mem: tuple = None  # (mode, areg, d16) for MAC with load
+    src: tuple = None  # ("reg", n) or ("imm", value)
 
 
 def _src(op, tail):
@@ -128,7 +125,7 @@ def decode(code):
     if op >> 12 != 0xA:
         return None
     if (op & 0xF1C0) == 0xA140:
-        return None                                   # MOV3Q
+        return None  # MOV3Q
     if op & 0x0100:
         if (op & 0xF9F0) in (0xA180, 0xA1C0):
             return Insn("store", 2, acc=(op >> 9) & 3, rx=op & 0xF, clear=bool(op & 0x40))
@@ -147,7 +144,7 @@ def decode(code):
     reg = ((op >> 6) & 1) << 3 | (op >> 9) & 7
     sub = bool(ext & 0x0100)
     mode = (op >> 3) & 7
-    if mode in (0, 1):                                # no load
+    if mode in (0, 1):  # no load
         if ext & 0x0003:
             raise NotImplementedError("dual-accumulator MAC %04x %04x" % (op, ext))
         acc = ((ext >> 4) & 1) << 1 | (op >> 7) & 1
@@ -156,7 +153,7 @@ def decode(code):
         raise NotImplementedError("MAC ea mode %d" % mode)
     if ext & 0x0020:
         raise NotImplementedError("MAC with MASK %04x %04x" % (op, ext))
-    acc = ((ext >> 4) & 1) << 1 | (~op >> 7) & 1      # lsb is stored inverted
+    acc = ((ext >> 4) & 1) << 1 | (~op >> 7) & 1  # lsb is stored inverted
     d16 = int.from_bytes(code[4:6], "big", signed=True) if mode == 5 else 0
     return Insn("mac", 6 if mode == 5 else 4, acc=acc, rx=ext >> 12, ry=ext & 0xF,
                 rw=reg, sub=sub, mem=(mode, op & 7, d16))

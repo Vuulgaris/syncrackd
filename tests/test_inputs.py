@@ -1,10 +1,4 @@
-"""Where the analog tracks and the external input reach the main CPU. Section 3, OS 1.42.
-
-Static checks of the listing, plus the two copy routines run on marked data.
-Nothing here says what the converters carry on hardware: the slot names come
-from the factory test's own strings and from which track's parameters the
-code applies to which buffer.
-"""
+"""Where the analog tracks and the external input reach the main CPU. Section 3, OS 1.42."""
 import numpy as np
 import pytest
 
@@ -37,14 +31,14 @@ def cstr(image, addr):
 
 
 def test_a_dma_channel_fills_a_ring_from_the_serial_audio_port(sec3):
-    assert mm.u32(sec3, 0x4000101a + 2) == mm.RX_RING           # move.l #ring,d0
-    assert mm.u32(sec3, 0x40001030 + 2) == mm.RX_TCD + 0x10     # -> destination
-    assert mm.u32(sec3, 0x40001036 + 2) == mm.RX_PORT           # move.l #port,d0
-    assert mm.u32(sec3, 0x40001042 + 2) == mm.RX_TCD            # -> source
+    assert mm.u32(sec3, 0x4000101a + 2) == mm.RX_RING  # move.l #ring,d0
+    assert mm.u32(sec3, 0x40001030 + 2) == mm.RX_TCD + 0x10  # -> destination
+    assert mm.u32(sec3, 0x40001036 + 2) == mm.RX_PORT  # move.l #port,d0
+    assert mm.u32(sec3, 0x40001042 + 2) == mm.RX_TCD  # -> source
     assert (mm.RX_TCD - 0xfc045000) // 32 == 52
-    assert sec3[mm.off(0x40001064):mm.off(0x40001066)] == bytes.fromhex("7220")       # 32 bytes a request: 8 slots
+    assert sec3[mm.off(0x40001064):mm.off(0x40001066)] == bytes.fromhex("7220")  # 32 bytes a request: 8 slots
     assert mm.u32(sec3, 0x40001066 + 2) == mm.RX_TCD + 8
-    assert sec3[mm.off(0x4000106c):mm.off(0x40001070)] == bytes.fromhex(fw.sx("0ee31ad56fd375b8"))   # 64 requests: 2 x 32 frames
+    assert sec3[mm.off(0x4000106c):mm.off(0x40001070)] == bytes.fromhex(fw.sx("0ee31ad56fd375b8"))  # 64 requests: 2 x 32 frames
     assert mm.u32(sec3, 0x4000107a + 2) == mm.RX_TCD + 0x14
     # the per-block routine finds the fresh half from the channel's write address
     assert mm.u32(sec3, 0x400a38f0 + 2) == mm.RX_TCD + 0x10
@@ -68,7 +62,7 @@ def test_mixer_takes_tracks_9_to_12_from_the_first_four_input_buffers(sec3):
     # per track gain loop, 12 tracks: 0..7 from TRACKS + 128 * i, 8..11 from INPUTS + 128 * (i - 8)
     assert mm.u32(sec3, 0x4008fe7a + 2) == mm.TRACKS
     assert mm.u32(sec3, 0x4008fe82 + 2) == mm.INPUTS - 8 * 128
-    assert sec3[mm.off(0x4008fe9e):mm.off(0x4008fea2)] == bytes.fromhex(fw.sx("6dd6a109fad06b1a"))   # moveq #12,d0 ; cmp.l d2,d0
+    assert sec3[mm.off(0x4008fe9e):mm.off(0x4008fea2)] == bytes.fromhex(fw.sx("6dd6a109fad06b1a"))  # moveq #12,d0 ; cmp.l d2,d0
 
 
 def test_input_stage_uses_the_fx_track_parameters_on_buffers_6_and_7(sec3):
@@ -76,7 +70,7 @@ def test_input_stage_uses_the_fx_track_parameters_on_buffers_6_and_7(sec3):
     assert mm.u32(sec3, 0x4008ec64 + 2) == 8 * 142 + 106
     assert mm.u32(sec3, 0x4008ecea + 2) == 128 * mm.IN_FX_L
     assert mm.u32(sec3, 0x4008ecf6 + 2) == 128 * mm.IN_FX_R
-    assert mm.u32(sec3, 0x4008ecf0 + 2) == 12 * 142 + 140        # track 13 is the FX track
+    assert mm.u32(sec3, 0x4008ecf0 + 2) == 12 * 142 + 140  # track 13 is the FX track
 
 
 def marked_ring():
@@ -118,10 +112,10 @@ def test_ring_slots_land_in_the_frame_and_then_in_the_input_buffers(main_cpu, ha
 
 
 def test_mixer_leaves_all_twenty_channels_in_the_frame(sec3):
-    # 0x4008febc..0x4008ff1a: digital tracks to channels 2..9, tracks 9..12 to 10..13, FX return to 14, 15.
-    # Channels 18 and 19 are not written again: they keep the external input as unpacked from the ring.
+    # 0x4008febc..0x4008ff1a: digital tracks to channels 2..9, tracks 9..12 to 10..13, FX return to 14, 15. Channels
+    # 18 and 19 are not written again: they keep the external input as unpacked from the ring.
     o = mm.off(0x4008febc)
-    assert sec3[o:o + 4] == bytes.fromhex(fw.sx("5e9c057d99296b3b"))                       # move.l (a1),8(a0)
+    assert sec3[o:o + 4] == bytes.fromhex(fw.sx("5e9c057d99296b3b"))  # move.l (a1),8(a0)
     assert mm.u32(sec3, 0x4008fea6 + 2) == mm.FRAME
     assert mm.u32(sec3, 0x4008feac + 2) == mm.TRACKS
     assert mm.u32(sec3, 0x4008feb2 + 2) == mm.INPUTS

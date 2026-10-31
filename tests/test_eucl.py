@@ -1,10 +1,4 @@
-"""The eucl image: the soloend image with SOLO and REC only on the TRIG page's first page.
-
-
-The TRIG object shows two
-pages, 1 (or 2) and 3, the euclidean one (records 457 to 464, tools/uitable.pages); the trig image's three methods
-did not ask which was showing. On page 3 they are stock's now, on every track.
-"""
+"""The eucl image: the soloend image with SOLO and REC only on the TRIG page's first page."""
 import shutil
 
 import pytest
@@ -41,7 +35,7 @@ def test_on_the_euclidean_page_every_knob_is_stocks(main, track):
     r = trig(main, track, 1)
     assert [r.ask(k) for k in range(8)] == [600 + k for k in range(8)]
     r.show()
-    assert r.texts == [] and r.trig_stock[-1] == ("draw", PAGE)          # no SOLO, no REC, no switch drawn
+    assert r.texts == [] and r.trig_stock[-1] == ("draw", PAGE)  # no SOLO, no REC, no switch drawn
     for k in range(1, 9):
         assert G.twist(r, k, 1) == 0x66
     assert [t for t in r.trig_stock if t[0] == "turn"] == [("turn", k) for k in range(1, 9)]
@@ -65,7 +59,7 @@ def test_the_image(official_path, official, main):
     spans = [mm.CAVE_TRIG, mm.CAVE_TRIG2, mm.CAVE_TRIG3, mm.CAVE_TRIG4]
     diff = [k for k in range(len(new)) if new[k] != old[k]]
     stray = [k for k in diff if not any(mm.off(a) <= k < mm.off(b) for a, b in spans)]
-    assert len(stray) <= 64, [hex(mm.BASE + k) for k in stray[:20]]   # operands that name a routine that moved
+    assert len(stray) <= 64, [hex(mm.BASE + k) for k in stray[:20]]  # operands that name a routine that moved
     for sid in official.ids:
         if sid not in (3, 7):
             assert built.container.by_id(sid).stored == official.container.by_id(sid).stored

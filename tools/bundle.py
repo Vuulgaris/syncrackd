@@ -1,18 +1,17 @@
 """The patch bundle a user's patcher applies: our bytes, where they go, and hashes. None of Elektron's bytes.
 
-    python -m tools.bundle stream                          # build/images/..._stream.syx -> build/bundle/stream.json
-    python -m tools.bundle stream --file X.syx --what "..."
+python -m tools.bundle stream                          # build/images/..._stream.syx -> build/bundle/stream.json
+python -m tools.bundle stream --file X.syx --what "..."
 
-The built image is compared with the official one section by section. Every run of bytes that differs becomes
-{at, new: our bytes}; a section that grew is compared with the official one padded with zeros. The official
-bytes under the runs are checked by one SHA-256 a section, all of them in order: a hash a run would give a run of
-a few bytes away to anyone who tries them all. Runs are never joined across a byte that did not change: that byte is
-Elektron's. Before the bundle is written, every 32-byte window of our bytes is looked for in the official
-sections 3 and 7 (windows of four byte values or fewer, padding and NOP runs, not counted): one found is code
-of theirs we carried, and the bundle is refused.
-16 was tried first: it caught only idioms, 20 runs of 16 to 27 bytes on the stream image
-(prologues and epilogues, NOP runs, calls to the same stock routines in stock's order, one 21-byte run on the
-audio CPU at 0x400067e2 that reads like instructions moved aside at a hook).
+The built image is compared with the official one section by section. Every run of bytes that differs becomes {at,
+new: our bytes}; a section that grew is compared with the official one padded with zeros. The official bytes under the
+runs are checked by one SHA-256 a section, all of them in order: a hash a run would give a run of a few bytes away to
+anyone who tries them all. Runs are never joined across a byte that did not change: that byte is Elektron's. Before
+the bundle is written, every 32-byte window of our bytes is looked for in the official sections 3 and 7 (windows of
+four byte values or fewer, padding and NOP runs, not counted): one found is code of theirs we carried, and the bundle
+is refused. 16 was tried first: it caught only idioms, 20 runs of 16 to 27 bytes on the stream image (prologues and
+epilogues, NOP runs, calls to the same stock routines in stock's order, one 21-byte run on the audio CPU at 0x400067e2
+that reads like instructions moved aside at a hook).
 """
 import argparse
 import json

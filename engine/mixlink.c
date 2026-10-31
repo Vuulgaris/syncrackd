@@ -1,34 +1,31 @@
-/* Main CPU (section 3, OS 1.42 only): what the mixer is shown, for the length
- * of one mixer call. Replaces the one call to the mixer.
+/* Main CPU (section 3, OS 1.42 only): what the mixer is shown, for the length of one mixer call. Replaces the one
+ * call to the mixer.
  *
  * 1. Stereo link. For every track whose knobs say "this sampler, stereo", the
- *    next track's sends, volume, routing and level words are made equal to this
- *    track's and the two pans are forced hard left and hard right.
+ * next track's sends, volume, routing and level words are made equal to this
+ * track's and the two pans are forced hard left and hard right.
  * 2. Audio mute. A muted track, digital (1..8) or analog (9..12), is shown a
- *    volume of 0, so the mixer fades it out over the block: dry signal and
- *    sends. Stock mute only stops new trigs. The mixer takes all 12 levels
- *    from the same volume word. "Muted" is worked out the way the trig code
- *    at 0x400a39a0 and 0x400a421a does: the global mutes, or everything but
- *    the solo tracks when there is a solo, or the pattern's mutes. The
- *    right-hand track of a stereo pair is muted with its left and never by
- *    itself. The FX track is left alone.
+ * volume of 0, so the mixer fades it out over the block: dry signal and
+ * sends. Stock mute only stops new trigs. The mixer takes all 12 levels
+ * from the same volume word. "Muted" is worked out the way the trig code
+ * at 0x400a39a0 and 0x400a421a does: the global mutes, or everything but
+ * the solo tracks when there is a solo, or the pattern's mutes. The
+ * right-hand track of a stereo pair is muted with its left and never by
+ * itself. The FX track is left alone.
  *
- * Everything is put back afterwards: the main CPU's own data is never left
- * changed. The rule for "linked" is the same one the audio CPU uses
- * (engine/sampler.c, sampler_post), read from the same parameters.
+ * Everything is put back afterwards: the main CPU's own data is never left changed. The rule for "linked" is the same
+ * one the audio CPU uses (engine/sampler.c, sampler_post), read from the same parameters.
  *
- * With ONETRACK (the stereo image) a stereo sample keeps to its own track and
- * there is no link: the next track is its own again, with its own pan, and a
- * stereo track's pan is its balance. The mute is all that is left here.
- */
+ * With ONETRACK (the stereo image) a stereo sample keeps to its own track and there is no link: the next track is its
+ * own again, with its own pan, and a stereo track's pan is its balance. The mute is all that is left here. */
 #include "sampler.h"
 
 #ifdef MIXSPLIT
-/* The mixtime image, a tool: stock's mixer is called through mix_timed, which reads the profile's timer before and after
- * it into two places of the profile's record (engine/prof.S): + 36, which the lap image read at the per-block routine's
- * first call, and + 56, the last of the stopped code's six stack longs. So the mixer stretch's 34.7 hundredths are
- * split into stock's mixer and our links around it (to a split of the mixer). In a run
- * of its own: this one has 2 bytes. */
+/* The mixtime image, a tool: stock's mixer is called through mix_timed, which reads the profile's timer before and
+ * after it into two places of the profile's record (engine/prof.S): + 36, which the lap image read at the per-block
+ * routine's first call, and + 56, the last of the stopped code's six stack longs. So the mixer stretch's 34.7
+ * hundredths are split into stock's mixer and our links around it (to a split of the mixer). In a run of its own:
+ * this one has 2 bytes. */
 void *mix_timed(void *, void *, u8 *);
 #define MIXER mix_timed
 __asm__(".section .cave.n,\"ax\",@progbits\n"
@@ -110,9 +107,9 @@ void *mix_link(void *a, void *b, u8 *params)
 #endif
 
 #ifdef SOLOKNOB
-    /* The soloknob image: a solo is the sampling page's (SOLO_WORD, engine/sampler.h). With any, every track
-     * that has none is silenced and no mute counts. A track that is no sampler any more has no knob to take
-     * its solo off, so it has none: its bit is cleared here. */
+    /* The soloknob image: a solo is the sampling page's (SOLO_WORD, engine/sampler.h). With any, every track that has
+     * none is silenced and no mute counts. A track that is no sampler any more has no knob to take its solo off, so
+     * it has none: its bit is cleared here. */
     mute = solo = SOLO_WORD;
     for (i = 0; i < N_TRACKS; i++)
         if (params[PARAMS_STRIDE * i + PARAM_TYPE] != MACHINE_TYPE)
@@ -132,9 +129,9 @@ void *mix_link(void *a, void *b, u8 *params)
     mute = (MUTES[1] ? ~MUTES[1] : MUTES[0]) | *PATTERN_MUTES;
 #endif
 #ifdef XFADE
-    /* The xfade image: a crossfade is the sampling page's too (XFADES, engine/sampler.h), a number a sampler
-     * track. A track is turned down by the largest of the other tracks' numbers: the largest of all, and for the
-     * track that holds it the next one. A track that is no sampler any more has no knob, so its number is 0. */
+    /* The xfade image: a crossfade is the sampling page's too (XFADES, engine/sampler.h), a number a sampler track. A
+     * track is turned down by the largest of the other tracks' numbers: the largest of all, and for the track that
+     * holds it the next one. A track that is no sampler any more has no knob, so its number is 0. */
     if (XFADE_ANY)
 #ifdef APAGE        /* the apage image: twelve numbers, and an analog track is never without its knob */
         for (i = 0; i < MIX_TRACKS; i++) {
@@ -157,9 +154,8 @@ void *mix_link(void *a, void *b, u8 *params)
         }
 #endif
 #ifdef XMUTE
-    /* The trig image: with no solo on, the track that holds the crossfade comes in as it goes up even when it is muted
-     * by the global mutes (not the pattern's), at its crossfade's share of its volume. 
-     * */
+    /* The trig image: with no solo on, the track that holds the crossfade comes in as it goes up even when it is
+     * muted by the global mutes (not the pattern's), at its crossfade's share of its volume. */
     if (top && !SOLO_NOW && (MUTES[0] & ~(u32)*PATTERN_MUTES) >> who & 1) {
         heard = 1u << who;
         mute &= ~heard;

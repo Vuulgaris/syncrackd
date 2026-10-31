@@ -1,15 +1,4 @@
-"""The prewas image: the allright image with the pre frame's flag on-chip.
-
-):
-test D (the meter image with 1 KB a block stored at 0x4556a000) lags, test G (the same reads, nothing stored) and test F
-(the same stores on-chip) do not. What every image since the pre image stores in that memory on any page is one long a
-block: the pre frame's first, whether the FX track's return was muted the block before (engine/recfeed.c, PRE_WAS).
-PREWAS: that long at 0x80007d20, on-chip, after the transfers' eight (stock clears it at every start, as it is to be).
-
-Held here with test_pre's rig: with no take and the page shut nothing is stored from 0x45566490 (what stock clears up to)
-to 0x45570000 (the effects' memory), and the FX track's mute goes as on the pre image with the flag in its new place.
-Not held: the lag.
-"""
+"""The prewas image: the allright image with the pre frame's flag on-chip."""
 import hashlib
 import shutil
 
@@ -80,7 +69,7 @@ def test_the_image(official_path, main, allright):
     quiet = lambda s: None
     raw, _, built, _, _ = build.build(official_path, log=quiet, xfade=40, prof=True)
     was_raw, _, was, _, _ = build.build(official_path, log=quiet, xfade=39, prof=True)
-    assert hashlib.sha256(was_raw).hexdigest().startswith("bee5bbfc")      # the allright image, as it is
+    assert hashlib.sha256(was_raw).hexdigest().startswith("bee5bbfc")  # the allright image, as it is
     assert built.section(7) == was.section(7)
     new, old = built.section(3), was.section(3)
     assert new == main[0] and old == allright[0]

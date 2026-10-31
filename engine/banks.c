@@ -1,35 +1,24 @@
 /* Main CPU (section 3, OS 1.42 only): three sample banks. The "bank" image only.
  *
- * 
- *
- * 
- *
- * The drive. Stock keeps the 64 sample slots in one run of sectors (with the
- * larger slots: 8192 to 139,263) and nothing after it up to 244 MB. Here there
- * are three such runs one after the other, and everything in the program that
- * reads, writes or erases a sector goes through one of three routines, named in
- * 21 places and no other. Those 21 are pointed at the three short routines
- * below, which move a sector of the first run to the same place in the run of
- * the bank that is loaded, and leave every other sector alone. So the scan that
- * reads the slots' names, the boot's pool builder, Transfer's route, keeping
- * takes and the loader all work on the loaded bank without knowing of it, and
+ * The drive. Stock keeps the 64 sample slots in one run of sectors (with the larger slots: 8192 to 139,263) and
+ * nothing after it up to 244 MB. Here there are three such runs one after the other, and everything in the program
+ * that reads, writes or erases a sector goes through one of three routines, named in 21 places and no other. Those 21
+ * are pointed at the three short routines below, which move a sector of the first run to the same place in the run of
+ * the bank that is loaded, and leave every other sector alone. So the scan that reads the slots' names, the boot's
+ * pool builder, Transfer's route, keeping takes and the loader all work on the loaded bank without knowing of it, and
  * nothing here can reach a sector outside the three runs.
  *
- * Which bank. BANK_NOW (engine/sampler.h) is the bank that is loaded. It starts
- * as "not known" (any number past 2). The first time a sample sector is asked for, bank_start reads
- * our one sector after the third run: it holds the bank that was loaded last,
- * and for each of the 128 projects the bank it was saved with. A drive without
- * that sector is on bank 0, which is where the samples always were, and so is a
- * project the sector knows nothing of: every project made before this image.
+ * Which bank. BANK_NOW (engine/sampler.h) is the bank that is loaded. It starts as "not known" (any number past 2).
+ * The first time a sample sector is asked for, bank_start reads our one sector after the third run: it holds the bank
+ * that was loaded last, and for each of the 128 projects the bank it was saved with. A drive without that sector is
+ * on bank 0, which is where the samples always were, and so is a project the sector knows nothing of: every project
+ * made before this image.
  *
- * A project. BANK_WANT is the bank the project in memory is to have; the
- * sampling page's BANK place turns it and nothing else. Saving the project
- * writes it down for that project (bank_saved, called from engine/keeptakes.c).
- * Loading a project that was saved with another bank than the loaded one makes
- * that bank the loaded one, writes that down, has stock read the 64 slots' names
- * again, and answers "load every slot" to the loader (bank_loaded). A bank is
- * changed at no other moment.
- */
+ * A project. BANK_WANT is the bank the project in memory is to have; the sampling page's BANK place turns it and
+ * nothing else. Saving the project writes it down for that project (bank_saved, called from engine/keeptakes.c).
+ * Loading a project that was saved with another bank than the loaded one makes that bank the loaded one, writes that
+ * down, has stock read the 64 slots' names again, and answers "load every slot" to the loader (bank_loaded). A bank
+ * is changed at no other moment. */
 #include "sampler.h"
 
 #define drive_read ((s32 (*)(u32, u32, void *))0x4010f612)
@@ -40,8 +29,8 @@
 
 #define CAVE __attribute__((section(".cave.b"), noinline))
 
-/* The numbers, alone in a run of their own so that their place is fixed, and the sector
- * bank_start reads into: it runs in whatever task asks for a sample sector first. */
+/* The numbers, alone in a run of their own so that their place is fixed, and the sector bank_start reads into: it
+ * runs in whatever task asks for a sample sector first. */
 __asm__(".section .cave.v,\"ax\",@progbits\n"
         "        .globl bank_now, bank_want, bank_busy\n"
         "bank_now:   .long 0xffffffff\n"
@@ -49,8 +38,8 @@ __asm__(".section .cave.v,\"ax\",@progbits\n"
         "bank_busy:  .long 0\n"
         "        .section .cave.b,\"ax\",@progbits\n"
         "        .globl bank_read, bank_write, bank_erase, bank_buf\n"
-        /* The three ways in. Each has the sector as its first argument: it is moved if it is a
-         * sample's, and the stock routine is jumped to with everything else as it came. */
+        /* The three ways in. Each has the sector as its first argument: it is moved if it is a sample's, and the
+         * stock routine is jumped to with everything else as it came. */
         "bank_read:  bsrs bank_map\n"
         "            jmp 0x4010f612\n"
         "bank_write: bsrs bank_map\n"
@@ -81,9 +70,9 @@ CAVE static u32 loaded(const struct bankmark *m)
     return m->magic == BANK_MAGIC && m->magic2 == ~BANK_MAGIC && m->now < BANKS_N ? m->now : 0;
 }
 
-/* The first sample sector is asked for: which bank? When the drive does not read, the answer is 0
- * and the next sample sector asks again, three times in all: after that the first bank it is, so
- * that a sector that cannot be read does not cost a failed read before every other one. */
+/* The first sample sector is asked for: which bank? When the drive does not read, the answer is 0 and the next sample
+ * sector asks again, three times in all: after that the first bank it is, so that a sector that cannot be read does
+ * not cost a failed read before every other one. */
 CAVE u32 bank_start(void)
 {
     u32 now;
@@ -138,8 +127,8 @@ CAVE void bank_saved(u32 project)
     write(store, m);
 }
 
-/* The project has just been loaded. If its bank is not the loaded one, it is from here on, and the
- * answer is 1: every slot has to be loaded. A project the sector does not know is on bank 0. */
+/* The project has just been loaded. If its bank is not the loaded one, it is from here on, and the answer is 1: every
+ * slot has to be loaded. A project the sector does not know is on bank 0. */
 CAVE u32 bank_loaded(u32 project)
 {
     u32 sec[512 / 4];

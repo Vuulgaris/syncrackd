@@ -1,25 +1,4 @@
-"""The "gain" image: a record gain on the sampling page (engine/recfeed.c and engine/recpage.c built with GAIN).
-
-
-
-
-A track's record gain, 0 to 24 dB a decibel a step, on knob F of the sampling page. The feed multiplies the
-source by it before the 32 bits are made 16, so a quiet source is brought up out of the bits a take would have
-thrown away. It is the page's own, like DEST: 0 at every start, not saved, not to be locked to a step.
-
-What is held here, in emulation:
-  - at 0 dB the feed is the stereo image's, bit for bit; with a gain every sample of a take is the source's top
-    24 bits times the gain, held to what 32 bits hold, then made 16 as it always was;
-  - what that buys: a quiet tone recorded with the gain on is as clean as a loud one, where the same gain put
-    on afterwards brings the take's own noise up with it;
-  - the meter shows the level with the gain on;
-  - the page: the value in the lower row's second place, a turn of knob F a decibel, a number a track;
-  - the sound engine is the stereo image's with the sum of twelve (tests/test_lean.py), which ran on
-    the unit through two builds and marked passed.
-
-Not held: how it reads on the unit's screen, and that the place in main CPU memory it is kept in is as free as
-the meter's four numbers before it, which have run there.
-"""
+"""The "gain" image: a record gain on the sampling page (engine/recfeed.c and engine/recpage.c built with GAIN)."""
 import shutil
 
 import numpy as np
@@ -40,7 +19,7 @@ pytestmark = pytest.mark.skipif(not shutil.which("m68k-elf-gcc"), reason="no Col
 SAMPLER = 44
 TOP = mm.GAIN_TOP
 TABLE = [round(256 * 10 ** (db / 20)) for db in range(TOP + 1)]
-GAIN_KNOB = 6                           # knob F, as a turn names it
+GAIN_KNOB = 6  # knob F, as a turn names it
 SEQ = 0x0106
 
 
@@ -129,7 +108,7 @@ def test_with_a_gain_every_sample_is_the_source_times_it_before_it_is_made_16_bi
     rig.reset(gains=gains)
     _, after = rig.run(make_block(ALL, [0] * track + [REC | STEREO | src(n)] + [0] * (11 - track)), frame, window)
     assert after == take_of(window, frame, *PLACE[n], db) != take_of(window, frame, *PLACE[n], 0)
-    assert rig.mc.read(mm.REC_GAINS, 8) == bytes(gains) and rig.mc.r32(mm.METER_GAIN) == 0       # the feed reads them and no more
+    assert rig.mc.read(mm.REC_GAINS, 8) == bytes(gains) and rig.mc.r32(mm.METER_GAIN) == 0  # the feed reads them and no more
 
 
 def test_the_first_track_in_record_records_with_its_own_gain(rig):
@@ -151,14 +130,15 @@ def test_full_scale_with_the_most_gain_stops_at_the_ends_and_a_number_past_24_is
     # (the lowest end is a step of the dither short of itself now and then, as it is without a gain)
     assert {int(v) for v in got[:, 0]} <= {32767, -32768, -32767} and {32767, -32768} <= {int(v) for v in got[:, 0]}
     assert got[0, 1] <= -32767 and got[-1, 1] == 32767 and abs(int(got[BLOCK // 2, 1])) < 12000
-    rig.reset(gains=[200] * 8)                                      # whatever that memory holds
+    rig.reset(gains=[200] * 8)  # whatever that memory holds
     assert rig.run(make_block(ALL, [REC] + [0] * 11), frame, window)[1] == after
 
 
 def test_a_quiet_source_comes_up_out_of_the_bits_a_take_would_have_thrown_away(rig):
     """What it is for. A tone 66 dB under full scale, 2,048 frames of it: recorded as it is and turned up 24 dB
-    afterwards, it has the take's own noise turned up with it; recorded with 24 dB of gain it is as clean as a
-    tone 42 dB under. The difference is the gain, near enough."""
+    afterwards, it has the take's own noise turned up with it; recorded with 24 dB of gain it is as clean as a tone 42
+    dB under. The difference is the gain, near enough.
+    """
     n = 64 * BLOCK
     tone = np.sin(2 * np.pi * 997 / 48000 * np.arange(n))
     quiet = np.round(tone * (2 ** 31) * 10 ** (-66 / 20)).astype(np.int64)
@@ -174,7 +154,7 @@ def test_a_quiet_source_comes_up_out_of_the_bits_a_take_would_have_thrown_away(r
             out.append(np.frombuffer(window[ring_at(seq):ring_at(seq) + 4 * BLOCK], dtype=">i2").reshape(BLOCK, 2)[:, 0])
         return np.concatenate(out).astype(float)
 
-    def clean(y):                                                   # dB from the tone to everything else
+    def clean(y):  # dB from the tone to everything else
         amp = 2 * np.dot(y, tone) / n
         rest = y - amp * tone
         return 10 * np.log10((amp ** 2 / 2) / np.mean(rest ** 2))
@@ -229,9 +209,9 @@ def test_the_page_shows_the_tracks_gain_in_the_lower_rows_second_place(main, db,
     r = GainPage(main, track=track)
     r.mc.write(mm.REC_GAINS, bytes([db if t == track else 13 for t in range(8)]))
     got = r.show()
-    assert (59, 12, words(db)) in got and (59, 0, "") in got        # where a value goes; no name: the meter's bar is there
+    assert (59, 12, words(db)) in got and (59, 0, "") in got  # where a value goes; no name: the meter's bar is there
     assert [t for t in got if t[2] in ("SRC", "DEST", "REC")] and not r.stray
-    assert r.gain_writes == [(mm.METER_GAIN, 4, db)]                # and the meter is told which gain to show the level with
+    assert r.gain_writes == [(mm.METER_GAIN, 4, db)]  # and the meter is told which gain to show the level with
     assert r.vars[1:3] == (0, 0)
 
 
@@ -258,10 +238,10 @@ def test_each_track_has_its_own_and_the_other_knobs_are_what_they_were(main, bef
 
 def test_on_the_first_page_and_on_another_machine_knob_f_is_stocks(main):
     r = GainPage(main, track=1)
-    r.mc.w32(PAGE + mm.PAGE_INDEX, 0)                               # SYN's first page: knob F there is MODE, which is ours already
+    r.mc.w32(PAGE + mm.PAGE_INDEX, 0)  # SYN's first page: knob F there is MODE, which is ours already
     r.twist(GAIN_KNOB, 5)
     assert r.gains == [0] * 8 and not [t for t in r.show() if t[2].endswith("dB")]
-    other = MeterRig(main, {1: 4}, track=1, index=0)                # a drum machine: one page, stock's
+    other = MeterRig(main, {1: 4}, track=1, index=0)  # a drum machine: one page, stock's
     assert other.twist(GAIN_KNOB, 5) == other.turn_answer and len(other.turned) == 1
     assert list(other.mc.read(mm.REC_GAINS, 8)) == [0] * 8
 
@@ -271,7 +251,8 @@ def test_on_the_first_page_and_on_another_machine_knob_f_is_stocks(main):
 def test_section_3_is_the_stereo_images_but_for_the_feed_and_the_page(stock3, main, before, official):
     image, syms = main
     spans = [mm.CAVE_PAGE, mm.CAVE_PAGE2, mm.CAVE_PAGE3, mm.CAVE_PAGE4, mm.CAVE_METER, mm.CAVE_AMUTE, mm.CAVE_REC]
-    # and where routines that have moved in their runs are named: the page's methods, the mixer's call, the trig test, REC's mark
+    # and where routines that have moved in their runs are named: the page's methods, the mixer's call, the trig test,
+    # REC's mark
     spans += [(mm.SYN_CLASS + k, mm.SYN_CLASS + k + 4) for k in (mm.PAGE_KNOB_METHOD, mm.PAGE_DRAW_METHOD, mm.PAGE_TURN_METHOD)]
     spans += [(mm.SYN_SIDE + mm.SYN_SIDE_TURN, mm.SYN_SIDE + mm.SYN_SIDE_TURN + 4), (mm.MIX_CALL + 2, mm.MIX_CALL + 6),
               (mm.TRIG_MUTE + 2, mm.TRIG_MUTE + 6), (mm.HOLD_WRITE + 2, mm.HOLD_WRITE + 6), (mm.SYN_BUILD + 6, mm.SYN_BUILD + 10)]
@@ -288,7 +269,7 @@ def test_section_3_is_the_stereo_images_but_for_the_feed_and_the_page(stock3, ma
     assert not any(a < hi and lo < b for a, b in taken) and lo <= syms["gain_place"] < hi
     v = np.frombuffer(stock3[:len(stock3) // 4 * 4], dtype=">u4")
     w = np.frombuffer(stock3[2:2 + (len(stock3) - 2) // 4 * 4], dtype=">u4")
-    assert not ((v >= lo) & (v < hi)).any() and not ((w >= lo) & (w < hi)).any()        # no long of stock's names an address in it
+    assert not ((v >= lo) & (v < hi)).any() and not ((w >= lo) & (w < hi)).any()  # no long of stock's names an address in it
 
 
 def test_the_image(official_path, official, main):

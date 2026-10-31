@@ -1,33 +1,4 @@
-"""The "mode" image: a sample is mono or stereo by what its slots hold, and MODE says what a take is.
-
-
-
-
-
-
-
-So (engine/sampler.h, AUTO):
-  - SMPL always counts the 32 samples, number n in slots 2n and 2n + 1. A sample is stereo when its second slot
-    holds exactly as many frames as its first, mono when not, and a mono one plays its first slot at a mono voice's
-    cost. MODE's lowest bit plays no part in it;
-  - that bit is what a take is. With it a take fills both slots. Without it the take is the source's two sides
-    added and halved, in the first slot, and the second is left with one frame, which is kept on the drive like any
-    take: what was in that slot cannot come back as a right channel;
-  - its knob is on the sampling page, the lower row's third place (knob G), MONO or STER, and the first page's
-    sixth place is empty. It is the track's alone;
-  - the page's last place reads the audio CPU's peak load, as the time image measures it.
-
-What is held here, in emulation:
-  - a sample plays as it did: the gain image's engine with MODE on MONO and a sample in a slot, or on STEREO and one
-    in two, and this engine with the same sample found for what it is, are the same frames;
-  - the engine is the reference model (emu/sampler_ref.py, auto=True);
-  - a mono take and a stereo take, on the audio CPU and in the feed, and what the keep's requests are answered;
-  - the page, the knob's text, the descriptor, and that the two programs differ from the gain image's and the time12
-    image's only where they are meant to.
-
-Not held: anything on the unit. How the words read on its screen, and that a take of one frame is to the drive's
-own code a sample like another, are the unit's to show.
-"""
+"""The "mode" image: a sample is mono or stereo by what its slots hold, and MODE says what a take is."""
 import shutil
 
 import numpy as np
@@ -53,10 +24,10 @@ pytestmark = pytest.mark.skipif(not shutil.which("m68k-elf-gcc"), reason="no Col
 
 SAMPLER = 44
 ST = 1712
-S_R, S_LINK, S_RVALID = 4, 49, 50       # in a voice's sampler state: the right channel's frames, what a take is, a right channel this block
-TAKE_KNOB = 7                           # knob G, as a turn names it
-FIRST_MODE = 6                          # knob F: where MODE was on the first page
-PEAK_AT = mm.SHARED + m.TIMED_BOX + 4   # the window's long the audio CPU says its peak with
+S_R, S_LINK, S_RVALID = 4, 49, 50  # in a voice's sampler state: the right channel's frames, what a take is, a right channel this block
+TAKE_KNOB = 7  # knob G, as a turn names it
+FIRST_MODE = 6
+PEAK_AT = mm.SHARED + m.TIMED_BOX + 4  # the window's long the audio CPU says its peak with
 SEQ = 0x0106
 KNOBS = dict(tune=TUNE, sample=SAMPLE, start=START, length=LENGTH, loop=LOOP, mode=MODE, decay=DECAY)
 # Every sample of the fade image's pool as a mono sample: in the first slot of a pair, the second empty.
@@ -108,7 +79,7 @@ def folded(monkeypatch):
 def start(built, pool, track=0, note=60, **knobs):
     e = P.engine(built, pool=pool)
     for t in range(m.N_VOICES):
-        e.set_slot(t, SAMPLE, 64 + 63)                  # the other tracks point at an empty slot
+        e.set_slot(t, SAMPLE, 64 + 63)  # the other tracks point at an empty slot
     values = {TUNE: 64, SAMPLE: 64, START: 0, LENGTH: 127, LOOP: 0, MODE: 0, DECAY: 127}
     values.update({KNOBS[k]: v for k, v in knobs.items()})
     for slot, v in values.items():
@@ -118,8 +89,9 @@ def start(built, pool, track=0, note=60, **knobs):
 
 
 def play(built, pool, script, track=0, note=60, **knobs):
-    """A note, then one block for each (STRT, LEN) of the script, the knobs set before it.
-    -> (engine, left, right) from the block the note starts in."""
+    """A note, then one block for each (STRT, LEN) of the script, the knobs set before it. -> (engine, left, right) from
+    the block the note starts in.
+    """
     e = start(built, pool, track, note, **knobs)
     out = [e.block(trig=1 << track), e.block()]
     for st, ln in script:
@@ -147,7 +119,8 @@ def model(e, pool, script, track=0, xfade=False, **knobs):
 
 
 def as_it_was(knobs):
-    """A case written for the images before: (the pool it means here, its knobs without MODE, whether it is stereo)."""
+    """A case written for the images before: (the pool it means here, its knobs without MODE, whether it is stereo).
+    """
     two = knobs.get("mode") == 1
     return (POOL if two else ALONE), {k: v for k, v in knobs.items() if k != "mode"}, two
 
@@ -157,7 +130,8 @@ def as_it_was(knobs):
 @pytest.mark.parametrize("n", range(len(SCRIPTS)))
 def test_a_sample_plays_as_it_did(auto, gain7, n):
     """Every script of STRT and LEN the live image is held to, on the gain image's engine with MODE saying what the
-    sample is, and here with MODE at nothing and the sample found for what it is. The same frames, both sides."""
+    sample is, and here with MODE at nothing and the sample found for what it is. The same frames, both sides.
+    """
     name = list(SCRIPTS)[n]
     knobs, script = SCRIPTS[name]
     note = (60, 53.3, 67)[n % 3]
@@ -191,8 +165,9 @@ def test_mode_no_longer_says_how_a_track_plays(auto, knobs):
 
 @pytest.mark.parametrize("second, two", [(1000, True), (999, False), (1001, False), (1, False), (0, False), (2000, False)])
 def test_a_sample_is_stereo_when_its_second_slot_is_as_long_as_its_first(auto, second, two):
-    """As long to the frame. A second slot that is shorter was no right channel before; one that is longer was,
-    and is not now: two samples that happen to share a pair are two samples."""
+    """As long to the frame. A second slot that is shorter was no right channel before; one that is longer was, and is
+    not now: two samples that happen to share a pair are two samples.
+    """
     rng = np.random.default_rng(second)
     pool = {8: rng.integers(-30000, 30000, 1000).astype(np.int16), 9: rng.integers(-30000, 30000, second).astype(np.int16)}
     e, left, right = play(auto, pool, hold(0, 127, 12), track=2, note=60, sample=68)
@@ -206,13 +181,14 @@ def test_past_the_32nd_sample_there_is_none(auto):
     for sample in (64 + 32, 127, 31, 0):
         e, left, right = play(auto, {k: POOL[0] for k in range(64)}, hold(0, 127, 6), sample=sample)
         assert not np.any(left) and not np.any(right) and not state(e)["playing"]
-    for sample in (64 + 31, 32):                                            # the 32nd, forward and backwards
+    for sample in (64 + 31, 32):  # the 32nd, forward and backwards
         assert np.any(play(auto, {k: POOL[0] for k in range(64)}, hold(0, 127, 6), sample=sample)[1])
 
 
 def test_a_mono_sample_is_a_mono_voices_work(auto, gain7):
-    """Instructions of the voice loop's call, eight voices and one of them playing three octaves down: the pair
-    found mono costs what a track on MONO did, and less than the stereo one."""
+    """Instructions of the voice loop's call, eight voices and one of them playing three octaves down: the pair found
+    mono costs what a track on MONO did, and less than the stereo one.
+    """
     def cost(built, pool, **knobs):
         e = start(built, pool, note=24, **knobs)
         e.block(trig=1)
@@ -223,7 +199,7 @@ def test_a_mono_sample_is_a_mono_voices_work(auto, gain7):
         return e.mc.insns - n
     mono, two = cost(auto, ALONE, loop=1), cost(auto, POOL, loop=1)
     assert abs(mono - cost(gain7, POOL, loop=1, mode=0)) < 40 and abs(two - cost(gain7, POOL, loop=1, mode=1)) < 40
-    assert two - mono > 1000                    # (the voice's own part. The right channel's four stages are the rest: none for a mono one)
+    assert two - mono > 1000  # (the voice's own part. The right channel's four stages are the rest: none for a mono one)
 
 
 # ---- a take is what MODE says -------------------------------------------------------------------------------------
@@ -241,8 +217,9 @@ def test_with_the_bit_a_take_is_a_stereo_sample_as_every_take_was(auto, track):
 
 @pytest.mark.parametrize("track", [0, 5, 7])
 def test_without_it_a_take_is_a_mono_sample_and_its_second_slot_holds_one_frame(auto, track):
-    """What the feed sends is kept from the left side: it sends a mono take's sample on both. The second slot
-    is the take's too, with one frame in it: a sample of another length, so no right channel."""
+    """What the feed sends is kept from the left side: it sends a mono take's sample on both. The second slot is the
+    take's too, with one frame in it: a sample of another length, so no right channel.
+    """
     e = P.engine(auto)
     P.box(e)
     k = 2 * track
@@ -251,7 +228,7 @@ def test_without_it_a_take_is_a_mono_sample_and_its_second_slot_holds_one_frame(
     data = P.hold(e, track=track, n=20)
     assert P.is_take(P.taken(e, k), data, 0, 20) and P.untouched(e, but=(k, k + 1))
     assert P.slot_entry(e, k + 1) == (1, m.REC_BASE + m.REC_STRIDE * (k + 1))
-    assert e.mc.r32(m.KEPT + 4 * k) == 0 and e.mc.r32(m.KEPT + 4 * k + 4) == 0     # neither slot is on the drive
+    assert e.mc.r32(m.KEPT + 4 * k) == 0 and e.mc.r32(m.KEPT + 4 * k + 4) == 0  # neither slot is on the drive
     assert not e.mc.read(e.voice(track) + ST + S_LINK, 1)[0]
     # played back: one channel, and no right channel is made, sent or paid for
     e.set_slot(track, MODE, 0)
@@ -291,8 +268,9 @@ def test_one_kind_of_take_over_the_other(auto):
 
 
 def test_a_mono_takes_second_slot_is_handed_to_the_drive_as_a_take_of_one_frame(auto):
-    """The keep's requests (engine/keeptakes.c), answered for both slots: so a save writes the second with a
-    header that says one frame, over whatever the drive had there."""
+    """The keep's requests (engine/keeptakes.c), answered for both slots: so a save writes the second with a header that
+    says one frame, over whatever the drive had there.
+    """
     e = P.engine(auto)
     P.box(e)
     e.set_slot(5, MODE, P.REC)
@@ -303,7 +281,7 @@ def test_a_mono_takes_second_slot_is_handed_to_the_drive_as_a_take_of_one_frame(
     ok, n, got = K.ask(e, 11, 0)
     first = bytes(e.mc.read(m.REC_BASE + m.REC_STRIDE * 11, 2))
     assert ok and n == 1 and got == first + bytes(510) and len(data)
-    for slot in (10, 11):                                                   # written: neither is offered again
+    for slot in (10, 11):  # written: neither is offered again
         K.ask(e, slot, m.KEEP_DONE)
         assert K.ask(e, slot, 0)[1] == 0
     assert e.mc.r32(m.KEPT + 44) == 1 ^ m.KEEP_MARK
@@ -340,14 +318,15 @@ def test_with_the_bit_the_feed_is_the_gain_images_to_the_bit(rig, before, track,
 @pytest.mark.parametrize("db", [0, 7, 24])
 @pytest.mark.parametrize("track, n", [(0, 0), (3, 1), (7, 9), (2, 14), (5, 15)])
 def test_without_it_both_sides_are_the_two_added_and_halved(rig, track, n, db):
-    """The main mix, the input, a track (one channel: itself, less its last bit), the FX track, the delay and reverb."""
+    """The main mix, the input, a track (one channel: itself, less its last bit), the FX track, the delay and reverb.
+    """
     frame, window = frames(seed=n + 3) >> 4, junk(SEQ - 1)
     gains = [db if t == track else 2 for t in range(8)]
     rig.reset(gains=gains)
     _, after = rig.run(make_block(ALL, [0] * track + [REC | src(n)] + [0] * (11 - track)), frame, window)
     assert after == mono_of(window, frame, *PLACE[n], db)
     pair = np.frombuffer(after[ring_at(SEQ):ring_at(SEQ) + 4 * BLOCK], dtype=">i2").reshape(BLOCK, 2)
-    assert np.abs(pair[:, 0].astype(int) - pair[:, 1]).max() <= 2           # the same on both sides (the dither is each side's own)
+    assert np.abs(pair[:, 0].astype(int) - pair[:, 1]).max() <= 2  # the same on both sides (the dither is each side's own)
     if PLACE[n][0] != PLACE[n][1]:
         assert after != take_of(window, frame, *PLACE[n], db)
 
@@ -361,7 +340,7 @@ def test_a_mono_take_of_full_scale_on_both_sides_is_full_scale(rig):
     _, after = rig.run(make_block(ALL, [REC] + [0] * 11), frame, window)
     got = np.frombuffer(after[ring_at(SEQ):ring_at(SEQ) + 4 * BLOCK], dtype=">i2")
     assert got.min() >= 32766 and after == mono_of(window, frame, 0, 1, 0)
-    frame[:, 1] = -0x80000000                                               # and two sides that are each other's opposite are nothing
+    frame[:, 1] = -0x80000000  # and two sides that are each other's opposite are nothing
     _, after = rig.run(make_block(ALL, [REC] + [0] * 11), frame, window)
     assert np.abs(np.frombuffer(after[ring_at(SEQ):ring_at(SEQ) + 4 * BLOCK], dtype=">i2").astype(int)).max() <= 1
 
@@ -380,7 +359,7 @@ def page_of(main, track=0, mode=0, index=1):
 def test_the_page_shows_what_a_take_is_in_the_lower_rows_third_place(main, mode, word):
     r = page_of(main, track=4, mode=mode)
     got = r.show()
-    assert (85, 12, word) in got and (85, 0, "") in got                     # where a value goes; no name: the meter's bar is there
+    assert (85, 12, word) in got and (85, 0, "") in got  # where a value goes; no name: the meter's bar is there
     assert (59, 12, "0dB") in got and [t for t in got if t[2] in ("SRC", "DEST", "REC", "BANK")] and not r.stray
     assert r.mode == mode and not r.changes
 
@@ -388,7 +367,7 @@ def test_the_page_shows_what_a_take_is_in_the_lower_rows_third_place(main, mode,
 @pytest.mark.parametrize("peak", [b"P047", b"P000", b"P131", b"P999"])
 def test_the_last_place_reads_the_audio_cpus_peak(main, peak):
     r = page_of(main)
-    r.mc.write(PEAK_AT - 4, b"C012")                                        # the first number is not shown
+    r.mc.write(PEAK_AT - 4, b"C012")  # the first number is not shown
     r.mc.write(PEAK_AT, peak)
     got = r.show()
     assert (111, 12, peak.decode()) in got and (111, 0, "") in got and not [t for t in got if t[2].startswith("C0")]
@@ -407,13 +386,14 @@ def test_a_turn_of_knob_g_switches_the_bit_and_nothing_else(main):
     for steps, want in ((1, STEREO), (1, STEREO), (3, STEREO), (-1, 0), (-5, 0), (0, 0), (2, STEREO)):
         assert r.twist(TAKE_KNOB, steps) == 1 and r.mode == REC | src(6) | want and r.redrawn[-1] == PAGE
         assert (85, 12, "STER" if want else "MONO") in r.show()
-    assert r.changes == [1, -1, 1] and not r.stray and not r.turned         # only when it changes; and stock's routine is not asked
+    assert r.changes == [1, -1, 1] and not r.stray and not r.turned  # only when it changes; and stock's routine is not asked
     assert r.popped == [("MODE", "mode %d" % v) for v in (REC | src(6) | STEREO, REC | src(6), REC | src(6) | STEREO)]
 
 
 def test_it_is_the_tracks_alone_and_goes_into_every_lock_of_mode(main):
-    """A held step changes nothing: there is no lock of it. A lock of MODE from an image before carries the track's
-    three now, so that it does nothing a track does not."""
+    """A held step changes nothing: there is no lock of it. A lock of MODE from an image before carries the track's three
+    now, so that it does nothing a track does not.
+    """
     r = page_of(main, mode=src(2))
     r.locks = {3: src(2), 9: REC | STEREO | src(5), 40: STEREO | src(2)}
     r.hold(3, 9)
@@ -431,9 +411,9 @@ def test_the_first_pages_sixth_place_is_empty_and_a_turn_of_it_is_nothing(main, 
     r = page_of(main, mode=STEREO | src(3), index=0)
     assert [r.ask(k) for k in range(9)] == [400 + k if k != FIRST_MODE - 1 else 0 for k in range(9)]
     assert r.twist(FIRST_MODE, 3) == 1 and r.twist(FIRST_MODE, -3) == 1 and r.mode == STEREO | src(3) and not r.changes and not r.turned
-    assert r.twist(3, 2) == r.turn_answer and len(r.turned) == 1            # every other knob there is stock's
-    assert not [t for t in r.show() if t[2] in ("MONO", "STER", "P047")]    # and nothing of the sampling page is drawn
-    old = GainPage(before)                                                  # (the gain image: MODE was that knob)
+    assert r.twist(3, 2) == r.turn_answer and len(r.turned) == 1  # every other knob there is stock's
+    assert not [t for t in r.show() if t[2] in ("MONO", "STER", "P047")]  # and nothing of the sampling page is drawn
+    old = GainPage(before)  # (the gain image: MODE was that knob)
     old.mc.w32(PAGE + mm.PAGE_INDEX, 0)
     assert old.ask(FIRST_MODE - 1) == 400 + FIRST_MODE - 1 and old.twist(FIRST_MODE, 1) == 1 and old.mode == STEREO
 
@@ -470,8 +450,9 @@ def test_smpl_reads_the_samples_name_whatever_mode_says(main):
 
 
 def test_a_new_tracks_takes_are_stereo(official, main, before):
-    """MODE's descriptor: 0, MONO, was what a new sampler track had, when the word was how it played. Every take
-    was a stereo sample then, and a new track's still is."""
+    """MODE's descriptor: 0, MONO, was what a new sampler track had, when the word was how it played. Every take was a
+    stereo sample then, and a new track's still is.
+    """
     def default(image):
         return [p for p in params.load(image, "1.42") if p.type == SAMPLER and p.slot == MODE][0].default
     assert default(main[0]) == 1 and default(before[0]) == 0
@@ -492,14 +473,15 @@ def test_section_7_is_the_time12_images_but_for_our_code(stock, auto, time12):
         diff = [m.BASE + k for k in range(len(image)) if image[k] != other[k]]
         assert diff and all(any(a <= d < b for a, b in spans) for d in diff)
     lo, hi = m.SPARE_RUNS[1]
-    assert image[m.off(lo):m.off(hi)] == stock[m.off(lo):m.off(hi)]         # the one small run left is still stock's
+    assert image[m.off(lo):m.off(hi)] == stock[m.off(lo):m.off(hi)]  # the one small run left is still stock's
     assert m.u32(image, m.ISR_VOICE_LOOP_CALL + 2) == syms["timed_hook"] and m.u32(image, m.ISR_AMP_CALL + 2) == syms["timed_amp"]
-    assert "locate" not in syms and "locate" in time12[1]                   # the walk from slot to slot is gone, for room
+    assert "locate" not in syms and "locate" in time12[1]  # the walk from slot to slot is gone, for room
 
 
 def test_the_image_holds_a_rows_twelve_numbers_and_the_engine_makes_the_same_table_of_them(auto, time12):
-    """The two numbers at each end of a row of twelve are 0 and no sum reads them: the image does not hold them,
-    and the copy's are left as the memory has them."""
+    """The two numbers at each end of a row of twelve are 0 and no sum reads them: the image does not hold them, and the
+    copy's are left as the memory has them.
+    """
     image, syms = auto
     at = m.off(syms["hq_rows"])
     held = np.frombuffer(image[at:at + 2 * 17 * 12], dtype=">i2").reshape(17, 12)

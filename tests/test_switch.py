@@ -1,19 +1,4 @@
-"""The switch image: the trig image with the hits' steps from each sample's own loudest frame, and SOLO and REC on the
-TRIG page drawn as stock's switch.
-
-
-
-
-
-The trig image counted a hit's fifteen steps from full scale, 2 dB each from -31 dB: a take that sits low reached few
-steps or none, and a hit under -31 dB was none. Here a first pass over a slot finds its loudest frame and the steps go
-from there: 1 past 31 dB under it, 15 past 3 dB under it, nothing under -45 dB of full scale. DEL's mapping is the
-same, so DEL 1 takes the hits within 3 dB of the sample's loudest, however loud the sample is.
-
-The switch: LFO.T's and FLT.T's picture is one routine of stock's (0x400703da), frame value >> 8 of a strip, so ours
-calls it with the solo's and REC's own value. REC's ONCE is the word. Not held: where on the screen stock's draw puts
-a place's picture (read from 0x4003a244 and 0x4003842c, not run on stock), and how it looks; the unit shows that.
-"""
+"""The switch image: the trig image with the hits' steps from each sample's own loudest frame, and SOLO and REC on the"""
 import shutil
 
 import numpy as np
@@ -41,7 +26,8 @@ def main(stock3):
     return build_main.patched_image(stock3, xfade=24)
 
 
-# ---- the switch -----------------------------------------------------------------------------------------------------
+# ---- the switch
+# -----------------------------------------------------------------------------------------------------
 
 def rig(built, track):
     """test_trig's rig, with stock's switch run as it is and the two calls it makes played."""
@@ -64,7 +50,7 @@ def test_solo_and_rec_are_drawn_as_stocks_switch_with_their_names(main):
     texts, blits = drawn(r)
     assert r.trig_stock == [("draw", T.PAGE)]
     assert [t for t in texts if t[2]] == [(33, 0, "SOLO"), (59, 0, "REC")]
-    assert blits == [(0, 25, 11), (0, 51, 11)]                  # frame 0, off; at the places' x + 1 and y + 4
+    assert blits == [(0, 25, 11), (0, 51, 11)]  # frame 0, off; at the places' x + 1 and y + 4
 
 
 def test_a_turn_moves_the_switch(main):
@@ -88,7 +74,7 @@ def test_rec_at_once_is_the_word(main):
     r = rig(main, track)
     G.geared(r, [256, 256])
     G.twist(r, T.F, 1)
-    G.twist(r, T.F, 1)                                          # OFF, ON, ONCE
+    G.twist(r, T.F, 1)  # OFF, ON, ONCE
     r.blits = []
     texts, blits = drawn(r)
     assert (59, 12, "ONCE") in texts and blits == [(0, 25, 11)]
@@ -100,7 +86,8 @@ def test_off_a_sampler_the_page_is_stocks(main):
     assert drawn(r) == ([], [])
 
 
-# ---- the hits' steps from a sample's loudest frame ------------------------------------------------------------------
+# ---- the hits' steps from a sample's loudest frame
+# ------------------------------------------------------------------
 
 def rel(peak):
     def loud(p):
@@ -125,7 +112,7 @@ def engine(official):
     return build_engine.patched_image(official.section(7), peak=True)
 
 
-@pytest.mark.parametrize("gain", [1.0, 0.25, 0.1])               # 0, -12 and -20 dB
+@pytest.mark.parametrize("gain", [1.0, 0.25, 0.1])  # 0, -12 and -20 dB
 def test_a_quiet_take_has_the_steps_a_loud_one_has(engine, monkeypatch, gain):
     """The same hits, each a step at most from where it is at full scale: a hit on a step's edge rounds either way."""
     x = (H.drums().astype(np.float64) * gain).astype(np.int16)
@@ -135,12 +122,12 @@ def test_a_quiet_take_has_the_steps_a_loud_one_has(engine, monkeypatch, gain):
     assert done == len(x) and got == H.model(x)
     loud = scanned(engine, H.drums())[0]
     assert [f for f, _, _ in got] == [f for f, _, _ in loud] and all(abs(a[1] - b[1]) <= 1 for a, b in zip(got, loud))
-    assert got[0][1] == 15                                      # the loudest is the top step, however quiet the take
+    assert got[0][1] == 15  # the loudest is the top step, however quiet the take
     print("switch: drums at %.0f dB, steps" % (20 * np.log10(gain)), [s for _, s, _ in got])
 
 
 def test_under_minus_45_db_of_full_scale_is_no_hit(engine):
-    x = (H.drums().astype(np.float64) * 0.004).astype(np.int16)   # -48 dB
+    x = (H.drums().astype(np.float64) * 0.004).astype(np.int16)  # -48 dB
     assert scanned(engine, x)[0] == []
 
 
@@ -152,7 +139,8 @@ def test_the_first_pass_says_nothing_until_it_is_done(engine):
     assert H.kept(e, 0)[0] == []
 
 
-# ---- the image ------------------------------------------------------------------------------------------------------
+# ---- the image
+# ------------------------------------------------------------------------------------------------------
 
 def test_the_image(official_path, main):
     quiet = lambda s: None
@@ -170,7 +158,7 @@ def test_the_image(official_path, main):
     a7, b7 = built.section(7), was.section(7)
     runs = list(m.HITS_CAVES.values()) + list(m.SRR_CAVES.values())
     into = lambda b, j: any(lo <= int.from_bytes(b[j:j + 4], "big") < hi for lo, hi in runs)
-    moved = lambda k: any(into(a7, j) and into(b7, j) for j in range(k - 3, k + 1))     # a pointer into the two runs, whose routines moved
+    moved = lambda k: any(into(a7, j) and into(b7, j) for j in range(k - 3, k + 1))  # a pointer into the two runs, whose routines moved
     stray7 = [hex(m.BASE + k) for k in range(len(a7)) if a7[k] != b7[k] and not any(m.off(lo) <= k < m.off(hi) for lo, hi in runs) and not moved(k)]
     assert stray7 == [] and a7 != b7
     print("switch image", __import__("hashlib").sha256(raw).hexdigest())

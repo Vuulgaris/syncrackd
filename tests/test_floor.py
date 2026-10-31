@@ -1,20 +1,4 @@
-"""The "floor" image: LEN stops at 3.
-
-
-
-
-So 3.
-
-Two places. The knob: LEN's descriptor on the main CPU gets a least value of 3, so the knob stops
-there. The engine (engine/sampler.c built with FLOOR): LEN is taken as no less than 3 where a note
-starts and where the knob is followed while it plays, for what does not pass the knob's range: an
-LFO, a lock, a pattern saved before.
-
-The compiled engine runs inside the real voice loop hook and is held bit-identical to the reference
-model (emu/sampler_ref.py, Player(..., floor=True)), and to the live image's engine wherever LEN is
-at the floor or over. A loop at the floor is 3/127 of what the sample has left after STRT, so on a
-short sample, or with STRT far in, it is still short.
-"""
+"""The "floor" image: LEN stops at 3."""
 import shutil
 
 import numpy as np
@@ -84,7 +68,9 @@ def test_len_turned_all_the_way_down_while_a_loop_plays_leaves_a_loop_at_the_flo
 
 
 def test_the_floor_is_a_share_of_what_the_sample_has_left(floor):
-    """3/127 of the frames from STRT to the sample's end: 140 of this pool's 6000 from the start, fewer with STRT further in."""
+    """3/127 of the frames from STRT to the sample's end: 140 of this pool's 6000 from the start, fewer with STRT further
+    in.
+    """
     assert span_of(0, FLOOR) == ref.scale(FRAMES, FLOOR << 8) == 140
     for st in (0, 40, 100):
         e, _, _ = play(floor, hold(st, 0, 4), loop=1, sample=68, start=st, length=0)
@@ -132,7 +118,7 @@ def test_the_image_is_the_live_image_but_for_that_number_and_our_code(official_p
     for sid in official.ids:
         if sid not in (3, 7):
             assert built.container.by_id(sid).stored == official.container.by_id(sid).stored
-    at = mm.off(mm.SAMP_RECORDS + 0x34 * 3 + 8)                         # LEN's record, its least value
+    at = mm.off(mm.SAMP_RECORDS + 0x34 * 3 + 8)  # LEN's record, its least value
     diff = [k for k in range(len(was.section(3))) if was.section(3)[k] != built.section(3)[k]]
     assert diff == [at + 2] and built.section(3)[at:at + 4] == (FLOOR << 8).to_bytes(4, "big")
     spans = list(m.CAVES.values()) + list(m.REC_CAVES.values()) + list(m.FADE_CAVES.values()) + list(m.LIVE_CAVES.values())

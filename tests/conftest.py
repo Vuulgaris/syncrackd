@@ -17,13 +17,14 @@ if _worker:
     build_engine.OUT = os.path.join(build_engine.OUT, _worker)
 
 
-CHUNK = 100     # tests of one file that go to a worker together
+CHUNK = 100  # tests of one file that go to a worker together
 
 
 @pytest.hookimpl(tryfirst=True)
 def pytest_collection_modifyitems(config, items):
-    """Under pytest-xdist (--dist loadgroup) a worker takes a group at a time: a file, or CHUNK tests
-    of a long one in the order they are written. The files with the most tests are given out first."""
+    """Under pytest-xdist (--dist loadgroup) a worker takes a group at a time: a file, or CHUNK tests of a long one in
+    the order they are written. The files with the most tests are given out first.
+    """
     if not hasattr(config, "workerinput"):
         return
     count = collections.Counter(item.path for item in items)

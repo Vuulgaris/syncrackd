@@ -1,16 +1,4 @@
-"""The tail image: the pre image with a one-shot faded out before its far end wherever that is.
-
-
-A one-shot was faded out only when
-its far end was inside the sample; at LEN full it stopped on the sample's last frame at once, and a take ends wherever
-its source was. Now a one-shot's far end is a cut wherever it is (engine/sampler.c, TAIL).
-
-Held here: a one-shot at LEN full is the soft image's sound up to the 128 frames before its end, goes down from
-there and ends at nothing; with LEN short of all it is the soft image's to the bit; a loop is the soft image's to the
-bit; and the image differs from the pre image only in the sampler's runs.
-
-Not held, and only the unit can show it: that this was the click heard.
-"""
+"""The tail image: the pre image with a one-shot faded out before its far end wherever that is."""
 import hashlib
 import shutil
 
@@ -57,7 +45,7 @@ def played(built, length=127, loop=0):
     e.set_slot(0, P.MODE, 0)
     e.set_slot(0, P.TUNE, 64)
     e.set_slot(0, P.LENGTH, length)
-    e.set_slot(0, 22, loop)                         # LOOP: knob slot 22
+    e.set_slot(0, 22, loop)  # LOOP: knob slot 22
     out = []
     for b in range(BLOCKS):
         rows = e.block(1 if b == 0 else 0, 0)
@@ -67,8 +55,8 @@ def played(built, length=127, loop=0):
 
 def test_a_one_shot_at_full_length_goes_down_to_nothing_before_its_end(tail, soft):
     was, now = played(soft), played(tail)
-    end = int(np.flatnonzero(np.abs(was).sum(axis=0))[-1]) + 1      # the frame after the sample's last
-    assert np.abs(was[:, end - 1]).max() > 1 << 20                  # the soft image stops on a loud frame
+    end = int(np.flatnonzero(np.abs(was).sum(axis=0))[-1]) + 1  # the frame after the sample's last
+    assert np.abs(was[:, end - 1]).max() > 1 << 20  # the soft image stops on a loud frame
     assert not was[:, end:].any() and not now[:, end:].any()
     assert np.array_equal(now[:, :end - FADE_OUT - 1], was[:, :end - FADE_OUT - 1])
     down, full = now[:, end - FADE_OUT:end], was[:, end - FADE_OUT:end]
@@ -76,7 +64,7 @@ def test_a_one_shot_at_full_length_goes_down_to_nothing_before_its_end(tail, sof
     big = np.abs(full) > 1 << 20
     gain = np.where(big, down / np.where(full == 0, 1, full), np.nan)
     line = np.nanmean(gain, axis=0)
-    assert line[0] > 0.95 and line[-1] < 0.03 and (np.diff(line[~np.isnan(line)]) < 0.001).all()      # a line down, to a 128th or less
+    assert line[0] > 0.95 and line[-1] < 0.03 and (np.diff(line[~np.isnan(line)]) < 0.001).all()  # a line down, to a 128th or less
 
 
 def test_with_len_short_of_all_and_in_a_loop_it_is_the_soft_images(tail, soft):
@@ -88,7 +76,7 @@ def test_the_image(official_path, official, tail, soft):
     quiet = lambda s: None
     raw, _, built, _, syms = build.build(official_path, log=quiet, xfade=14)
     was_raw, _, was, _, _ = build.build(official_path, log=quiet, xfade=13)
-    assert hashlib.sha256(was_raw).hexdigest().startswith("ddb8ae7a")      # the pre image, as it is
+    assert hashlib.sha256(was_raw).hexdigest().startswith("ddb8ae7a")  # the pre image, as it is
     assert built.section(3) == was.section(3)
     seven, last = built.section(7), was.section(7)
     assert seven == tail[0] != last == soft[0] and len(seven) == len(last)

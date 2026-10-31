@@ -1,24 +1,24 @@
 """Find code that nothing in a decoded section can reach: the room there is for patches.
 
-    python -m tools.deadcode 3          # main CPU program, OS 1.42
-    python -m tools.deadcode 7          # audio CPU program
+python -m tools.deadcode 3          # main CPU program, OS 1.42
+python -m tools.deadcode 7          # audio CPU program
 
 Static evidence only. The code is cut into pieces at every rts and rte, and a piece is
 live when something that is itself live names an address inside it:
-  - an address in the operand of a decoded instruction (calls, branches, lea, pea);
-  - any 32-bit value at an even offset of the image (pointer tables, immediates,
-    literal pools, absolute calls), wherever it sits; past the code, at odd offsets
-    too, in case a table is packed;
-  - a branch, call, lea or pea with a 16 or 32-bit pc-relative reach read at every
-    even offset, decoded or not, so that a listing knocked out of step by data in
-    the code cannot hide one;
-  - the 16-bit entries of a switch table.
+- an address in the operand of a decoded instruction (calls, branches, lea, pea);
+- any 32-bit value at an even offset of the image (pointer tables, immediates,
+literal pools, absolute calls), wherever it sits; past the code, at odd offsets
+too, in case a table is packed;
+- a branch, call, lea or pea with a 16 or 32-bit pc-relative reach read at every
+even offset, decoded or not, so that a listing knocked out of step by data in
+the code cannot hide one;
+- the 16-bit entries of a switch table.
 Everything named from outside the code (data, and the other sections of the file) is a
 root, and so is everything before the entry point. What no root reaches is reported.
 
-Each of these errs towards calling code live. What it cannot see: an address worked
-out by arithmetic at run time. Neither program does that for calls as far as the
-listing shows (indirect calls load whole pointers), but nothing here proves it.
+Each of these errs towards calling code live. What it cannot see: an address worked out by arithmetic at run time.
+Neither program does that for calls as far as the listing shows (indirect calls load whole pointers), but nothing here
+proves it.
 """
 import bisect
 import os
@@ -79,10 +79,9 @@ def _reaches(image, base):
 def survey(image, base, code_end, entry, others=()):
     """Pieces of [base, code_end) that no root reaches.
 
-    others: the file's other sections, whose 32-bit values count as roots too.
-    Returns [(start, end, named, clean)]: runs of unreached pieces that lie next to each
-    other. named = how many times something outside the run (unreached itself) names an
-    address inside it. clean = every word of the run decodes as an instruction.
+    others: the file's other sections, whose 32-bit values count as roots too. Returns [(start, end, named, clean)]:
+    runs of unreached pieces that lie next to each other. named = how many times something outside the run (unreached
+    itself) names an address inside it. clean = every word of the run decodes as an instruction.
     """
     ins = listing(image[:code_end - base], base)
     starts = [base] + [ins[k + 1][0] for k in range(len(ins) - 1) if ins[k][1].startswith(("rts", "rte"))]
@@ -97,7 +96,7 @@ def survey(image, base, code_end, entry, others=()):
             src.append(a)
             dst.append(int(x, 16))
         t = TABLE.match(text)
-        if t:                                   # a switch: 16-bit offsets from the table's own address
+        if t:  # a switch: 16-bit offsets from the table's own address
             tb = int(t.group(1), 16)
             for k in range(1024):
                 o = tb - base + 2 * k
@@ -110,7 +109,7 @@ def survey(image, base, code_end, entry, others=()):
     for s, v in _values(image, base):
         src.append(s)
         dst.append(v)
-    for s, v in _values(image, base, (1, 3)):   # a packed table would sit past the code
+    for s, v in _values(image, base, (1, 3)):  # a packed table would sit past the code
         src.append(s[s >= code_end])
         dst.append(v[s >= code_end])
     s, v = _reaches(image, base)
@@ -126,8 +125,8 @@ def survey(image, base, code_end, entry, others=()):
     frm = np.where(in_code, np.searchsorted(st, src, side="right") - 1, -1)
 
     live = np.zeros(n, dtype=bool)
-    live[:piece(entry) + 1] = True              # the vectors and stubs before the entry, and the entry
-    live[to[~in_code]] = True                   # named from data
+    live[:piece(entry) + 1] = True  # the vectors and stubs before the entry, and the entry
+    live[to[~in_code]] = True  # named from data
     for sec in others:
         for _, v in _values(sec, 0, range(4)):
             v = v[(v >= base) & (v < code_end) & (v % 2 == 0)]

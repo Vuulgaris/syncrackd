@@ -1,27 +1,24 @@
 """Turn audio files into the mono pieces the sampler expects. Writes files only.
 
-    make samples                                              # everything in samples/ -> build/samples/transfer/
-    python -m tools.split_sample pad.wav hits/ --out build/samples/set1 --first 9
+make samples                                              # everything in samples/ -> build/samples/transfer/
+python -m tools.split_sample pad.wav hits/ --out build/samples/set1 --first 9
 
-Elektron Transfer trims anything over 5 seconds and stores 16-bit 48 kHz mono.
-So a stereo sample goes in as two files, left and right, in neighbouring slots
-(MODE 1, "stereo"). 64 slots hold 32 stereo samples of up to 5 seconds.
+Elektron Transfer trims anything over 5 seconds and stores 16-bit 48 kHz mono. So a stereo sample goes in as two
+files, left and right, in neighbouring slots (MODE 1, "stereo"). 64 slots hold 32 stereo samples of up to 5 seconds.
 
-In stereo the SMPL knob counts stereo samples, not slots: number n is slots
-2n-1 and 2n. So a stereo sample always starts on an odd slot here, and a slot
-is left empty where a mono sample would otherwise put it on an even one.
+In stereo the SMPL knob counts stereo samples, not slots: number n is slots 2n-1 and 2n. So a stereo sample always
+starts on an odd slot here, and a slot is left empty where a mono sample would otherwise put it on an even one.
 
 Every input becomes 16-bit 48 kHz, so Transfer has nothing left to convert.
 The slot each file belongs in is the number at the front of its name:
-    stereo, up to 5 s     07_name_L.wav, 08_name_R.wav
-    mono, up to 5 s       09_name.wav
-    longer                cut into 5 s samples: 10_name_01L.wav, 11_name_01R.wav, 12_name_02L.wav, ...
+stereo, up to 5 s     07_name_L.wav, 08_name_R.wav
+mono, up to 5 s       09_name.wav
+longer                cut into 5 s samples: 10_name_01L.wav, 11_name_01R.wav, 12_name_02L.wav, ...
 Nothing is resampled down or packed. Folders are read with their subfolders,
 in name order.
 
-Next to the output folder a text file lists which slot holds what, and the
-MODE and SMPL to dial in. Pieces of a longer file are samples of their own;
-MODE 5 ("chain") plays them as one, up to the first empty slot.
+Next to the output folder a text file lists which slot holds what, and the MODE and SMPL to dial in. Pieces of a
+longer file are samples of their own; MODE 5 ("chain") plays them as one, up to the first empty slot.
 """
 import argparse
 import math
@@ -39,18 +36,18 @@ RATE = 48000
 MAX_SLOTS = 64
 MAX_SECONDS = 5.0
 # The "big" image (tools/build_main.py): slots of 1 MB, filled by the changed copy of Transfer
-# (tools/patch_transfer.py), which cuts at 10 s. At boot the unit still loads no more than stock
-# could in all: 64 x 524,224 bytes of samples.
+# (tools/patch_transfer.py), which cuts at 10 s. At boot the unit still loads no more than stock could in all: 64 x
+# 524,224 bytes of samples.
 BIG_SECONDS = 10.0
-SINGLE_FIRST = 33           # the pack image: slots 33 to 64 are also places of their own, each a mono sample
+SINGLE_FIRST = 33  # the pack image: slots 33 to 64 are also places of their own, each a mono sample
 # The stops image (engine/sampler.h, STOPS) tells what a slot holds by its length: an odd number of frames is a single
-# slot's mono sample, an even number belongs to a stereo place. So with --pack a mono file is made odd and a stereo one
-# even on both sides, by leaving its last frame out where it has to be. On the pack image the length says nothing.
+# slot's mono sample, an even number belongs to a stereo place. So with --pack a mono file is made odd and a stereo
+# one even on both sides, by leaving its last frame out where it has to be. On the pack image the length says nothing.
 BIG_POOL_FRAMES = 64 * 0x7ffc0 // 2
 # the "double" image sends the pool in two halves of 16382 chunks of 2 KB; each slot's count is 4 bytes of it
 DOUBLE_POOL_FRAMES = (2 * 16382 * 2048 - 4 * 64) // 2
 AUDIO = (".wav", ".aif", ".aiff", ".mp3", ".m4a", ".flac", ".caf")
-MARKER = ".made_by_split_sample"          # in an output folder: its numbered files are ours to replace
+MARKER = ".made_by_split_sample"  # in an output folder: its numbered files are ours to replace
 
 
 def read_wav(path):
@@ -89,8 +86,9 @@ def clock(seconds):
 
 
 def split(x, chunk_seconds=None, mono=False, limit=MAX_SECONDS):
-    """(frames, channels) int16 -> list of (name suffix, mono int16 array), in slot order.
-    limit: the longest a slot may be, 5 s, or 10 s for the big image."""
+    """(frames, channels) int16 -> list of (name suffix, mono int16 array), in slot order. limit: the longest a slot may
+    be, 5 s, or 10 s for the big image.
+    """
     chunk_seconds = limit if chunk_seconds is None else chunk_seconds
     if not 0 < chunk_seconds <= limit:
         raise ValueError("chunk must be at most %g seconds" % limit)
@@ -106,7 +104,7 @@ def split(x, chunk_seconds=None, mono=False, limit=MAX_SECONDS):
         raise ValueError("%s of %s needs %d slots, the Syntakt has %d: room for %s of stereo or %s of mono" % (
             clock(frames / RATE), "stereo" if channels == 2 else "mono", pieces * channels, MAX_SLOTS,
             clock(MAX_SLOTS // 2 * limit), clock(MAX_SLOTS * limit)))
-    size = math.ceil(frames / pieces)                 # equal pieces, the last one no longer than the rest
+    size = math.ceil(frames / pieces)  # equal pieces, the last one no longer than the rest
     out = []
     for k in range(pieces):
         part = x[k * size:(k + 1) * size]
@@ -156,15 +154,16 @@ def inputs(paths):
 
 def kinded(pieces, stereo):
     """The pieces with lengths that say what they are (the stops image): a mono sample an odd number of frames, a stereo
-    one an even number on both sides. The last frame is left out where the length is the other kind; never more."""
+    one an even number on both sides. The last frame is left out where the length is the other kind; never more.
+    """
     return [(suffix, data[:len(data) - (len(data) % 2 != (0 if stereo else 1))]) for suffix, data in pieces]
 
 
 def convert(files, chunk_seconds=None, mono=False, first=1, limit=MAX_SECONDS, pool=BIG_POOL_FRAMES, pack=False):
-    """-> [(stem, stereo, pieces)] for every file. ValueError if they do not fit from slot `first` on.
-    pool: with slots longer than stock's, the frames the unit loads at boot in all.
-    pack: for the pack image, where the mono ones go in the single slots from 64 down (place), and for the stops
-    image, which goes by a length's kind (kinded)."""
+    """-> [(stem, stereo, pieces)] for every file. ValueError if they do not fit from slot `first` on. pool: with slots
+    longer than stock's, the frames the unit loads at boot in all. pack: for the pack image, where the mono ones go in
+    the single slots from 64 down (place), and for the stops image, which goes by a length's kind (kinded).
+    """
     if not 1 <= first <= MAX_SLOTS:
         raise ValueError("the first slot must be 1 to %d" % MAX_SLOTS)
     jobs = []
@@ -201,11 +200,10 @@ def convert(files, chunk_seconds=None, mono=False, first=1, limit=MAX_SECONDS, p
 
 
 def place(jobs, first=1, pack=False):
-    """-> [(slot, stem, stereo, pieces)]: the slot of each file's first piece, counted from 1.
-    A stereo file starts on an odd slot; the slot before it is left empty if it has to be.
-    pack: for the pack image (
-    ). The
-    stereo files as before; the mono ones from slot 64 down, the first file given in the highest slots."""
+    """-> [(slot, stem, stereo, pieces)]: the slot of each file's first piece, counted from 1. A stereo file starts on an
+    odd slot; the slot before it is left empty if it has to be. pack: for the pack image ( ). The stereo files as
+    before; the mono ones from slot 64 down, the first file given in the highest slots.
+    """
     out, slot, top = [], first, MAX_SLOTS
     for stem, stereo, pieces in jobs:
         if pack and not stereo:
@@ -220,8 +218,9 @@ def place(jobs, first=1, pack=False):
 
 
 def layout(jobs, first=1, pack=False):
-    """-> rows (first slot, slots, name, seconds, MODE, SMPL), one per sample, in slot order. SMPL is the
-    number to dial in: the slot for a mono sample, the stereo sample's number for a pair."""
+    """-> rows (first slot, slots, name, seconds, MODE, SMPL), one per sample, in slot order. SMPL is the number to dial
+    in: the slot for a mono sample, the stereo sample's number for a pair.
+    """
     rows = []
     for slot, stem, stereo, pieces in sorted(place(jobs, first, pack), key=lambda job: job[0]):
         step = 2 if stereo else 1
@@ -304,7 +303,7 @@ def main(argv=None):
     name = os.path.splitext(os.path.basename(os.path.normpath(a.input[0])))[0].replace(" ", "_")
     outdir = a.out or os.path.join("build", "samples", name)
     if any(os.path.isdir(p) and os.path.abspath(p) == os.path.abspath(outdir) for p in a.input):
-        outdir += "_syntakt"                          # never write the pieces in among the sources
+        outdir += "_syntakt"  # never write the pieces in among the sources
     try:
         pool = DOUBLE_POOL_FRAMES if a.double else BIG_POOL_FRAMES
         big = a.big or a.double

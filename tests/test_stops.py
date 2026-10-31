@@ -1,43 +1,4 @@
-"""The "stops" image: SMPL stops only on real samples and one free spot of each kind.
-
-
-
-
-
-Of three ways, the one chosen: the
-knob skips, with one free spot of each kind.
-
-So (engine/sampler.h, STOPS). Slots are counted from 1 here, as Transfer counts them; stereo place n is slots
-2n - 1 and 2n, and single slot k, 33 to 64, is slot k:
-  - turning SMPL on the first page stops at every stereo place that holds a sample, the lowest stereo place that
-    is free, the highest single slot that is free, and every single slot that holds a mono sample. Nothing else.
-    The reversed half of the knob the same, mirrored. A turn of several steps is that many stops; a value that is
-    no stop goes to the nearest one in the turned direction;
-  - what says which kind a slot holds is its length: 0 empty, odd a single slot's mono sample, even its stereo
-    place's. A stereo place holds a sample when its first slot is not empty and (in the back half, where a slot
-    can be a single one's) not odd; it is free when both its slots are empty. A single slot holds a mono sample
-    when its length is odd and more than one frame (one frame is what the mode and cross images left in a mono
-    take's second slot, and such takes are kept on the drive); it is free when it is empty and the first slot of
-    its pair holds no even sample;
-  - so a single slot's take is a frame short of its whole blocks, and a mono take in a stereo place leaves two
-    frames in its second slot;
-  - the audio CPU says two bits a slot in the window, sixteen slots a block, behind a mark that reads right when
-    four blocks have gone by; the main CPU reads them when the knob is turned, and while they do not read right,
-    or the audio CPU is down, the turn is stock's.
-
-What is held here, in emulation:
-  - the audio CPU's four longs and its mark, from a start with anything in memory, through takes of each kind and
-    slots loaded and emptied; what it costs; that the engine plays as the pack image's does;
-  - the take's routine against the pack image's, block for block, for each kind of take;
-  - the knob's travel against the rule as written above, for many layouts of the bank, on stock's own methods
-    for a parameter's value and a step's lock (tests/test_page.py); the two CPUs' halves against each other;
-  - an odd length from the drive's header through the pool to the audio CPU's table, and from a file to a file
-    (tests/test_split.py);
-  - that both programs differ from the pack image's only where meant.
-
-Not held: anything on the unit. Above all that a file of an odd number of frames sent with Transfer is a slot of
-an odd number of frames on the drive.
-"""
+"""The "stops" image: SMPL stops only on real samples and one free spot of each kind."""
 import shutil
 
 import numpy as np
@@ -67,14 +28,14 @@ from tools import fw
 pytestmark = pytest.mark.skipif(not shutil.which("m68k-elf-gcc"), reason="no ColdFire cross-compiler")
 
 SAMPLER = 44
-SMPL_KNOB = mm.SMPL_KNOB                # the first page's second knob, as a turn names it
+SMPL_KNOB = mm.SMPL_KNOB  # the first page's second knob, as a turn names it
 OK = m.STOPS_OK
-TWO = m.STOPS_TAKE_ONE                  # frames a mono take leaves in its second slot here
-ROUND = 4                               # blocks in which every slot is said once
+TWO = m.STOPS_TAKE_ONE  # frames a mono take leaves in its second slot here
+ROUND = 4  # blocks in which every slot is said once
 ST_COUNT = m.STOPS_COUNT
-EVENT_PUSHED = 20                       # in a knob's event: the knob is pushed in while it is turned
-KEY_JUMP = 1                            # the key that makes stock's knob routine jump a value: FUNC, by what it does with it
-SMPL_TEMPLATE = 0x401d6b74              # how SMPL's knob steps, in the display table's entry for its record (tools/uitable.py)
+EVENT_PUSHED = 20  # in a knob's event: the knob is pushed in while it is turned
+KEY_JUMP = 1  # the key that makes stock's knob routine jump a value: FUNC, by what it does with it
+SMPL_TEMPLATE = 0x401d6b74  # how SMPL's knob steps, in the display table's entry for its record (tools/uitable.py)
 
 
 @pytest.fixture(scope="module")
@@ -119,7 +80,8 @@ def folded(monkeypatch):
     monkeypatch.setattr(P, "HookEngine", Folded)
 
 
-# ---- the rule, as it is written ---------------------------------------------------------------------------------------
+# ---- the rule, as it is written
+# ---------------------------------------------------------------------------------------
 
 def kind(frames):
     """A slot's two bits: its length's lowest, then whether anything is left without it."""
@@ -133,11 +95,11 @@ def said(frames):
 
 def stops_of(frames):
     """The numbers SMPL stops at, 1 to 64, for the 64 slots' lengths."""
-    f = lambda k: frames[k - 1]                                     # slots from 1, as the rule is written
+    f = lambda k: frames[k - 1]  # slots from 1, as the rule is written
     holds = [n for n in range(1, 33) if f(2 * n - 1) > 0 and (n <= 16 or f(2 * n - 1) % 2 == 0)]
     free = [n for n in range(1, 33) if f(2 * n - 1) == 0 and f(2 * n) == 0]
-    mono = [k for k in range(33, 65) if f(k) % 2 == 1 and f(k) > 1]         # one frame: the mode image's mono take, its second slot
-    first = lambda k: k - 1 + k % 2                                 # the first slot of k's pair
+    mono = [k for k in range(33, 65) if f(k) % 2 == 1 and f(k) > 1]  # one frame: the mode image's mono take, its second slot
+    first = lambda k: k - 1 + k % 2  # the first slot of k's pair
     spare = [k for k in range(33, 65) if f(k) == 0 and not (f(first(k)) > 0 and f(first(k)) % 2 == 0)]
     return sorted(set(holds) | set(free[:1]) | set(mono) | set(spare[-1:]))
 
@@ -156,7 +118,8 @@ def travelled(numbers, value, steps):
 
 def bank(stereo=(), mono=(), odd=(), even=(), lone=()):
     """64 lengths. stereo: places 1 to 32 with a stereo sample. mono: single slots with a mono sample (odd). odd, even:
-    slots with any sample of that kind of length. lone: places with a mono take, its second slot of two frames."""
+    slots with any sample of that kind of length. lone: places with a mono take, its second slot of two frames.
+    """
     f = [0] * 64
     for n in stereo:
         f[2 * n - 2] = f[2 * n - 1] = 9600 + 2 * n
@@ -180,8 +143,8 @@ LAYOUTS = {
     "16 stereo and 32 mono": (bank(stereo=range(1, 17), mono=range(33, 65)), list(range(1, 17)) + list(range(33, 65))),
     "one free slot between the stacks": (bank(stereo=range(1, 21), mono=range(42, 65)), list(range(1, 21)) + list(range(41, 65))),
     "one free pair between the stacks": (bank(stereo=range(1, 21), mono=range(43, 65)), list(range(1, 22)) + list(range(42, 65))),
-    # an even file in an odd slot of the back half is its stereo place's sample, as on the mode image; in an even slot it
-    # is nothing the knob stops at; and the slot after an even one is no free single slot
+    # an even file in an odd slot of the back half is its stereo place's sample, as on the mode image; in an even slot
+    # it is nothing the knob stops at; and the slot after an even one is no free single slot
     "old even mono files at the back": (bank(stereo=[1], even=[63, 61, 62, 58], mono=[59]), [1, 2, 31, 32, 59, 60]),
     "mono takes in stereo places": (bank(stereo=[1, 3], lone=[2, 20, 32], mono=[60]), [1, 2, 3, 4, 20, 32, 60, 62]),
     # slots 1 to 32 have no single reading: a first slot there makes its place a stop whatever its length
@@ -213,7 +176,8 @@ def test_the_rule_gives_one_free_spot_of_each_kind_at_most():
         assert sum(1 for k in got if k > 32 and not frames[k - 1]) <= 1
 
 
-# ---- the audio CPU says what every slot holds -----------------------------------------------------------------------------
+# ---- the audio CPU says what every slot holds
+# -----------------------------------------------------------------------------
 
 def window(e):
     return [e.mc.r32(a) for a in m.STOPS_LONGS], e.mc.r32(m.STOPS_MARK)
@@ -253,8 +217,9 @@ def put(e, frames):
 
 @pytest.mark.parametrize("seed", range(12))
 def test_every_slot_is_said_within_four_blocks_of_a_start_with_anything_in_memory(stops, seed):
-    """Whatever the count of blocks, the longs and the mark hold: after each block one more long is right and the
-    others are as they were, and the mark reads right after the fourth block and not before."""
+    """Whatever the count of blocks, the longs and the mark hold: after each block one more long is right and the others
+    are as they were, and the mark reads right after the fourth block and not before.
+    """
     frames = lengths(seed)
     e = P.engine(stops)
     put(e, frames)
@@ -271,7 +236,8 @@ def test_every_slot_is_said_within_four_blocks_of_a_start_with_anything_in_memor
 
 def test_a_mark_left_reading_right_is_the_one_case_the_main_cpu_has_to_close(stops):
     """The audio CPU cannot tell a mark that was right before it started from one it made. The main CPU sets it to 0
-    while the audio CPU is down (engine/rightfill.c: the test of that is below); from 0 it is four blocks."""
+    while the audio CPU is down (engine/rightfill.c: the test of that is below); from 0 it is four blocks.
+    """
     e = P.engine(stops)
     put(e, lengths(3))
     junk(e, 1, mark=OK)
@@ -283,8 +249,9 @@ def test_a_mark_left_reading_right_is_the_one_case_the_main_cpu_has_to_close(sto
 
 
 def test_the_slots_as_stock_builds_them_from_a_pool_with_odd_lengths(stops):
-    """Stock's own routine walks the pool, a count and then that many frames a slot: an odd count is a slot of an
-    odd number of frames, and the slot after it begins where it should."""
+    """Stock's own routine walks the pool, a count and then that many frames a slot: an odd count is a slot of an odd
+    number of frames, and the slot after it begins where it should.
+    """
     rng = np.random.default_rng(7)
     frames = [int(v) for v in rng.choice([0, 1, 2, 3, 333, 334, 1001], 64)]
     pool = {k: noise(n, k) for k, n in enumerate(frames) if n}
@@ -297,8 +264,9 @@ def test_the_slots_as_stock_builds_them_from_a_pool_with_odd_lengths(stops):
 
 
 def test_what_is_said_follows_takes_of_each_kind(stops):
-    """A stereo take in a stereo place, a mono take in one, and a single slot's: each is said for what it is while
-    it runs, from its first block on, and after."""
+    """A stereo take in a stereo place, a mono take in one, and a single slot's: each is said for what it is while it
+    runs, from its first block on, and after.
+    """
     e = P.engine(stops)
     P.box(e)
     junk(e, 4)
@@ -334,8 +302,9 @@ def test_what_is_said_follows_a_slot_that_is_loaded_and_one_that_is_emptied(stop
 
 
 def test_only_its_five_longs_of_the_window_are_written_and_one_long_of_free_memory(stops, pack):
-    """Against the pack image's engine through the same blocks, a take among them: the same writes to the window and
-    to free memory, and the four longs, the mark and the count of blocks besides. A long at a time."""
+    """Against the pack image's engine through the same blocks, a take among them: the same writes to the window and to
+    free memory, and the four longs, the mark and the count of blocks besides. A long at a time.
+    """
     def run(built):
         e = P.engine(built)
         P.box(e)
@@ -352,7 +321,8 @@ def test_only_its_five_longs_of_the_window_are_written_and_one_long_of_free_memo
     assert now - was == ours and was - now == set() and not ours & was
 
 
-# ---- a take's length says what it is -------------------------------------------------------------------------------------
+# ---- a take's length says what it is
+# -------------------------------------------------------------------------------------
 
 TRACK = 4
 
@@ -370,8 +340,9 @@ def test_a_stereo_take_is_the_pack_images_block_for_block(stops, pack, place):
 
 @pytest.mark.parametrize("place", [3, 20, 31])
 def test_a_mono_take_in_a_stereo_place_is_the_pack_images_with_two_frames_in_its_second_slot(stops, pack, place):
-    """Two where the mode image left one: not as long as the first, so no right channel, and not odd, so no single
-    slot's sample. Everything else after every block is the pack image's."""
+    """Two where the mode image left one: not as long as the first, so no right channel, and not odd, so no single slot's
+    sample. Everything else after every block is the pack image's.
+    """
     was, old = takes(pack, place, P.REC)
     now, e = takes(stops, place, P.REC)
     k = 2 * place
@@ -388,7 +359,8 @@ def test_a_single_slots_take_is_a_frame_short_of_its_blocks_from_the_first_on(st
     """Through every way a take goes and ends: after every block the slot's length is the pack image's less one frame
     (and none where that is none), so odd whenever there is anything; the frames in its buffer, the voice's own count,
     the marks and every other line of the table are the pack image's; and the slots either side, kept samples with
-    marked buffers, are as they were."""
+    marked buffers, are as they were.
+    """
     fenced = [k for k in (place - 1, place + 1) if k < 64]
     was, old = takes(pack, place, mode, fenced=fenced)
     now, e = takes(stops, place, mode, fenced=fenced)
@@ -398,7 +370,7 @@ def test_a_single_slots_take_is_a_frame_short_of_its_blocks_from_the_first_on(st
         assert t1[place] == (max(n - 1, 0), t0[place][1]) and (not n or t1[place][0] % 2 == 1)
     assert all(np.array_equal(a, b) for a, b in zip(frames_of(e, place, WHERE), frames_of(old, place, WHERE)))
     assert [(t[place][0] + 1) // BLOCK for t, *_ in now] == STORY and [rec for _, _, rec, _, _ in now] == RUNNING
-    assert {t[place][0] % BLOCK for t, *_ in now} == {0, BLOCK - 1}        # nothing yet, or a frame short
+    assert {t[place][0] % BLOCK for t, *_ in now} == {0, BLOCK - 1}  # nothing yet, or a frame short
 
 
 def single_take(built, place, n=20, seed=1):
@@ -414,8 +386,9 @@ def single_take(built, place, n=20, seed=1):
 @pytest.mark.parametrize("note", [60, 55.25, 67])
 @pytest.mark.parametrize("place", [41, 62])
 def test_it_plays_as_the_pack_images_take_less_its_last_frame(stops, pack, place, note):
-    """The same take on both, the pack image's told it is a frame shorter (test only): the same sound to its end, at
-    its own pitch and at others, where the frames around its end are summed."""
+    """The same take on both, the pack image's told it is a frame shorter (test only): the same sound to its end, at its
+    own pitch and at others, where the frames around its end are summed.
+    """
     e, old = single_take(stops, place), single_take(pack, place)
     n = P.slot_entry(old, place)[0]
     assert P.slot_entry(e, place) == (n - 1, buf(place)) and n % BLOCK == 0 and n > 400
@@ -429,8 +402,9 @@ def test_it_plays_as_the_pack_images_take_less_its_last_frame(stops, pack, place
 
 
 def test_it_is_handed_to_the_drive_at_that_length(stops):
-    """The keep's requests (engine/keeptakes.c): an odd number of frames, its last sector's last long cut where the
-    take ends, and the mark that it is kept made of that length."""
+    """The keep's requests (engine/keeptakes.c): an odd number of frames, its last sector's last long cut where the take
+    ends, and the mark that it is kept made of that length.
+    """
     e = single_take(stops, 50, n=30)
     took = P.taken(e, 50)
     n = len(took)
@@ -438,7 +412,7 @@ def test_it_is_handed_to_the_drive_at_that_length(stops):
     raw = took.astype(">i2").tobytes()
     ok, frames, got = K.ask(e, 50, 0)
     assert ok and frames == n and got == raw[:512]
-    last = 448 + 512 * ((2 * n - 448) // 512)                              # the last piece the main CPU asks for
+    last = 448 + 512 * ((2 * n - 448) // 512)  # the last piece the main CPU asks for
     ok, frames, got = K.ask(e, 50, last)
     assert ok and frames == n and got == raw[last:].ljust(512, b"\0") and 0 < 2 * n - last < 512
     assert K.ask(e, 51, 0)[1] == 0 and K.ask(e, 49, 0)[1] == 0
@@ -448,8 +422,9 @@ def test_it_is_handed_to_the_drive_at_that_length(stops):
 
 @pytest.mark.parametrize("place", [5, 30])
 def test_a_mono_takes_second_slot_of_two_frames_is_no_right_channel_and_is_kept_as_a_take(stops, place):
-    """It plays as one channel, and the keep is handed the second slot as a take of two frames, so that what the
-    drive had there cannot come back as a right channel (the mode image's reason for one frame)."""
+    """It plays as one channel, and the keep is handed the second slot as a take of two frames, so that what the drive
+    had there cannot come back as a right channel (the mode image's reason for one frame).
+    """
     e = P.engine(stops)
     P.box(e)
     k = 2 * place
@@ -463,12 +438,13 @@ def test_a_mono_takes_second_slot_of_two_frames_is_no_right_channel_and_is_kept_
     assert (e.mc.r32(e.voice(1) + ST), e.mc.r32(e.voice(1) + ST + S_R)) == (buf(k), 0) and out[:, 1].any() and not out[:, 2].any()
     ok, frames, got = K.ask(e, k + 1, 0)
     assert ok and frames == TWO and got[4:] == bytes(508)
-    assert stops_of(table(e)) == [1, place + 1, 64]                        # its place is a stop, and its second slot is none
+    assert stops_of(table(e)) == [1, place + 1, 64]  # its place is a stop, and its second slot is none
 
 
 def test_two_single_takes_side_by_side_are_two_mono_samples_and_no_stereo_place(stops):
-    """Two takes of one length in slots 41 and 42 of Transfer: on the pack image the stereo place they are, 21, took
-    them for a stereo sample. Here each is odd, so each is a stop of its own and 21 is none."""
+    """Two takes of one length in slots 41 and 42 of Transfer: on the pack image the stereo place they are, 21, took them
+    for a stereo sample. Here each is odd, so each is a stop of its own and 21 is none.
+    """
     e = P.engine(stops)
     P.box(e)
     for place, seed in ((40, 1), (41, 2)):
@@ -480,38 +456,42 @@ def test_two_single_takes_side_by_side_are_two_mono_samples_and_no_stereo_place(
     assert stops_of(frames) == [1, 41, 42, 64]
 
 
-# ---- what it costs ----------------------------------------------------------------------------------------------------------
+# ---- what it costs
+# ----------------------------------------------------------------------------------------------------------
 
-SAYING = 128                            # instructions a block for sixteen slots said: seven a slot, sixteen around them
+SAYING = 128  # instructions a block for sixteen slots said: seven a slot, sixteen around them
 
 
 def test_an_interrupt_is_the_pack_images_and_sixteen_slots_said(stops, pack, factory):
-    """Eight pitched stereo loops, instructions an interrupt: every block is the pack image's and 128, the steady
-    one, the one eight notes start in, and the two after it."""
+    """Eight pitched stereo loops, instructions an interrupt: every block is the pack image's and 128, the steady one,
+    the one eight notes start in, and the two after it.
+    """
     was = costs(pack[0], factory, 55.25, 80, start=30, length=40)
     now = costs(stops[0], factory, 55.25, 80, start=30, length=40)
     assert {b - a for a, b in zip(was, now)} == {SAYING}
     a, b = cycle(pack[0], factory, start=30, length=40), cycle(stops[0], factory, start=30, length=40)
     assert [y - x for x, y in zip(a, b)] == [SAYING] * 3
-    assert int(np.median(now[60:])) < 103700 and b[0] < 114200            # of 117,348 for stock's heaviest
+    assert int(np.median(now[60:])) < 103700 and b[0] < 114200  # of 117,348 for stock's heaviest
 
 
-# ---- the knob ---------------------------------------------------------------------------------------------------------------
+# ---- the knob
+# ---------------------------------------------------------------------------------------------------------------
 
 class StopsPage(GainPage):
     """The page rig on the sampler's first page, with SMPL's value and its locks beside MODE's: stock's methods for a
     parameter run as they are (tests/test_page.py), and what they ask of the holder for SMPL's record is played here.
-    The window holds what the audio CPU says of a bank, and stock's word that the audio CPU is up."""
+    The window holds what the audio CPU says of a bank, and stock's word that the audio CPU is up.
+    """
 
     def __init__(self, built, frames=None, smpl=64, track=0, up=1, mark=OK, **kw):
         self.smpl, self.smpl_locks, self.did, self.keys_down = smpl, {}, [], set()
         super().__init__(built, track=track, **kw)
         mc = self.mc
-        self.stub(mm.UI_STATE, lambda key: key in self.keys_down)      # stock's "is this key held", after the rig's own "none is"
+        self.stub(mm.UI_STATE, lambda key: key in self.keys_down)  # stock's "is this key held", after the rig's own "none is"
         mc.uc.ctl_flush_tb()
         mc.map(mm.AUDIO_UP & ~0xfff, 0x1000)
         mc.w32(mm.AUDIO_UP, up)
-        mc.w32(mm.UI_TABLE + mm.UI_STRIDE * mm.R_SMPL, 4)       # SMPL's flags, as the start-up code leaves them (tools/uitable.py)
+        mc.w32(mm.UI_TABLE + mm.UI_STRIDE * mm.R_SMPL, 4)  # SMPL's flags, as the start-up code leaves them (tools/uitable.py)
         mc.w32(PAGE + mm.PAGE_INDEX, 0)
         mc.write(PEAK_AT, b"P047")
         self.bank(frames or [0] * 64, mark)
@@ -596,14 +576,15 @@ def test_the_knob_stops_at_the_banks_samples_and_one_free_spot_of_each_kind(main
     want = values_of(numbers)
     assert walk(r, 0, 1) == [v for v in want if v > 0] and walk(r, 127, -1) == [v for v in want if v < 127][::-1]
     forward = [v - 63 for v in want if v > 63]
-    assert forward == numbers and [64 - v for v in want if v < 64][::-1] == numbers      # the reversed half is the same list, mirrored
+    assert forward == numbers and [64 - v for v in want if v < 64][::-1] == numbers  # the reversed half is the same list, mirrored
     assert not r.stray and not r.turned and not r.locked and not r.changes
 
 
 @pytest.mark.parametrize("seed", range(10))
 def test_any_bank_any_value_any_turn(main, seed):
-    """Lengths of every kind in every slot. From every value the knob can have, a stop or not, turns of one step
-    and of several either way land where the rule says, and a turn of none is nothing."""
+    """Lengths of every kind in every slot. From every value the knob can have, a stop or not, turns of one step and of
+    several either way land where the rule says, and a turn of none is nothing.
+    """
     rng = np.random.default_rng(seed)
     frames = [int(v) for v in rng.choice([0, 0, 0, 1, 2, 3, 640, 641, 4800, 4801], 64)]
     numbers = stops_of(frames)
@@ -622,30 +603,31 @@ def test_a_fast_turn_is_that_many_stops_and_a_value_that_is_no_stop_goes_to_the_
     """20 stereo samples and 10 mono ones: 1 to 20, the free place 21, the free slot 54, 55 to 64."""
     r = StopsPage(main, LAYOUTS["20 stereo and 10 mono, a gap between"][0], smpl=knob_of(0))
     assert [r.turn_smpl(n) for n in (1, 3, 15, 1, 1, 1, 9, 1, 5)] == [63 + n for n in (2, 5, 20, 21, 54, 55, 64, 64, 64)]
-    assert [r.turn_smpl(n) for n in (-1, -9, -1, -2, -30)] == [63 + n for n in (63, 54, 21, 19)] + [64 - 12]     # through the middle: 18 forward, 12 reversed
+    assert [r.turn_smpl(n) for n in (-1, -9, -1, -2, -30)] == [63 + n for n in (63, 54, 21, 19)] + [64 - 12]  # through the middle: 18 forward, 12 reversed
     # a pattern made before, or a lock, on a number the knob no longer stops at
     for value, steps, want in ((63 + 30, 1, 63 + 54), (63 + 30, -1, 63 + 21), (63 + 40, 2, 63 + 55), (64 - 30, -1, 64 - 54), (64 - 30, 1, 64 - 21),
                                (64 - 22, 3, 64 - 19), (63 + 53, -25, 64 - 4)):
         r.smpl = value
         assert r.turn_smpl(steps) == want
-    assert r.popped[-1] == ("SMPL", "smpl %d" % (64 - 4)) and len(r.popped) == 21      # stock's pop-up, at every turn
+    assert r.popped[-1] == ("SMPL", "smpl %d" % (64 - 4)) and len(r.popped) == 21  # stock's pop-up, at every turn
 
 
 def test_a_plain_turn_is_the_tracks_value_through_stocks_method_and_stocks_pop_up(main):
     r = StopsPage(main, bank(stereo=[1, 2, 3]), smpl=knob_of(0))
     assert r.turn_smpl(1) == knob_of(1) and r.did == [("plain", 1)] and r.popped == [("SMPL", "smpl %d" % knob_of(1))]
-    assert r.turn_smpl(-3) == knob_of(1, reverse=True) and r.did[-1] == ("plain", -3)      # through the middle, to the reversed half
+    assert r.turn_smpl(-3) == knob_of(1, reverse=True) and r.did[-1] == ("plain", -3)  # through the middle, to the reversed half
     assert r.turn_smpl(-7) == knob_of(63, reverse=True) and r.turn_smpl(-1) == knob_of(63, reverse=True)
-    assert len(r.did) == 3 and len(r.popped) == 4          # at the knob's end nothing moves, and the pop-up says where it is
+    assert len(r.did) == 3 and len(r.popped) == 4  # at the knob's end nothing moves, and the pop-up says where it is
     r.popups = False
     assert r.turn_smpl(1) == knob_of(3, reverse=True) and len(r.popped) == 4
-    assert r.turn_smpl(1, side=False) == knob_of(2, reverse=True)                  # and by the class's own entry
+    assert r.turn_smpl(1, side=False) == knob_of(2, reverse=True)  # and by the class's own entry
     assert r.mode == 0 and not r.changes and not r.locked and not r.edited and not r.stray
 
 
 def test_a_held_step_gets_a_lock_as_a_turn_of_any_knob_gives_one(main):
-    """Stock's routine for a held step: the first turn makes a lock at the track's value and moves nothing, the
-    next ones move the lock. Ours the same, by stops; the track's own value stays."""
+    """Stock's routine for a held step: the first turn makes a lock at the track's value and moves nothing, the next ones
+    move the lock. Ours the same, by stops; the track's own value stays.
+    """
     frames = bank(stereo=range(1, 6), mono=[64, 63])
     r = StopsPage(main, frames, smpl=knob_of(1))
     r.hold(3, 9, trigs=False)
@@ -655,11 +637,11 @@ def test_a_held_step_gets_a_lock_as_a_turn_of_any_knob_gives_one(main):
     r.hold(3)
     assert r.turn_smpl(2) == knob_of(1) and r.smpl_locks == {3: knob_of(3), 9: knob_of(1)}
     r.hold(3, 9)
-    assert r.turn_smpl(3) == knob_of(1) and r.smpl_locks == {3: knob_of(61), 9: knob_of(4)}       # each from where it is
+    assert r.turn_smpl(3) == knob_of(1) and r.smpl_locks == {3: knob_of(61), 9: knob_of(4)}  # each from where it is
     assert r.turn_smpl(1) == knob_of(1) and r.smpl_locks == {3: knob_of(62), 9: knob_of(5)}
     assert r.turn_smpl(5) == knob_of(1) and r.smpl_locks == {3: knob_of(63), 9: knob_of(63)}
     assert r.did[-2:] == [("move", 3, 1), ("move", 9, 58)] and len(r.did) == 9
-    assert r.turn_smpl(1) == knob_of(1) and len(r.did) == 9                                        # at the end no lock is moved
+    assert r.turn_smpl(1) == knob_of(1) and len(r.did) == 9  # at the end no lock is moved
     assert not r.popped and not r.changes and not r.locks and not r.stray and r.done
     r.hold()
     assert r.turn_smpl(-1) == knob_of(0) and r.smpl_locks == {3: knob_of(63), 9: knob_of(63)} and r.popped
@@ -667,32 +649,34 @@ def test_a_held_step_gets_a_lock_as_a_turn_of_any_knob_gives_one(main):
 
 def test_pushed_in_a_click_is_eight_stops_as_stocks_is_eight_numbers(main, stock3):
     """Stock counts a knob's coarse step for a click while the knob is pushed in: the event's byte at + 20 picks the
-    second of two numbers of the record's template (0x400f6866), and SMPL's are 1 and 8."""
+    second of two numbers of the record's template (0x400f6866), and SMPL's are 1 and 8.
+    """
     at = mm.off(SMPL_TEMPLATE)
     assert stock3[at:at + 8] == (1).to_bytes(4, "big") + (8).to_bytes(4, "big")
-    assert stock3[mm.off(0x400f686e):mm.off(0x400f686e) + 4] == bytes.fromhex(fw.sx("68db5d181c11995d"))              # tstb the event's + 20
-    assert stock3[mm.off(0x400f687e):mm.off(0x400f687e) + 6] == bytes.fromhex(fw.sx("c6c08076ca22cd34897a"))       # steps times the number picked
+    assert stock3[mm.off(0x400f686e):mm.off(0x400f686e) + 4] == bytes.fromhex(fw.sx("68db5d181c11995d"))  # tstb the event's + 20
+    assert stock3[mm.off(0x400f687e):mm.off(0x400f687e) + 6] == bytes.fromhex(fw.sx("c6c08076ca22cd34897a"))
     assert uitable.table(stock3)[mm.R_SMPL]["template"] == SMPL_TEMPLATE
     r = StopsPage(main, LAYOUTS["the two stacks touching"][0], smpl=knob_of(0))
-    assert r.turn_smpl(1, pushed=True) == knob_of(8) and r.turn_smpl(2, pushed=True) == knob_of(44)        # 9 to 20, then 41 to 45
+    assert r.turn_smpl(1, pushed=True) == knob_of(8) and r.turn_smpl(2, pushed=True) == knob_of(44)  # 9 to 20, then 41 to 45
     assert r.turn_smpl(-1, pushed=True) == knob_of(16) and r.turn_smpl(-1) == knob_of(15)
-    assert r.turn_smpl(-3, pushed=True) == knob_of(8, reverse=True) and r.did[-1] == ("plain", -24)       # 15 forward, 9 reversed
+    assert r.turn_smpl(-3, pushed=True) == knob_of(8, reverse=True) and r.did[-1] == ("plain", -24)  # 15 forward, 9 reversed
     r.hold(2)
-    assert r.turn_smpl(1, pushed=True) == r.smpl and r.turn_smpl(1, pushed=True) == r.smpl                 # a held step's lock too
+    assert r.turn_smpl(1, pushed=True) == r.smpl and r.turn_smpl(1, pushed=True) == r.smpl  # a held step's lock too
     assert r.smpl_locks == {2: knob_of(0, reverse=True)}
 
 
 def test_with_stocks_jump_key_held_the_turn_is_stocks(main, stock3):
-    """Stock's knob routine asks whether key 1 is held and, with it, changes a value by the record's own jump, which
-    for a sample is to the same number on the knob's other half (read in the listing, 0x4003b9c6 and 0x4006f8e4: not
-    run here). That turn is not taken: the mirror of a stop is a stop."""
+    """Stock's knob routine asks whether key 1 is held and, with it, changes a value by the record's own jump, which for
+    a sample is to the same number on the knob's other half (read in the listing, 0x4003b9c6 and 0x4006f8e4: not run
+    here). That turn is not taken: the mirror of a stop is a stop.
+    """
     at = mm.off(0x4003b9c6)
-    assert stock3[at:at + 12] == bytes.fromhex(fw.sx("97216e699742a7125ba2") + "%08x" % mm.UI_STATE + "4e95")       # pea 1 ; lea the key test ; jsr
+    assert stock3[at:at + 12] == bytes.fromhex(fw.sx("97216e699742a7125ba2") + "%08x" % mm.UI_STATE + "4e95")  # pea 1 ; lea the key test ; jsr
     r = StopsPage(main, LAYOUTS["the two stacks touching"][0], smpl=knob_of(3))
     r.keys_down = {KEY_JUMP}
     assert r.twist(SMPL_KNOB, 1) == r.turn_answer and r.twist(SMPL_KNOB, -1, pushed=True) == r.turn_answer
     assert len(r.turned) == 2 and r.smpl == knob_of(3) and not r.did and not r.redrawn
-    r.keys_down = {0x12, 2, 7}                                             # any other key: ours
+    r.keys_down = {0x12, 2, 7}  # any other key: ours
     del r.turned[:]
     assert r.turn_smpl(1) == knob_of(4)
 
@@ -706,8 +690,9 @@ def test_a_step_held_past_the_patterns_end_is_no_held_step(main):
 
 @pytest.mark.parametrize("mark", [0, 0xa5a5a5, 0xa5a5a500, 0x5a5a5a5a, 0xffffffff, 0x52454321])
 def test_while_the_mark_does_not_read_right_the_turn_is_stocks(main, mark):
-    """The audio CPU has not said what the slots hold, or has not for four blocks: stock's own routine gets the turn
-    as it came, and ours does nothing."""
+    """The audio CPU has not said what the slots hold, or has not for four blocks: stock's own routine gets the turn as
+    it came, and ours does nothing.
+    """
     r = StopsPage(main, LAYOUTS["the two stacks touching"][0], smpl=knob_of(25), mark=mark)
     assert r.twist(SMPL_KNOB, 1) == r.turn_answer and r.twist(SMPL_KNOB, -3, side=False) == r.turn_answer
     assert len(r.turned) == 2 and r.smpl == knob_of(25) and not r.did and not r.popped and not r.redrawn and not r.stray
@@ -716,12 +701,13 @@ def test_while_the_mark_does_not_read_right_the_turn_is_stocks(main, mark):
     r.bank(LAYOUTS["the two stacks touching"][0])
     r.hold()
     del r.turned[:]
-    assert r.turn_smpl(1) == knob_of(40)                                   # and with the mark there it is ours
+    assert r.turn_smpl(1) == knob_of(40)  # and with the mark there it is ours
 
 
 def test_a_bank_with_no_stop_at_all_leaves_the_knob_to_stock(main):
-    """It takes a bank made for it: second slots alone in front, and at the back one frame in every first slot. The
-    rule has nothing to stop at, and the knob is not to be stuck."""
+    """It takes a bank made for it: second slots alone in front, and at the back one frame in every first slot. The rule
+    has nothing to stop at, and the knob is not to be stuck.
+    """
     frames = [0, 640] * 16 + [1, 640] * 16
     assert stops_of(frames) == []
     r = StopsPage(main, frames, smpl=knob_of(5))
@@ -747,12 +733,13 @@ def test_only_the_five_longs_and_stocks_word_are_read(main):
 
 
 def test_every_other_knob_of_the_samplers_two_pages_is_what_it_was(main, before):
-    """The first page's other knobs go to stock as they came; the sampling page's are the pack image's, turn for turn."""
+    """The first page's other knobs go to stock as they came; the sampling page's are the pack image's, turn for turn.
+    """
     r = StopsPage(main, LAYOUTS["a hole in each stack"][0], track=6)
     for knob in (1, 3, 4, 5, 7, 8, 9):
         assert r.twist(knob, 2) == r.turn_answer and r.twist(knob, -1, side=False) == r.turn_answer
     assert len(r.turned) == 14 and r.smpl == 64 and not r.did and not r.redrawn
-    assert r.twist(FIRST_MODE, 3) == 1 and not r.changes                   # the empty sixth place: a turn of it is nothing, as it was
+    assert r.twist(FIRST_MODE, 3) == 1 and not r.changes  # the empty sixth place: a turn of it is nothing, as it was
     assert [r.ask(k) for k in range(9)] == [400 + k if k != FIRST_MODE - 1 else 0 for k in range(9)]
     old = GainPage(before, track=6)
     old.mc.write(PEAK_AT, b"P047")
@@ -762,7 +749,7 @@ def test_every_other_knob_of_the_samplers_two_pages_is_what_it_was(main, before)
         assert r.twist(knob, steps) == old.twist(knob, steps) and (r.mode, r.dest, r.gains, r.box) == (old.mode, old.dest, old.gains, old.box)
         assert r.show() == old.show()
     assert r.smpl == 64 and not r.did and r.changes == old.changes and r.dest == 37
-    assert r.stray == old.stray == [0x40196abe]                            # (the bank the project is to be saved with, which knob D writes)
+    assert r.stray == old.stray == [0x40196abe]  # (the bank the project is to be saved with, which knob D writes)
 
 
 def test_another_machine_has_its_own_knobs(main):
@@ -781,7 +768,8 @@ def test_another_machine_has_its_own_knobs(main):
     assert [other.ask(k) for k in range(9)] == [400 + k for k in range(9)] and other.pages == 1
 
 
-# ---- the two CPUs' halves against each other -----------------------------------------------------------------------------------
+# ---- the two CPUs' halves against each other
+# -----------------------------------------------------------------------------------
 
 @pytest.mark.parametrize("seed", range(6))
 def test_what_the_audio_cpu_says_is_what_the_knob_goes_by(stops, main, seed):
@@ -799,7 +787,8 @@ def test_what_the_audio_cpu_says_is_what_the_knob_goes_by(stops, main, seed):
 
 def test_takes_placed_by_hand_one_click_past_the_last_sample(stops, main):
     """What it is for. An empty bank: the knob has stereo place 1 and single slot 64. A stereo take at 1, and 2 is the
-    free place; a mono take at 64, and 63 is the free slot; and so on, each take one click past the last of its kind."""
+    free place; a mono take at 64, and 63 is the free slot; and so on, each take one click past the last of its kind.
+    """
     e = P.engine(stops)
     P.box(e)
     junk(e, 9, mark=0)
@@ -821,21 +810,23 @@ def test_takes_placed_by_hand_one_click_past_the_last_sample(stops, main):
     assert knob() == [1, 2, 64]
     take(64, P.REC | P.STEREO, 2)
     assert knob() == [1, 2, 63, 64]
-    take(2, P.REC, 3)                                                      # a mono take in a stereo place
+    take(2, P.REC, 3)  # a mono take in a stereo place
     take(63, P.REC, 4)
     assert knob() == [1, 2, 3, 62, 63, 64]
     take(3, P.REC | P.STEREO, 5)
-    take(3, P.REC | P.STEREO, 6)                                           # again over the same spot: nothing is eaten
+    take(3, P.REC | P.STEREO, 6)  # again over the same spot: nothing is eaten
     assert knob() == [1, 2, 3, 4, 62, 63, 64]
     assert [k + 1 for k, n in enumerate(table(e)) if n] == [1, 2, 3, 4, 5, 6, 63, 64]
 
 
-# ---- an odd length, from the drive to the audio CPU ------------------------------------------------------------------------------
+# ---- an odd length, from the drive to the audio CPU
+# ------------------------------------------------------------------------------
 
 def test_an_odd_length_on_the_drive_is_an_odd_length_in_the_audio_cpus_table(main, stops):
-    """The pool as this image's main program stages it at a start (engine/poolhalves.c, and stock's readers under
-    it as they are, the drive played by the test), handed to stock's own routine on the audio CPU that makes the
-    slot table of it. A slot's header says its frames, and that many reach the table."""
+    """The pool as this image's main program stages it at a start (engine/poolhalves.c, and stock's readers under it as
+    they are, the drive played by the test), handed to stock's own routine on the audio CPU that makes the slot table
+    of it. A slot's header says its frames, and that many reach the table.
+    """
     r = B.BankRig(main, bank=B.UNKNOWN)
     frames = {0: 4800, 1: 4800, 2: 3001, 5: 1, 40: 2400, 41: 2400, 57: 2399, 62: 4801, 63: 1235}
     for k, n in frames.items():
@@ -853,12 +844,14 @@ def test_an_odd_length_on_the_drive_is_an_odd_length_in_the_audio_cpus_table(mai
     assert settle(e) == (said(table(e)), OK) and stops_of(table(e)) == [1, 2, 4, 21, 58, 62, 63, 64]
 
 
-# ---- the main CPU clears the mark while the audio CPU is down ----------------------------------------------------------------------
+# ---- the main CPU clears the mark while the audio CPU is down
+# ----------------------------------------------------------------------
 
 def test_with_the_audio_cpu_down_the_mark_is_set_to_0_and_with_it_up_it_is_left(main, before):
-    """Where the right channels' long is cleared, every block (engine/rightfill.c): the audio CPU starting again,
-    as it does after samples are sent to the unit, finds no mark of before, and makes its own in four blocks. The
-    mark is outside the 2 KB the boot's loader sends the samples through, which nothing of ours writes meanwhile."""
+    """Where the right channels' long is cleared, every block (engine/rightfill.c): the audio CPU starting again, as it
+    does after samples are sent to the unit, finds no mark of before, and makes its own in four blocks. The mark is
+    outside the 2 KB the boot's loader sends the samples through, which nothing of ours writes meanwhile.
+    """
     r = T.FillRig(*main)
     tracks = np.zeros((8, 32), dtype=np.int32)
     win = bytearray(T.window_of({t: T.some_tracks(40)[t] for t in range(8)}, 0xff))
@@ -881,18 +874,17 @@ def test_with_the_audio_cpu_down_the_mark_is_set_to_0_and_with_it_up_it_is_left(
         counts.append(r.mc.insns - was)
         assert not [a for a, s in r.reads + r.writes if a - mm.SHARED in (m.STOPS_MARK,) + m.STOPS_LONGS]
     assert counts[0] == counts[1]
-    old = T.FillRig(*before)                                               # (the pack image's leaves that long alone)
+    old = T.FillRig(*before)  # (the pack image's leaves that long alone)
     old.set(tracks, bytes(win), up=0)
     old.mc.call(old.fill)
     assert old.mc.r32(mm.SHARED + m.STOPS_MARK) == OK
 
 
-# ---- the window, the programs, and the image ------------------------------------------------------------------------------------
+# ---- the window, the programs, and the image
+# ------------------------------------------------------------------------------------
 
 def test_the_five_longs_are_where_the_window_has_nothing(stock, stock3):
-    """Between what is in use on the unit on every side: the recorder's count and random number and its ring; the
-    sampling page's box and the right channels' second stretch; the time image's two longs and the right channels'
-    first stretch. Neither stock program names an address there."""
+    """Neither stock program names an address there."""
     a, b, c, d = m.STOPS_LONGS
     assert (a, b) == (m.MAILBOX + 8, m.MAILBOX + 12) and b + 4 == m.MAILBOX + m.MAILBOX_RING
     assert (c, d) == (m.REC_BOX + m.REC_SIZE, m.REC_BOX + m.REC_SIZE + 4) and d + 4 == m.rw_half(9)
@@ -908,22 +900,24 @@ def test_the_five_longs_are_where_the_window_has_nothing(stock, stock3):
 
 
 def test_the_audio_cpus_interrupt_is_put_in_place_after_the_pool_is_in(stock):
-    """The four longs are inside the 2 KB the boot's loader sends the pool through, and the routine that writes them
-    runs in the interrupt, every block. Stock's start names the interrupt's routine once, in its last step, after the
-    loop that takes the pool's chunks, and then stays in a loop of one instruction: there is no pool sent while the
-    interrupt runs, and one sent again is a start again."""
+    """The four longs are inside the 2 KB the boot's loader sends the pool through, and the routine that writes them runs
+    in the interrupt, every block. Stock's start names the interrupt's routine once, in its last step, after the loop
+    that takes the pool's chunks, and then stays in a loop of one instruction: there is no pool sent while the
+    interrupt runs, and one sent again is a start again.
+    """
     from emu.engine import ISR
     code = stock[:m.off(m.CODE_END)]
     named = [m.BASE + k for k in range(0, len(code) - 3, 2) if code[k:k + 4] == ISR.to_bytes(4, "big")]
     assert named == [0x40001066] and named[0] > m.POOL_CHUNK_COPY + 0x2c > m.POOL_CHUNK_COPY
     at = m.off(0x40001064)
-    assert stock[at:at + 12] == bytes.fromhex("223c" + "%08x" % ISR + fw.sx("2fc3d129e0f90e58eeb8"))     # the routine into the table of them ; and round
+    assert stock[at:at + 12] == bytes.fromhex("223c" + "%08x" % ISR + fw.sx("2fc3d129e0f90e58eeb8"))  # the routine into the table of them ; and round
     assert m.POOL_CHUNK == 0x800 and all(m.POOL_CHUNK <= a < m.POOL_CHUNK + 0x800 for a in m.STOPS_LONGS) and m.STOPS_MARK < m.POOL_CHUNK
 
 
 def test_section_7_is_the_pack_images_but_for_our_code(stock, stops, pack):
-    """The same runs and the same pointers into them: no new run, no new hook. The hook's last instruction goes on to
-    the new routine, which is in two of the runs' ends; the take's routine is in the run it was in."""
+    """The same runs and the same pointers into them: no new run, no new hook. The hook's last instruction goes on to the
+    new routine, which is in two of the runs' ends; the take's routine is in the run it was in.
+    """
     image, syms = stops
     runs = dict(m.CAVES, **m.REC_CAVES, **m.FADE_CAVES, **m.LIVE_CAVES, **m.PITCH_CAVES, **m.ONE_CAVES, **m.QUICK_CAVES)
     runs.update(m.LEAN_CAVES, **{k: v for k, v in m.TIMED_CAVES.items() if k != "m"}, **m.CROSS_CAVES)
@@ -959,7 +953,8 @@ def test_section_3_is_the_pack_images_but_for_the_page_and_the_right_channels_ro
     # a turn's two entries are the image's own, and go on to the ones that were
     assert mm.u32(image, mm.SYN_SIDE + mm.SYN_SIDE_TURN) == syms["stops_turn_side"] and mm.u32(image, mm.SYN_CLASS + mm.PAGE_TURN_METHOD) == syms["stops_turn"]
     assert mm.u32(before[0], mm.SYN_SIDE + mm.SYN_SIDE_TURN) == syms["syn_turn_side"]
-    # the two new runs: nothing reaches them, each begins after a return and ends on one, and no other run of ours is there
+    # the two new runs: nothing reaches them, each begins after a return and ends on one, and no other run of ours is
+    # there
     runs = deadcode.survey(stock3, mm.BASE, mm.CODE_END, mm.ENTRY, [official.section(k) for k in (2, 4, 6, 8)])
     ours = [v for k, v in vars(mm).items() if k.startswith("CAVE") and isinstance(v, tuple) and v not in (mm.CAVE_PAGE5, mm.CAVE_PAGE6)]
     for (lo, hi), size, names in ((mm.CAVE_PAGE5, 602, ("smpl_turn", "stops_turn_side")), (mm.CAVE_PAGE6, 680, ("stops", "travel", "stops_turn"))):

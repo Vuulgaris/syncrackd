@@ -3,23 +3,23 @@
 Three things, all optional on top of the audio CPU sampler:
 
 1. The UI descriptors of machine type 44 get the sampler's names, ranges and
-   defaults. Data only: eight table records, and five name strings that only
-   those records point at.
+defaults. Data only: eight table records, and five name strings that only
+those records point at.
 2. How four of those knobs are shown. START, LENGTH, LOOP and MODE were a
-   filter, a mix, a tune and a sample selector, and would read -64..+63,
-   -24..+24 and slot numbers. Ten operands in the start-up routine that
-   fills the display table (tools/uitable.py) are pointed at the function
-   objects plain knobs use, so each reads as its number.
+filter, a mix, a tune and a sample selector, and would read -64..+63,
+-24..+24 and slot numbers. Ten operands in the start-up routine that
+fills the display table (tools/uitable.py) are pointed at the function
+objects plain knobs use, so each reads as its number.
 3. The mixer link (engine/mixlink.c): code in an unreferenced function, and
-   the operand of the one call to the mixer. In front of it, the analog mute
-   (engine/amute.c) in a second unreferenced function.
+the operand of the one call to the mixer. In front of it, the analog mute
+(engine/amute.c) in a second unreferenced function.
 
 4. Recorder image only (engine/recfeed.c): the call to the mixer goes through
-   a second piece of code, in three mix kernel variants nothing calls, that
-   copies audio to the audio CPU while a track records (MODE 2 and 3).
+a second piece of code, in three mix kernel variants nothing calls, that
+copies audio to the audio CPU while a track records (MODE 2 and 3).
 
-The mixer link is checked in the emulator with the mixer itself stubbed out;
-the descriptors are checked by reading them back.
+The mixer link is checked in the emulator with the mixer itself stubbed out; the descriptors are checked by reading
+them back.
 """
 import os
 
@@ -35,8 +35,8 @@ def be32(v):
     return v.to_bytes(4, "big")
 
 
-# strings that already exist in the image and are pointed at as they are:
-# (address, text). Several are the tails of longer strings.
+# strings that already exist in the image and are pointed at as they are: (address, text). Several are the tails of
+# longer strings.
 EXISTING = {
     "Tune": 0x4025432f, "TUNE": 0x402626b9, "Decay": 0x40254368, "DEC": 0x4025455f,
     "Length": 0x40253b79, "LEN": 0x40258893, "LOOP": 0x40258979,
@@ -50,14 +50,14 @@ REWRITE = [
     (0x402545e0, "FLT1", "STRT"),
     (0x402545e5, "Tune 2", "Loop"),
 ]
-# LOOP: 0 off, 1 loop, 2 ping-pong. MODE: 0 mono, 1 stereo, 2 and 3 record (they play as mono
-# on an image without the recorder), 4 and 5 chained mono and stereo. Same on both images.
+# LOOP: 0 off, 1 loop, 2 ping-pong. MODE: 0 mono, 1 stereo, 2 and 3 record (they play as mono on an image without the
+# recorder), 4 and 5 chained mono and stereo. Same on both images.
 LOOP_MAX, MODE_MAX = 0x0200, 0x0500
 # The page image: MODE is three switches (engine/sampler.h), 0..7.
 MODE_MAX_PAGE = 0x0700
 # The meter image: the source is a number above the two switches (engine/sampler.h, MODE_SRC), 0..15.
 MODE_MAX_METER = 0x3f00
-# The floor image: LEN stops at 3 (engine/sampler.h, LEN_MIN). Under that a loop is a buzz. Its first build had 6.
+# The floor image: LEN stops at 3 (engine/sampler.h, LEN_MIN). Under that a loop is a buzz.
 LEN_MIN_FLOOR = 0x0300
 # record index -> {field offset: (stock, new)}; records are slots 18, 19, 20, 21, 22, 23, 26, 25
 RECORDS = {
@@ -91,7 +91,8 @@ REWRITE_SRR = [
 
 
 # The xknob image: knob D (record 504, DEC's) is the crossfade. Its two names are ours, after the erasers in the box
-# image's data run (XKNOB_NAMES); the record's range and default are DEC's, 0 to 127 and 127, which is a crossfade of 0.
+# image's data run (XKNOB_NAMES); the record's range and default are DEC's, 0 to 127 and 127, which is a crossfade of
+# 0.
 XKNOB_SHORT, XKNOB_LONG = mm.CAVE_TRIG4[0] + 52, mm.CAVE_TRIG4[0] + 58
 XKNOB_NAMES = b"XFADE\0" + b"Crossfade\0"
 
@@ -110,7 +111,7 @@ def descriptor_patches(image, page=False, floor=False, meter=False, auto=False, 
         rec = mm.SAMP_RECORDS + REC * k
         _expect(image, rec, be32(44), "descriptor record %d" % k)
         for field, (stock, new) in sorted(fields.items()):
-            if srr and k == 5:           # the srr image: MODE's record keeps stock's names' places and stock's 127, and starts at 0
+            if srr and k == 5:  # the srr image: MODE's record keeps stock's names' places and stock's 127, and starts at 0
                 if field != F_DEFAULT:
                     continue
                 out.append(fw.Patch(3, mm.off(rec + field), be32(stock), be32(0), "descriptor 5: the reduction starts off"))
@@ -119,17 +120,17 @@ def descriptor_patches(image, page=False, floor=False, meter=False, auto=False, 
                 new = MODE_MAX_METER if meter else MODE_MAX_PAGE
             if auto and (k, field) == (5, F_DEFAULT):
                 new = MODE_DEFAULT_AUTO
-            if xknob and k == 7:         # the xknob image: knob D's names are the crossfade's
+            if xknob and k == 7:  # the xknob image: knob D's names are the crossfade's
                 new = {F_LONG: XKNOB_LONG, F_SHORT: XKNOB_SHORT}[field]
             out.append(fw.Patch(3, mm.off(rec + field), be32(stock), be32(new),
                                 "descriptor %d field %#x" % (k, field)))
-    if floor:                            # LEN's record: its least value
+    if floor:  # LEN's record: its least value
         out.append(fw.Patch(3, mm.off(mm.SAMP_RECORDS + REC * 3 + F_MIN), be32(0), be32(LEN_MIN_FLOOR), "descriptor 3: LEN stops at 3"))
     return out
 
 
 # (instruction, its opcode, stock object, new object, what)
-PEA, MOVE_TOP = b"\x48\x79", b"\x2e\xbc"     # pea abs.l ; movel #imm,%sp@
+PEA, MOVE_TOP = b"\x48\x79", b"\x2e\xbc"  # pea abs.l ; movel #imm,%sp@
 DISPLAY = [
     (0x401942b8, MOVE_TOP, 0x41b9ef70, mm.OBJ_TEXT_PLAIN, "START text"),
     (0x401942c6, PEA, 0x41b9e690, mm.OBJ_GFX_PLAIN, "START graphic"),
@@ -144,13 +145,12 @@ DISPLAY = [
 ]
 
 
-# The srr image, second build: how far a turn moves SRR. Stock's start-up routine copies sixteen bytes of knob
-# behaviour into a record's entry of the display table from a template. A plain 0 to 127 knob's (LEN's, the record
-# before MODE's two, and the two after) is {1, 4, 0, an object}; MODE's, Twinshot's sample picker, is {1, 8, 0,
-# another}: MODE's entry is given the plain one: the
-# register LEN's entry pushes, which still holds it there (the record after MODE's pushes it again).
+# Stock's start-up routine copies sixteen bytes of knob behaviour into a record's entry of the display table from a
+# template. A plain 0 to 127 knob's (LEN's, the record before MODE's two, and the two after) is {1, 4, 0, an object};
+# MODE's, Twinshot's sample picker, is {1, 8, 0, another}: MODE's entry is given the plain one: the register LEN's
+# entry pushes, which still holds it there (the record after MODE's pushes it again).
 KNOB_PLAIN, KNOB_PICKER = 0x401d6b44, 0x401d6b74
-SRR_KNOB = 0x40194396        # movel %d4,%sp@- : the template for MODE's entry
+SRR_KNOB = 0x40194396  # movel %d4,%sp@- : the template for MODE's entry
 SRR_KNOB_CONTEXT = [
     (KNOB_PLAIN, fw.sx("e0b8ff4e6983ae6a11aacdfb5d77170ed6472d81"), "the plain knob's sixteen bytes"),
     (KNOB_PICKER, fw.sx("cf583646fee76d78bdd20def7e1f1ffc7c936571"), "the sample picker's sixteen bytes"),
@@ -178,8 +178,8 @@ def display_patches(image, words=False, srr=False, xknob=False):
             _expect(image, addr, bytes.fromhex(stock), "SRR's knob, " + what)
         out.append(fw.Patch(3, mm.off(SRR_KNOB), bytes.fromhex("2f04"), bytes.fromhex("2f0d"), "display: SRR turns as a plain knob does"))
     for addr, opcode, stock, new, note in DISPLAY:
-        if words and note in (("LOOP text",) if srr else ("LOOP text", "MODE text")):     # the srr image: MODE's record is a plain number
-            new = mm.OBJ_TEXT_SLOT             # engine/knobtext.c writes these; MODE has that object in stock
+        if words and note in (("LOOP text",) if srr else ("LOOP text", "MODE text")):  # the srr image: MODE's record is a plain number
+            new = mm.OBJ_TEXT_SLOT  # engine/knobtext.c writes these; MODE has that object in stock
             if new == stock:
                 _expect(image, addr, opcode + be32(stock), "display %s" % note)
                 continue
@@ -205,7 +205,8 @@ MUTE_CONTEXT = [
 ]
 
 
-# The feed image: the routine that writes a block of a take (engine/feed.S) is in a run of its own. Stock code it leans on:
+# The feed image: the routine that writes a block of a take (engine/feed.S) is in a run of its own. Stock code it
+# leans on:
 FEED_CONTEXT = [
     (mm.CAVE_FEED[0] - 2, "4e75", "its run starts a routine"),
     (mm.CAVE_FEED[1] - 2, "4e75", "its run ends one"),
@@ -213,8 +214,9 @@ FEED_CONTEXT = [
 ]
 
 
-# The soloknob image: the solo image's code is not built and none of its seven places is changed (SOLO_CONTEXT is what they
-# hold); a solo is a bit a track in a long of ours at the start of the run that code was in. Stock code it leans on:
+# The soloknob image: the solo image's code is not built and none of its seven places is changed (SOLO_CONTEXT is what
+# they hold); a solo is a bit a track in a long of ours at the start of the run that code was in. Stock code it leans
+# on:
 SOLOKNOB_CONTEXT = [
     (mm.CAVE_SOLO[0] - 2, "4e75", "the run its long is in starts a routine, which nothing reaches"),
     (mm.CAVE_SOLO[1] - 2, "4e75", "and ends one"),
@@ -250,35 +252,35 @@ PROF_CONTEXT = [
 def mixer_patches(image, rec=False, page=False, bank=False, mute=False, reclock=False, meter=False, stereo=False, gain=False, auto=False, feed=False,
                   soloknob=False, xfade=False, prof=False):
     # its code space is full to within 2 bytes, and the compiler's block reordering costs 4
-    if xfade >= 41:                      # the cut image: stock's mixer called straight, untimed (the mixtime image's split left out)
+    if xfade >= 41:  # the cut image: stock's mixer called straight, untimed (the mixtime image's split left out)
         code, syms = build_engine.compile_code(("mixlink.c",), {"m": mm.CAVE_LINK2}, "mixlink_cut",
                                                ("ONETRACK", "SOLOKNOB", "XFADE", "APAGE", "SLOCK", "XMUTE", "NODIV"), flags=("-fno-reorder-blocks",))
-    elif xfade >= 33 and not EVLAP:      # the mixtime image, a tool: stock's mixer timed in the profile's record
+    elif xfade >= 33 and not EVLAP:  # the mixtime image, a tool: stock's mixer timed in the profile's record
         code, syms = build_engine.compile_code(("mixlink.c",), {"m": mm.CAVE_LINK2 if xfade >= 38 else mm.CAVE, "n": mm.CAVE_SPLIT},
                                                "mixlink_nodiv" if xfade >= 38 else "mixlink_mixtime",
                                                ("ONETRACK", "SOLOKNOB", "XFADE", "APAGE", "SLOCK", "XMUTE", "MIXSPLIT",
-                                                "PROF_STR=\"%#x\"" % mm.CAVE_PROF[0]) + (("NODIV",) if xfade >= 38 else ()),     # 38: the nodiv image
+                                                "PROF_STR=\"%#x\"" % mm.CAVE_PROF[0]) + (("NODIV",) if xfade >= 38 else ()),  # 38: the nodiv image
                                                flags=("-fno-reorder-blocks",))
-    elif xfade >= 23:                    # the trig image: the track holding the crossfade is heard through a global mute
+    elif xfade >= 23:  # the trig image: the track holding the crossfade is heard through a global mute
         code, syms = build_engine.compile_code(("mixlink.c",), {"m": mm.CAVE}, "mixlink_trig", ("ONETRACK", "SOLOKNOB", "XFADE", "APAGE", "SLOCK", "XMUTE"),
                                                flags=("-fno-reorder-blocks",))
-    elif xfade >= 5:                     # the slock image: a sampler track's solo may be a step's own
+    elif xfade >= 5:  # the slock image: a sampler track's solo may be a step's own
         code, syms = build_engine.compile_code(("mixlink.c",), {"m": mm.CAVE}, "mixlink_slock", ("ONETRACK", "SOLOKNOB", "XFADE", "APAGE", "SLOCK"),
                                                flags=("-fno-reorder-blocks",))
-    elif xfade == 4:                     # the apage image: the solo and the crossfade are the analog tracks' too, twelve of each
+    elif xfade == 4:  # the apage image: the solo and the crossfade are the analog tracks' too, twelve of each
         code, syms = build_engine.compile_code(("mixlink.c",), {"m": mm.CAVE}, "mixlink_apage", ("ONETRACK", "SOLOKNOB", "XFADE", "APAGE"),
                                                flags=("-fno-reorder-blocks",))
-    elif xfade:                          # the xfade image: every other track is turned down by a track's crossfade
+    elif xfade:  # the xfade image: every other track is turned down by a track's crossfade
         code, syms = build_engine.compile_code(("mixlink.c",), {"m": mm.CAVE}, "mixlink_xfade", ("ONETRACK", "SOLOKNOB", "XFADE"),
                                                flags=("-fno-reorder-blocks",))
-    elif soloknob:                         # the soloknob image: a solo is the sampling page's, and with any no mute counts
+    elif soloknob:  # the soloknob image: a solo is the sampling page's, and with any no mute counts
         code, syms = build_engine.compile_code(("mixlink.c",), {"m": mm.CAVE}, "mixlink_soloknob", ("ONETRACK", "SOLOKNOB"),
                                                flags=("-fno-reorder-blocks",))
-    elif stereo:                         # the stereo image: a stereo sample keeps to its track, and no track follows another
+    elif stereo:  # the stereo image: a stereo sample keeps to its track, and no track follows another
         code, syms = build_engine.compile_code(("mixlink.c",), {"m": mm.CAVE}, "mixlink_one", ("ONETRACK",), flags=("-fno-reorder-blocks",))
     else:
         code, syms = build_engine.compile_code(("mixlink.c",), {"m": mm.CAVE}, "mixlink", flags=("-fno-reorder-blocks",))
-    start, end = mm.CAVE_LINK2 if xfade >= 38 and not EVLAP else mm.CAVE     # the nodiv image: the link in a run of its own
+    start, end = mm.CAVE_LINK2 if xfade >= 38 and not EVLAP else mm.CAVE  # the nodiv image: the link in a run of its own
     if (start, end) == mm.CAVE_LINK2:
         for addr in (start - 2, end - 2):
             _expect(image, addr, bytes.fromhex("4e75"), "the nodiv image's run for the link starts and ends a routine")
@@ -293,7 +295,7 @@ def mixer_patches(image, rec=False, page=False, bank=False, mute=False, reclock=
     _expect(image, 0x400a3408, b"\x23\xd0" + be32(mm.MUTES), "global mutes copied in")
     _expect(image, 0x400a30b6, b"\x33\xd0" + be32(mm.PATTERN_MUTES), "pattern mutes stored")
     out = [fw.Patch(3, mm.off(start), stock, new, "mixer link code")]
-    if 33 <= xfade < 41 and not EVLAP:   # the mixtime image: the timed call of stock's mixer, in a run of its own
+    if 33 <= xfade < 41 and not EVLAP:  # the mixtime image: the timed call of stock's mixer, in a run of its own
         lo, hi = mm.CAVE_SPLIT
         for addr in (lo - 2, hi - 2):
             _expect(image, addr, bytes.fromhex("4e75"), "the mixtime image's run starts and ends a routine")
@@ -308,8 +310,8 @@ def mixer_patches(image, rec=False, page=False, bank=False, mute=False, reclock=
     _expect(image, mm.CONTROL_SEND + 14, b"\x4e\xb9" + be32(0x401021b4), "control block: send call")
     _expect(image, 0x40090060, fw.sb("857da3fa8395f7c7ebe4ea7c"), "voice level from volume; right = block + 10")
     _expect(image, mm.VOICE_TRACK, bytes((8, 9, 10, 11)), "voice to track table")
-    # full image: the analog mute alone. Recorder image: the feed is linked with it, and the feed's
-    # 16-bit conversion goes in the room left after the analog mute.
+    # full image: the analog mute alone. Recorder image: the feed is linked with it, and the feed's 16-bit conversion
+    # goes in the room left after the analog mute.
     caves = {"a": mm.CAVE_AMUTE}
     sources, name = ("amute.c",), "amute"
     if rec:
@@ -323,37 +325,37 @@ def mixer_patches(image, rec=False, page=False, bank=False, mute=False, reclock=
         _expect(image, mm.AUDIO_UP_TEST, b"\x4a\xb9" + be32(mm.AUDIO_UP), "audio CPU up: test")
         caves["r"] = mm.CAVE_REC
         sources, name = ("amute.c", "recfeed.c"), "recfeed_bank" if bank else "recfeed_page" if page else "recfeed"
-    if mute:                             # the mute image: the routine in front of stock's trig test, in the feed's run
+    if mute:  # the mute image: the routine in front of stock's trig test, in the feed's run
         for addr, stock, what in MUTE_CONTEXT:
             _expect(image, addr, bytes.fromhex(stock), "a muted track's trigs, " + what)
         sources, name = sources + ("mutetrig.c",), ("recfeed_mode" if auto else "recfeed_gain" if gain else "recfeed_stereo" if stereo else "recfeed_meter" if meter
                                                     else "recfeed_reclock" if reclock else "recfeed_mute")
     defines = ("MIX_NEXT=%#x" % syms["mix_link"],)
-    if meter:                            # the meter image: the feed's routines move to a run of their own, behind four numbers
+    if meter:  # the meter image: the feed's routines move to a run of their own, behind four numbers
         for addr, stock, what in METER_CONTEXT:
             _expect(image, addr, bytes.fromhex(stock), "the meter, " + what)
         caves["n"] = mm.CAVE_METER
         defines += ("METER",)
-        for addr, stock, what in HOLD_CONTEXT:           # and a step's REC gets past stock's hold flag, in the room the feed left
+        for addr, stock, what in HOLD_CONTEXT:  # and a step's REC gets past stock's hold flag, in the room the feed left
             _expect(image, addr, bytes.fromhex(stock), "a step's REC, " + what)
         sources += ("recword.S",)
-    if reclock:                          # the reclock image: a step's REC is a lock on knob slot 24
+    if reclock:  # the reclock image: a step's REC is a lock on knob slot 24
         defines += ("RECLOCK",)
-    if rec and page:                     # the page image: "from the external input" is a bit of MODE of its own
+    if rec and page:  # the page image: "from the external input" is a bit of MODE of its own
         defines += ("PAGE",)
-    if rec and bank:                     # the bank image: no feed while slots are loaded
+    if rec and bank:  # the bank image: no feed while slots are loaded
         defines += ("BANKS",)
-    if gain:                             # the gain image: a track's record gain, before the 32 bits are made 16
+    if gain:  # the gain image: a track's record gain, before the 32 bits are made 16
         defines += ("GAIN",)
-    if auto:                             # the mode image: a mono take is the source's two sides added and halved
+    if auto:  # the mode image: a mono take is the source's two sides added and halved
         defines += ("AUTO",)
-    if feed:                             # the feed image: a block of a take is written by feed.S, in a run of its own
+    if feed:  # the feed image: a block of a take is written by feed.S, in a run of its own
         for addr, stock, what in FEED_CONTEXT:
             _expect(image, addr, bytes.fromhex(stock), "the feed's block, " + what)
         caves["f"] = mm.CAVE_FEED
         defines += ("FEED",)
         sources, name = sources + ("feed.S",), "recfeed_feed"
-    if soloknob:                         # the soloknob image: the analog mute goes by the page's solos too, and the long they are in
+    if soloknob:  # the soloknob image: the analog mute goes by the page's solos too, and the long they are in
         for addr, stock, what in SOLOKNOB_CONTEXT:
             _expect(image, addr, bytes.fromhex(stock), "the solo knob, " + what)
         if image.count(be32(mm.SOLO_WORD)):
@@ -362,10 +364,10 @@ def mixer_patches(image, rec=False, page=False, bank=False, mute=False, reclock=
                             "the solo knob: a bit a track, none at a start"))
         defines += ("SOLOKNOB",)
         name = "recfeed_soloknob"
-    if xfade:                            # the xfade image: the analog voices go down too, MODE is sent as stereo, and the eight bytes
+    if xfade:  # the xfade image: the analog voices go down too, MODE is sent as stereo, and the eight bytes
         for addr, stock, what in XFADE_CONTEXT:
             _expect(image, addr, bytes.fromhex(stock), "the crossfade, " + what)
-        many = 16 if xfade >= 5 else 12 if xfade == 4 else 8     # the apage image: twelve, the analog tracks' after the eight. The slock image: and a long, this block's solos
+        many = 16 if xfade >= 5 else 12 if xfade == 4 else 8  # the apage image: twelve, the analog tracks' after the eight. The slock image: and a long, this block's solos
         if any(image.count(be32(mm.XFADES + k)) for k in range(many)):
             raise fw.GuardError("an address of the crossfades' eight bytes is named in the main program")
         if not mm.SOLO_WORD + 4 == mm.XFADES < mm.XFADES + many <= mm.CAVE_SOLO[1]:
@@ -374,17 +376,17 @@ def mixer_patches(image, rec=False, page=False, bank=False, mute=False, reclock=
                             "the crossfade: a number a track, 0 at a start"))
         defines += ("XFADE", "APAGE", "SLOCK") if xfade >= 5 else ("XFADE", "APAGE") if xfade == 4 else ("XFADE",)
         name = "recfeed_slock" if xfade == 5 else "recfeed_apage" if xfade == 4 else "recfeed_xfade"
-        if xfade >= 6:                   # the alock image: the solos are worked out for all twelve tracks, in a run of their own
+        if xfade >= 6:  # the alock image: the solos are worked out for all twelve tracks, in a run of their own
             for addr in (mm.CAVE_ALOCK[0] - 2, mm.CAVE_ALOCK[1] - 2):
                 _expect(image, addr, bytes.fromhex("4e75"), "the solos' run starts and ends a routine")
             _expect(image, 0x40097a7e, bytes.fromhex(fw.sx("157c1490f580f65dba783903f5cf39b504d0")), "stock reads the analog tracks' machines after the eight")
             caves["t"] = mm.CAVE_ALOCK
             defines += ("ALOCK",)
             name = "recfeed_alock"
-        if xfade >= 7:                   # the multi image: every track that says record is fed, a block of the window a track
+        if xfade >= 7:  # the multi image: every track that says record is fed, a block of the window a track
             defines += ("MULTI",)
             name = "recfeed_multi"
-        if xfade >= 8:                   # the srr image: REC and SRC are the track's own word on slot 24, read by the per-block routine in a run of its own
+        if xfade >= 8:  # the srr image: REC and SRC are the track's own word on slot 24, read by the per-block routine in a run of its own
             for addr, stock, what in SRR_CONTEXT:
                 _expect(image, addr, bytes.fromhex(stock), "the track's word on slot 24, " + what)
             for addr in (mm.CAVE_SRR[0] - 2, mm.CAVE_SRR[1] - 2):
@@ -394,7 +396,7 @@ def mixer_patches(image, rec=False, page=False, bank=False, mute=False, reclock=
             caves["w"] = mm.CAVE_SRR
             defines += ("SRR",)
             name = "recfeed_srr"
-        if prof:                         # the prof image, a tool: the per-block interrupt timed, and the record a source of a take
+        if prof:  # the prof image, a tool: the per-block interrupt timed, and the record a source of a take
             for addr, stock, what in PROF_CONTEXT:
                 _expect(image, addr, bytes.fromhex(stock), "the profile, " + what)
             for addr in (mm.CAVE_PROF[0] - 2, mm.CAVE_PROF[1] - 2):
@@ -405,8 +407,8 @@ def mixer_patches(image, rec=False, page=False, bank=False, mute=False, reclock=
                 raise fw.GuardError("the per-block routine's address must be named twice: where its vector is set and where it is compared")
             caves["y"] = mm.CAVE_PROF
             defines += ("PROF",)
-            sources, name = ("prof.S",) + sources, "recfeed_prof"      # first: its record is first in the run
-            if xfade >= 13:              # the pre image: a take's sources and the meter's are taken before the mixer, and the FX track's mute is one
+            sources, name = ("prof.S",) + sources, "recfeed_prof"  # first: its record is first in the run
+            if xfade >= 13:  # the pre image: a take's sources and the meter's are taken before the mixer, and the FX track's mute is one
                 for addr in (mm.CAVE_PRE[0] - 2, mm.CAVE_PRE[1] - 2):
                     _expect(image, addr, bytes.fromhex("4e75"), "the copies' run starts and ends a routine")
                 if any(image.count(be32(a)) for a in range(mm.CAVE_PRE[0], mm.CAVE_PRE[1], 2)):
@@ -414,40 +416,40 @@ def mixer_patches(image, rec=False, page=False, bank=False, mute=False, reclock=
                 caves["p"] = mm.CAVE_PRE
                 defines += ("PRE",)
                 name = "recfeed_pre"
-        if xfade >= 23:                  # the trig image: the analog mute hears the crossfade's track through a global mute too
+        if xfade >= 23:  # the trig image: the analog mute hears the crossfade's track through a global mute too
             defines += ("XMUTE",)
             name = "recfeed_trig"
-        if xfade >= 26:                  # the xknob image: a sampler track's crossfade is read from its knob on slot 25 every block
+        if xfade >= 26:  # the xknob image: a sampler track's crossfade is read from its knob on slot 25 every block
             defines += ("XKNOB",)
             name = "recfeed_xknob"
-        if xfade >= 31:                  # the slice image: KEYS, bit 1 of the track's word, sent as bit 7 of slot 24's low byte
+        if xfade >= 31:  # the slice image: KEYS, bit 1 of the track's word, sent as bit 7 of slot 24's low byte
             defines += ("SLICE",)
             name = "recfeed_slice"
-        if xfade >= 41:                  # the cut image: the interrupt's hook to the profile only with it on
+        if xfade >= 41:  # the cut image: the interrupt's hook to the profile only with it on
             defines += ("CUT",)
-        if xfade >= 42:                  # the nofx image: no FX track mute, no frame of ours: a take reads the buffers
+        if xfade >= 42:  # the nofx image: no FX track mute, no frame of ours: a take reads the buffers
             defines += ("NOFX",)
-        if xfade >= 48:                  # the soloend image: a sampler step's solo lock over when its note is
+        if xfade >= 48:  # the soloend image: a sampler step's solo lock over when its note is
             for addr in (mm.CAVE_SOLOEND[0] - 2, mm.CAVE_SOLOEND[1] - 2):
                 _expect(image, addr, bytes.fromhex("4e75"), "the soloend image's run starts and ends a routine")
             if any(image.count(be32(a)) for a in range(mm.CAVE_SOLOEND[0], mm.CAVE_SOLOEND[1], 2)):
                 raise fw.GuardError("an address in the soloend image's run is named in the main program")
             caves["e"] = mm.CAVE_SOLOEND
             defines += ("SOLOEND", "SOLOEND_AT=%#x" % mm.SOLO_GONE)
-        if xfade >= 40:                  # the prewas image: the pre frame's flag on-chip, so nothing is stored at 0x4556b000 with no take or meter
+        if xfade >= 40:  # the prewas image: the pre frame's flag on-chip, so nothing is stored at 0x4556b000 with no take or meter
             defines += ("PREWAS",)
-        if xfade >= 34:                  # the fast image: a block with nothing to change goes straight to stock's mixer (timed)
-            defines += ("FAST", "MIX_FAST=%#x" % (mm.MIX if EVLAP or xfade >= 41 else syms["mix_timed"]))     # the evtime tool: stock's mixer, untimed
+        if xfade >= 34:  # the fast image: a block with nothing to change goes straight to stock's mixer (timed)
+            defines += ("FAST", "MIX_FAST=%#x" % (mm.MIX if EVLAP or xfade >= 41 else syms["mix_timed"]))  # the evtime tool: stock's mixer, untimed
             name = "recfeed_soloend" if xfade >= 48 else "recfeed_nofx" if xfade >= 42 else "recfeed_cut" if xfade >= 41 else "recfeed_prewas" if xfade >= 40 else "recfeed_fast"
             for addr in (mm.CAVE_FAST[0] - 2, mm.CAVE_FAST[1] - 2):
                 _expect(image, addr, bytes.fromhex("4e75"), "the fast image's run starts and ends a routine")
             if any(image.count(be32(a)) for a in range(mm.CAVE_FAST[0], mm.CAVE_FAST[1], 2)):
                 raise fw.GuardError("an address in the fast image's run is named in the main program")
             caves["k"] = mm.CAVE_FAST
-    if xfade >= 53:                      # the stretch image: KEYS's stretch, bit 3 of the track's word, sent as bit 6 of slot 24's low byte; SPD (PTIM's slot 52) copied into the block
+    if xfade >= 53:  # the stretch image: KEYS's stretch, bit 3 of the track's word, sent as bit 6 of slot 24's low byte; SPD (PTIM's slot 52) copied into the block
         defines += ("STRETCH",)
         name = "recfeed_stretch"
-    if xfade >= 54:                      # the lock image: KEYS's tempo lock, bit 4; SPD, the tempo and the lock sent in turn
+    if xfade >= 54:  # the lock image: KEYS's tempo lock, bit 4; SPD, the tempo and the lock sent in turn
         run = mm.CAVE_LOCK
         for addr in (run[0] - 2, run[1] - 2):
             _expect(image, addr, bytes.fromhex("4e75"), "the lock image's run starts and ends a routine")
@@ -456,13 +458,13 @@ def mixer_patches(image, rec=False, page=False, bank=False, mute=False, reclock=
         caves["m"] = run
         defines += ("LOCK",)
         name = "recfeed_lock"
-    if xfade >= 58:                      # the stsw image: a step's stretch, slot 17's low byte, over the track's bit
+    if xfade >= 58:  # the stsw image: a step's stretch, slot 17's low byte, over the track's bit
         defines += ("STSW",)
         name = "recfeed_stsw"
-    if xfade >= 61:                      # the next image: bit 6 of the track's word is KIND, and a word with it is signed too
+    if xfade >= 61:  # the next image: bit 6 of the track's word is KIND, and a word with it is signed too
         defines += ("NEXT",)
         name = "recfeed_next"
-    if xfade >= 81:                      # the handrec image: stopped, a track at ONCE records a note played by hand
+    if xfade >= 81:  # the handrec image: stopped, a track at ONCE records a note played by hand
         defines += ("HANDREC", "HAND_REC=%#x" % mm.HAND_REC, "HAND_HOLD=%#x" % mm.HAND_HOLD)
         name = "recfeed_handrec"
     code, more = build_engine.compile_code(sources, caves, name, defines)
@@ -489,16 +491,16 @@ def mixer_patches(image, rec=False, page=False, bank=False, mute=False, reclock=
         raise fw.GuardError("the meter's numbers must come first in their code space")
     entry = "mix_rec" if rec else "mix_amute"
     out.append(fw.Patch(3, mm.off(mm.MIX_CALL + 2), be32(mm.MIX), be32(syms[entry]), "mixer call"))
-    if xfade >= 54:                      # the lock image: stock's portamento off on a stretched sampler track (engine/recword.S, port_gate)
+    if xfade >= 54:  # the lock image: stock's portamento off on a stretched sampler track (engine/recword.S, port_gate)
         out.append(fw.Patch(3, mm.off(mm.PORT_CHECK), bytes.fromhex(fw.sx("fc2d2f4e244807905501279c5d7c")),
                             b"\x4e\xb9" + be32(syms["port_gate"]) + build_engine.NOP * 2, "the pitch routine's PORT: off on a stretched sampler track"))
-    if prof:                             # linkw %fp,#-164 ; moveml %d0-%a5,%sp@ -> jmp prof_irq ; nop
+    if prof:  # linkw %fp,#-164 ; moveml %d0-%a5,%sp@ -> jmp prof_irq ; nop
         out.append(fw.Patch(3, mm.off(mm.BLOCK_IRQ), bytes.fromhex(fw.sx("10ab4ee62deaa1067ce5e67c")), b"\x4e\xf9" + be32(syms["prof_gate" if xfade >= 41 else "prof_irq"]) + build_engine.NOP,
                             "the per-block interrupt's first two instructions: to the profile's routine, which does them"))
-    if mute:                             # movel %fp@(-56),%d1 ; asrl %d2,%d1 -> jsr mute_trig
+    if mute:  # movel %fp@(-56),%d1 ; asrl %d2,%d1 -> jsr mute_trig
         out.append(fw.Patch(3, mm.off(mm.TRIG_MUTE), bytes.fromhex(fw.sx("31865c926081b3cb53e2")), b"\x4e\xb9" + be32(syms["mute_trig"]),
                             "a muted track's trigs: stock's test only for a MIDI track"))
-    if meter:                            # movew %d0,%a0@(76) ; lea %a0@(142),%a0 -> jsr rec_word ; nop
+    if meter:  # movew %d0,%a0@(76) ; lea %a0@(142),%a0 -> jsr rec_word ; nop
         out.append(fw.Patch(3, mm.off(mm.HOLD_WRITE), bytes.fromhex(fw.sx("dc51e2da2e3bc5c575281d33")), b"\x4e\xb9" + be32(syms["rec_word"]) + build_engine.NOP,
                             "slot 24 of a sampler track: REC's mark in place of stock's hold flag"))
     return out, syms
@@ -506,18 +508,17 @@ def mixer_patches(image, rec=False, page=False, bank=False, mute=False, reclock=
 
 # ---- larger sample slots (the "big" image) ---------------------------------------------------
 #
-# Stock gives each of the 64 sample slots 1024 sectors of the +Drive, from sector 8192: 512 KB,
-# 5.46 s. Here a slot is 2048 sectors from the same place: 1 MB, 10.9 s, so the samples run from
-# 4 MB to 68 MB where stock stops at 36 MB. Nothing in OS 1.42 uses 36 MB to 244 MB
-# (docs/FINDINGS.md, tests/test_sample_store.py). The slot count stays 64.
+# Stock gives each of the 64 sample slots 1024 sectors of the +Drive, from sector 8192: 512 KB, 5.46 s. Here a slot is
+# 2048 sectors from the same place: 1 MB, 10.9 s, so the samples run from 4 MB to 68 MB where stock stops at 36 MB.
+# Nothing in OS 1.42 uses 36 MB to 244 MB (docs/FINDINGS.md, tests/test_sample_store.py). The slot count stays 64.
 #
-# Every live place that turns a slot into a place on the drive, or holds a length to a slot's
-# size, is changed; the three stock routines that write or erase a slot by themselves are not,
-# because nothing in the image reaches them. The routine that builds the audio CPU's pool at
-# boot is replaced (engine/poolstage.c): what is loaded stays within the stock 32 MB.
+# Every live place that turns a slot into a place on the drive, or holds a length to a slot's size, is changed; the
+# three stock routines that write or erase a slot by themselves are not, because nothing in the image reaches them.
+# The routine that builds the audio CPU's pool at boot is replaced (engine/poolstage.c): what is loaded stays within
+# the stock 32 MB.
 BIG_SLOT_SECTORS = 2048
-BIG_SLOT_MAX_BYTES = BIG_SLOT_SECTORS * 512 - 64          # of sample data: 524,256 frames
-POOL_STAGE = (0x40082334, 0x4008242a)                     # the stock pool builder, all of it
+BIG_SLOT_MAX_BYTES = BIG_SLOT_SECTORS * 512 - 64  # of sample data: 524,256 frames
+POOL_STAGE = (0x40082334, 0x4008242a)  # the stock pool builder, all of it
 # (address, stock bytes, new bytes, what)
 BIG_SLOTS = [
     # the scan: sector = (slot << 10) + 8192, and twice the frame count held to 524,224
@@ -554,8 +555,8 @@ BIG_CONTEXT = [
 ]
 
 
-# The "double" image sends the pool in two halves (engine/poolhalves.c): the builder fills the block
-# with one half at a time and the sender asks it where each chunk is. Stock code it leans on:
+# The "double" image sends the pool in two halves (engine/poolhalves.c): the builder fills the block with one half at
+# a time and the sender asks it where each chunk is. Stock code it leans on:
 HALVES_CONTEXT = [
     (0x40082fb6, fw.sx("e89bba9dbbbfdd6b378be1ba6809acdcba9b661d"), "sender: chunks from the length in the block"),
     (0x40082fc6, fw.sx("d3dd39f327baab1e694f"), "sender: command 2"),
@@ -572,7 +573,7 @@ HALVES_CONTEXT = [
     (0x40082a48, fw.sx("0d4ec4c986e9cb2a97ad3ae8"), "the block's address, for the stock builder only"),
     (0x401132ec, fw.sx("d95c8c71fa394939"), "the header reader's first instruction"),
 ]
-POOL_CHUNK_STOCK = fw.sx("ebd4d917a20049744385bc200f411adc")        # lsll %d1,%d0 ; pea 0x800 ; addil #block + 5,%d0
+POOL_CHUNK_STOCK = fw.sx("ebd4d917a20049744385bc200f411adc")  # lsll %d1,%d0 ; pea 0x800 ; addil #block + 5,%d0
 
 
 def bigslot_patches(image, halves=False):
@@ -603,10 +604,10 @@ def bigslot_patches(image, halves=False):
 
 # ---- keeping takes (the "keep" image) ----------------------------------------------------------
 #
-# Saving a project also writes every take that is not on the +Drive yet into its two sample
-# slots (engine/keeptakes.c). The two calls to the routine that saves a project are pointed at our
-# routine, which calls the stock one first. It needs the larger slots: a take is up to 10.24 s.
-# stock code it calls or leans on: (address, stock bytes, what)
+# Saving a project also writes every take that is not on the +Drive yet into its two sample slots
+# (engine/keeptakes.c). The two calls to the routine that saves a project are pointed at our routine, which calls the
+# stock one first. It needs the larger slots: a take is up to 10.24 s. stock code it calls or leans on: (address,
+# stock bytes, what)
 KEEP_CONTEXT = [
     (mm.PROJECT_SAVE - 2, fw.sx("7b66f4ea524ccf23329f"), "the project save routine starts here"),
     (0x4005baca, fw.sx("280b4c95ff1c71cea69070ba3fc07dd5"), "first call: progress, project, manager"),
@@ -623,9 +624,9 @@ KEEP_CONTEXT = [
 ]
 
 
-# The load image: loading a project puts the drive's samples back in the slots that hold a take the
-# drive does not have (the load half of engine/keeptakes.c, in the same run of code). The one call
-# to the routine that loads a project for the Project Load job goes to ours.
+# The load image: loading a project puts the drive's samples back in the slots that hold a take the drive does not
+# have (the load half of engine/keeptakes.c, in the same run of code). The one call to the routine that loads a
+# project for the Project Load job goes to ours.
 LOAD_CONTEXT = [
     (mm.PROJECT_LOAD - 2, fw.sx("3384ac7d04f620519f4709cb5b13"), "the project load routine starts here"),
     (mm.PROJECT_LOAD_CALL - 12, fw.sx("5dd98d04bc6cc541f06756c17c9bcba2"), "the call: progress, project, manager"),
@@ -640,9 +641,9 @@ LOAD_CONTEXT = [
 ]
 
 
-# The bank image: three sample banks (engine/banks.c, with the save and load hooks of
-# engine/keeptakes.c built for it). Every place that names one of the three drive routines names
-# ours for it instead, which moves a sample's sector to the loaded bank and jumps to stock's.
+# The bank image: three sample banks (engine/banks.c, with the save and load hooks of engine/keeptakes.c built for
+# it). Every place that names one of the three drive routines names ours for it instead, which moves a sample's sector
+# to the loaded bank and jumps to stock's.
 BANK_CONTEXT = [
     (mm.DRIVE_READ, fw.sx("80371ac315a7d6cbb04ed0c6ccc21f30117df467930d3ceb"), "the drive's read: (sector, bytes, where to)"),
     (mm.DRIVE_WRITE, fw.sx("80371ac315a7d6cbb04ed0c6ccc21f30117df467930d3ceb"), "the drive's write: (sector, bytes, from where)"),
@@ -655,8 +656,8 @@ BANK_CONTEXT = [
 ]
 
 
-# The save image: the takes are written from the sampling page in a job of ours (engine/keeptakes.c,
-# save_start). Stock code it calls or leans on:
+# The save image: the takes are written from the sampling page in a job of ours (engine/keeptakes.c, save_start).
+# Stock code it calls or leans on:
 SAVE_CONTEXT = [
     (mm.JOB_RUNNER, fw.sx("641e44358b45f955cbcc375478ed24b48932"), "the runner of jobs: made once, then handed out"),
     (mm.JOB_START, fw.sx("6dc71f9317459189cdc2b0854c208d09ad06"), "a job is started: the runner is its first argument"),
@@ -680,10 +681,9 @@ SAVE_CONTEXT = [
 ]
 
 
-# The ptn image: the takes are written when a whole pattern is saved to the project (engine/keeptakes.c,
-# ptn_keep). Stock has one pattern save and five calls of it; the two behind the pattern menu's SAVE TO
-# PROJ, WHOLE PATTERN go to ours, which calls stock's and then starts the save image's job. Stock code it
-# calls or leans on:
+# The ptn image: the takes are written when a whole pattern is saved to the project (engine/keeptakes.c, ptn_keep).
+# Stock has one pattern save and five calls of it; the two behind the pattern menu's SAVE TO PROJ, WHOLE PATTERN go to
+# ours, which calls stock's and then starts the save image's job. Stock code it calls or leans on:
 PTN_CONTEXT = [
     (mm.PATTERN_SAVE - 2, fw.sx("22e8f96d1dcf3adb3518977455a5e0d09ebc6834efb14b7883dd"),
      "the pattern save starts a routine: (manager, to the temp area, pattern, ...)"),
@@ -729,7 +729,7 @@ def keep_patches(image, load=False, bank=False, save=False, ptn=False, phone=Fal
             _expect(image, addr, bytes.fromhex(stock), "banks, " + what)
         lo, hi = mm.CAVE_BANK
         caves = {"k": mm.CAVE_KEEP, "v": (lo, lo + mm.BANK_VARS), "b": (lo + mm.BANK_VARS, hi)}
-        if scratch:                      # the scratch image: takes held on the drive, in two runs of their own (engine/scratch.c)
+        if scratch:  # the scratch image: takes held on the drive, in two runs of their own (engine/scratch.c)
             runs = dict(zip("stuwxy", (mm.CAVE_SCRATCH, mm.CAVE_SCRATCH2, mm.CAVE_SCRATCH3, mm.CAVE_SCRATCH4, mm.CAVE_SCRATCH5, mm.CAVE_SCRATCH6)))
             for run in runs.values():
                 for addr in (run[0] - 2, run[1] - 2):
@@ -737,7 +737,7 @@ def keep_patches(image, load=False, bank=False, save=False, ptn=False, phone=Fal
                 if any(image.count(be32(a)) for a in range(run[0], run[1], 2)):
                     raise fw.GuardError("an address in the scratch image's runs is named in the main program")
             caves.update(runs)
-        if stream:                       # the stream image: the reload of the slots the phone writes after a load, in two runs of its own
+        if stream:  # the stream image: the reload of the slots the phone writes after a load, in two runs of its own
             for run in (mm.CAVE_STREAM, mm.CAVE_STREAM3):
                 for addr in (run[0] - 2, run[1] - 2):
                     _expect(image, addr, bytes.fromhex("4e75"), "the stream image's runs start and end a routine")
@@ -745,7 +745,7 @@ def keep_patches(image, load=False, bank=False, save=False, ptn=False, phone=Fal
                     raise fw.GuardError("an address in the stream image's runs is named in the main program")
             caves["a"] = mm.CAVE_STREAM
             caves["c"] = mm.CAVE_STREAM3
-        if evict:                        # the evict image: a reload's slots out of the scratch table, in a run of its own
+        if evict:  # the evict image: a reload's slots out of the scratch table, in a run of its own
             for addr in (mm.CAVE_EVICT[0] - 2, mm.CAVE_EVICT[1] - 2):
                 _expect(image, addr, bytes.fromhex("4e75"), "the evict image's run starts and ends a routine")
             if any(image.count(be32(a)) for a in range(*mm.CAVE_EVICT, 2)):
@@ -776,7 +776,7 @@ def keep_patches(image, load=False, bank=False, save=False, ptn=False, phone=Fal
         for uses, routine, sym in ((mm.DRIVE_READ_USES, mm.DRIVE_READ, "bank_read"), (mm.DRIVE_WRITE_USES, mm.DRIVE_WRITE, "bank_write"),
                                    (mm.DRIVE_ERASE_USES, mm.DRIVE_ERASE, "bank_erase")):
             for site in uses:
-                if image[mm.off(site):mm.off(site) + 2] not in (b"\x4e\xb9", b"\x45\xf9", b"\x49\xf9", b"\x4b\xf9"):   # jsr, lea a2, a4, a5
+                if image[mm.off(site):mm.off(site) + 2] not in (b"\x4e\xb9", b"\x45\xf9", b"\x49\xf9", b"\x4b\xf9"):  # jsr, lea a2, a4, a5
                     raise fw.GuardError("banks: %#x does not name a drive routine the way it did" % site)
                 _expect(image, site + 2, be32(routine), "banks, a place that names a drive routine")
                 out.append(fw.Patch(3, mm.off(site + 2), be32(routine), be32(syms[sym]), "banks: a drive routine named"))
@@ -791,38 +791,38 @@ def keep_patches(image, load=False, bank=False, save=False, ptn=False, phone=Fal
     for call in mm.PROJECT_SAVE_CALLS:
         _expect(image, call, b"\x4e\xb9" + be32(mm.PROJECT_SAVE), "keeping takes, a call to the project save routine")
         if fresh and call == mm.PROJECT_SAVE_CALLS[1]:
-            continue                    # the fresh image: a new project's save goes by the phone's code, below
+            continue  # the fresh image: a new project's save goes by the phone's code, below
         out.append(fw.Patch(3, mm.off(call + 2), be32(mm.PROJECT_SAVE), be32(syms["save_keep"]), "keeping takes: project save call"))
     if load:
         call = mm.PROJECT_LOAD_CALL
         _expect(image, call, b"\x4e\xb9" + be32(mm.PROJECT_LOAD), "loading, the call to the project load routine")
         target = syms["load_keep"]
-        if phone:                       # the phone image: the call goes to ours, which asks the phone and then calls load_keep
+        if phone:  # the phone image: the call goes to ours, which asks the phone and then calls load_keep
             pcaves = {"v": (mm.CAVE_PHONE[0], mm.CAVE_PHONE[0] + mm.PHONE_VARS), "p": (mm.CAVE_PHONE[0] + mm.PHONE_VARS, mm.CAVE_PHONE[1]),
                       "q": mm.CAVE_PHONE2}
-            if knows:                   # the fltr image: the load query, in a third run
+            if knows:  # the fltr image: the load query, in a third run
                 pcaves["r"] = mm.CAVE_PHONE3
-            if fresh:                   # the fresh image: a new project's save and ask, in a fourth
+            if fresh:  # the fresh image: a new project's save and ask, in a fourth
                 pcaves["f"] = mm.CAVE_FRESH
-            if newproj:                 # the newproj image: the maker's two calls, in a fifth and a sixth
+            if newproj:  # the newproj image: the maker's two calls, in a fifth and a sixth
                 pcaves["g"] = mm.CAVE_NEWPROJ
                 pcaves["h"] = mm.CAVE_NEWPROJ2
-            if wipe:                    # the wipe image: the empty slots, in a seventh and an eighth
+            if wipe:  # the wipe image: the empty slots, in a seventh and an eighth
                 pcaves["i"] = mm.CAVE_WIPE
                 pcaves["j"] = mm.CAVE_WIPE2
-            if stream:                  # the stream image: 0x6B and the load's 0x6C, in a ninth
+            if stream:  # the stream image: 0x6B and the load's 0x6C, in a ninth
                 pcaves["l"] = mm.CAVE_STREAM2
                 pcaves["m"] = mm.CAVE_STREAM4
             pcode, psyms = build_engine.compile_code(("phone.c",), pcaves,
                                                      "phone_stream" if stream else "phone_wipe" if wipe else "phone_newproj" if newproj else "phone_fresh" if fresh else "phone_seen" if seen else "phone_mirror" if mirror else "phone_capture" if capture else "phone_knows" if knows else "phone",
                                                      ("PHONE", "LOAD_KEEP_AT=%#x" % target) + (("KNOWS",) if knows else ())
-                                                     + (("CAPTURE", "CAPTURE_AT=%#x" % mm.CAVE_RXGATE[0]) if capture else ())     # the rxcap image
-                                                     + (("MIRROR", "MIRROR_AT=%#x" % mm.CAVE_MIRROR[0]) if mirror else ())      # the mirror image: the viewer's on and off
-                                                     + (("SEEN",) if seen else ())      # the ask image: the phone asked only once it has said 0x63
-                                                     + (("FRESH", "SAVE_KEEP_AT=%#x" % syms["save_keep"]) if fresh else ())     # the fresh image: a new project asks too
-                                                     + (("NEWPROJ", "NEW_SLOTS_AT=%#x" % syms["new_slots"]) if newproj else ())   # the newproj image: NEW PROJECT too
-                                                     + (("WIPE",) if wipe else ())      # the wipe image: the unit empties the slots the phone names
-                                                     + (("STREAM", "STREAM_ADD_AT=%#x" % syms["stream_add"]) if stream else ()))     # the stream image
+                                                     + (("CAPTURE", "CAPTURE_AT=%#x" % mm.CAVE_RXGATE[0]) if capture else ())  # the rxcap image
+                                                     + (("MIRROR", "MIRROR_AT=%#x" % mm.CAVE_MIRROR[0]) if mirror else ())  # the mirror image: the viewer's on and off
+                                                     + (("SEEN",) if seen else ())  # the ask image: the phone asked only once it has said 0x63
+                                                     + (("FRESH", "SAVE_KEEP_AT=%#x" % syms["save_keep"]) if fresh else ())  # the fresh image: a new project asks too
+                                                     + (("NEWPROJ", "NEW_SLOTS_AT=%#x" % syms["new_slots"]) if newproj else ())  # the newproj image: NEW PROJECT too
+                                                     + (("WIPE",) if wipe else ())  # the wipe image: the unit empties the slots the phone names
+                                                     + (("STREAM", "STREAM_ADD_AT=%#x" % syms["stream_add"]) if stream else ()))  # the stream image
             if psyms.get("phone_mask") is None:
                 psyms["phone_mask"] = mm.CAVE_PHONE[0]
             pnew = pcode["v"] + bytes(mm.PHONE_VARS - len(pcode["v"])) + pcode["p"]
@@ -840,7 +840,7 @@ def keep_patches(image, load=False, bank=False, save=False, ptn=False, phone=Fal
                 out.append(fw.Patch(3, mm.off(lo), image[mm.off(lo):mm.off(hi)], rnew, "the fltr image: the load query"))
             _expect(image, mm.SYSEX_IN_JMP, b"\x4e\xf9" + be32(0x40109d0c), "the phone, the SysEx entry's jump to the handler")
             out.append(fw.Patch(3, mm.off(mm.SYSEX_IN_JMP + 2), be32(0x40109d0c), be32(psyms["stream_sysex" if stream else "wipe_sysex" if wipe else "knows_sysex" if knows else "phone_sysex"]), "the phone: SysEx entry"))
-            if fresh:                   # the fresh image: stock's new project, saved, then asks the phone as a load does
+            if fresh:  # the fresh image: stock's new project, saved, then asks the phone as a load does
                 lo, hi = mm.CAVE_FRESH
                 for addr in (lo - 2, hi - 2):
                     _expect(image, addr, bytes.fromhex("4e75"), "the fresh image's run starts and ends a routine")
@@ -848,7 +848,7 @@ def keep_patches(image, load=False, bank=False, save=False, ptn=False, phone=Fal
                     raise fw.GuardError("an address in the fresh image's run is named in the main program")
                 fnew = pcode["f"] + build_engine.NOP * ((hi - lo - len(pcode["f"])) // 2)
                 out.append(fw.Patch(3, mm.off(lo), image[mm.off(lo):mm.off(hi)], fnew, "the fresh image: a new project's save and ask"))
-            if newproj:                 # the newproj image: both calls of the project maker, NEW PROJECT's and an empty slot's
+            if newproj:  # the newproj image: both calls of the project maker, NEW PROJECT's and an empty slot's
                 for cave, (lo, hi) in (("g", mm.CAVE_NEWPROJ), ("h", mm.CAVE_NEWPROJ2)) + ((("i", mm.CAVE_WIPE), ("j", mm.CAVE_WIPE2)) if wipe else ()) + ((("l", mm.CAVE_STREAM2), ("m", mm.CAVE_STREAM4)) if stream else ()):
                     for addr in (lo - 2, hi - 2):
                         _expect(image, addr, bytes.fromhex("4e75"), "the newproj image's runs start and end a routine")
@@ -866,7 +866,7 @@ def keep_patches(image, load=False, bank=False, save=False, ptn=False, phone=Fal
                 out.append(fw.Patch(3, mm.off(call + 2), be32(mm.PROJECT_SAVE), be32(psyms["fresh_save"]), "the fresh image: a new project's save, then the phone"))
                 call = mm.PROJECT_LOAD_CALL
             syms = dict(syms, **psyms)
-            target = psyms["stream_load" if stream else "fresh_load" if newproj else "knows_load" if knows else "phone_load"]   # (the newproj image: the project left first)
+            target = psyms["stream_load" if stream else "fresh_load" if newproj else "knows_load" if knows else "phone_load"]  # (the newproj image: the project left first)
         out.append(fw.Patch(3, mm.off(call + 2), be32(mm.PROJECT_LOAD), be32(target), "loading: project load call"))
     if ptn:
         calls = mm.PATTERN_SAVE_CALLS + mm.PATTERN_SAVE_OTHERS
@@ -885,10 +885,9 @@ def keep_patches(image, load=False, bank=False, save=False, ptn=False, phone=Fal
 
 # ---- names and words on screen (the "screen" image) --------------------------------------------
 #
-# SMPL shows the stereo sample's name when MODE counts stereo samples, and LOOP and MODE show
-# words (engine/knobtext.c). Our routine takes the place of the stock slot text function in its
-# function object; LOOP's text is pointed at that object too (display_patches).
-# stock code it calls or leans on: (address, stock bytes, what)
+# SMPL shows the stereo sample's name when MODE counts stereo samples, and LOOP and MODE show words
+# (engine/knobtext.c). Our routine takes the place of the stock slot text function in its function object; LOOP's text
+# is pointed at that object too (display_patches). stock code it calls or leans on: (address, stock bytes, what)
 SCREEN_CONTEXT = [
     (mm.TEXT_SLOT - 2, fw.sx("3d99d2e73d2acd05c81d"), "the slot text function starts here"),
     (mm.TEXT_SLOT + 4, fw.sx("2c1478325720f9ded6a9"), "the slot text function: the value is its second argument, 8.8"),
@@ -924,10 +923,9 @@ def screen_patches(image, page=False, meter=False, auto=False, pack=False, xknob
 
 # ---- a second page behind SYN (the "page" image) ------------------------------------------------
 #
-# First step toward the sampling page: on a sampler track a second press of SYN shows a second,
-# empty page (engine/recpage.c). The SYN page object is built with a list of two page numbers
-# and our routine stands in front of the class's "which record is behind this knob" method.
-# stock code it calls or leans on: (address, stock bytes, what)
+# First step toward the sampling page: on a sampler track a second press of SYN shows a second, empty page
+# (engine/recpage.c). The SYN page object is built with a list of two page numbers and our routine stands in front of
+# the class's "which record is behind this knob" method. stock code it calls or leans on: (address, stock bytes, what)
 PAGE_CONTEXT = [
     (mm.SYN_BUILD + 10, fw.sx("a27f5d12b42d94a124a8864ff87e"), "the list and the count go to the routine that makes a vector"),
     (mm.SYN_BUILD + 0x18, fw.sx("6eec0f663919c58485b7cb9b45294da41266aaf0a9b923f57931"), "an object of 0x1ac bytes for key 0x14, built by the SYN class"),
@@ -1013,8 +1011,8 @@ PAGE_CONTEXT = [
 ]
 
 
-# The reclock image: a step's REC is a lock on knob slot 24, made through the routines of the steps
-# object that the holder's lock methods end in (engine/recpage.c). Stock code it calls or leans on:
+# The reclock image: a step's REC is a lock on knob slot 24, made through the routines of the steps object that the
+# holder's lock methods end in (engine/recpage.c). Stock code it calls or leans on:
 RECLOCK_CONTEXT = [
     (mm.HOLDER_CLASS + mm.HOLDER_LOCK, fw.sx("97d5b4cbbdcb1cfeac587a0f1beb09d8"), "the holder's + 64, + 68 and + 72"),
     (mm.HOLDER_CLASS + mm.KNOB_VALUE, fw.sx("4c9aeabcf4fe471a"), "the holder's + 40"),
@@ -1048,10 +1046,10 @@ RECLOCK_CONTEXT = [
 ]
 
 
-# The meter image: the sampling page draws a bar with stock's rectangle routine, and the feed asks for
-# the page to be drawn again with stock's request. Stock code they call or lean on:
-# Stock's loop that writes the hold flag over slot 24 of every digital track in the block that is sent
-# (engine/recword.S): everything of it but the two instructions that are replaced.
+# The meter image: the sampling page draws a bar with stock's rectangle routine, and the feed asks for the page to be
+# drawn again with stock's request. Stock code they call or lean on: Stock's loop that writes the hold flag over slot
+# 24 of every digital track in the block that is sent (engine/recword.S): everything of it but the two instructions
+# that are replaced.
 HOLD_CONTEXT = [
     (mm.HOLD_LOOP, fw.sx("0f7b4db70af377bfd1e5803e7d9b665c89d54ecd7a13660b7dce8a2cf48fc9c8289614772e0ad0ab72b7e2ea01ce35cc"),
      "a track's machine at + 62, and the flag in d0: + 128 not 0, or + 110 past 0x7eff"),
@@ -1082,8 +1080,8 @@ METER_CONTEXT = [
 
 
 # The stereo image: one-track stereo on the main CPU (engine/rightfill.c). The mixer's four right-hand passes are
-# handed a second set of buffers, which our routine fills where stock waits for the first set to arrive.
-# Stock code it changes an operand of, calls or leans on:
+# handed a second set of buffers, which our routine fills where stock waits for the first set to arrive. Stock code it
+# changes an operand of, calls or leans on:
 RIGHT_CONTEXT = [
     # the delay send's two sums: (increments, gains, the tracks, the bus), left then right, one kernel
     (0x4008f7e6, fw.sx("56b3039a3847bc56c310150d7463ce55c587ff4a2943fd8f3759d788fe341af4"), "the delay send's left pass"),
@@ -1125,11 +1123,12 @@ RIGHT_CONTEXT = [
     (0x40096c80, fw.sx("d3eb46d7f163a0470e10c9b58549ac9da2c1"), "the effects' memory: 9 x 64 KB at 0x4d570000 are cleared"),
     (0x400004ba, fw.sx("e4c5a6f7c3f9337c9de5c139fef85414"), "the program's data ends at 0x45566490"),
 ]
-RIGHT_HOOK_STOCK = fw.sx("9d0eaea3035952cd35f722cf8345")     # jsr %pc@(DMA_WAIT) ; tstl AUDIO_UP
+RIGHT_HOOK_STOCK = fw.sx("9d0eaea3035952cd35f722cf8345")  # jsr %pc@(DMA_WAIT) ; tstl AUDIO_UP
 
 
 # The dma image: the second set is in on-chip memory and the right channels are brought to it by two channels of the
-# transfer controller, set as stock sets its own (engine/rightdma.c). Stock code it calls, copies the ways of or leans on:
+# transfer controller, set as stock sets its own (engine/rightdma.c). Stock code it calls, copies the ways of or leans
+# on:
 DMA_CONTEXT = [
     (mm.DMA_CONTROL_SET, fw.sx("76eaf5b9fa85366debb7c94be57b4298c131"), "the controller: round robin inside a group, the groups in fixed order"),
     (mm.DMA_47_SET, fw.sx("ba6f6ee5498d7c3560a4766a39a0f405397e1e9ed183a3ddfceb8ed11fffaa9c2ddb410e76a7815cf98df54e56955b0e27889027b031a734"),
@@ -1199,14 +1198,14 @@ def _dma_free(image):
             raise fw.GuardError("%#x at %#x: the dma image's memory may be named" % (v, mm.BASE + i))
 
 
-# Every long at an even place of the main program that reads as an address inside our part of on-chip memory, and
-# what it is: none is an instruction's operand (docs/FINDINGS.md, "The right channels by a hardware transfer").
+# Every long at an even place of the main program that reads as an address inside our part of on-chip memory, and what
+# it is: none is an instruction's operand (docs/FINDINGS.md, "The right channels by a hardware transfer").
 DMA_MEMORY_SEEN = {
-    (0x40102602, 0x80007403), (0x400935ec, 0x80007603), (0x40092070, 0x80007c1f),       # the end of one instruction and the start of the next
-    (0x401dafc4, 0x800076da), (0x401dafc0, 0x80007a82),                                 # a table of numbers that fall
-    (0x4021d288, 0x80007429), (0x4021d28c, 0x80007734), (0x4021d290, 0x80007a53),       # another
-    (0x4022296c, 0x80007802), (0x40222970, 0x80007d07),                                 # another
-    (0x402e0d12, 0x80007804), (0x402f4fa6, 0x80007805), (0x402f326e, 0x80007c00), (0x4031d0fa, 0x80007c00), (0x4031bae6, 0x80007c1f),   # the program's data
+    (0x40102602, 0x80007403), (0x400935ec, 0x80007603), (0x40092070, 0x80007c1f),  # the end of one instruction and the start of the next
+    (0x401dafc4, 0x800076da), (0x401dafc0, 0x80007a82),  # a table of numbers that fall
+    (0x4021d288, 0x80007429), (0x4021d28c, 0x80007734), (0x4021d290, 0x80007a53),  # another
+    (0x4022296c, 0x80007802), (0x40222970, 0x80007d07),  # another
+    (0x402e0d12, 0x80007804), (0x402f4fa6, 0x80007805), (0x402f326e, 0x80007c00), (0x4031d0fa, 0x80007c00), (0x4031bae6, 0x80007c1f),  # the program's data
 }
 
 
@@ -1223,7 +1222,7 @@ def right_patches(image, stops=False, dma=False, lap=False, movem=False):
             if any(image.count(be32(a)) for a in range(mm.CAVE_LAP[0], mm.CAVE_LAP[1], 2)):
                 raise fw.GuardError("an address in the readings' run is named in the main program")
             caves["q"] = mm.CAVE_LAP
-        if movem:                        # the copy image: the mono tracks' copies by movem, in a run of its own
+        if movem:  # the copy image: the mono tracks' copies by movem, in a run of its own
             for addr in (mm.CAVE_COPY[0] - 2, mm.CAVE_COPY[1] - 2):
                 _expect(image, addr, bytes.fromhex("4e75"), "the copy image's run starts and ends a routine")
             if any(image.count(be32(a)) for a in range(mm.CAVE_COPY[0], mm.CAVE_COPY[1], 2)):
@@ -1231,7 +1230,7 @@ def right_patches(image, stops=False, dma=False, lap=False, movem=False):
             caves["c"] = mm.CAVE_COPY
         code, syms = build_engine.compile_code(("rightdma.c",), caves, ("rightdma_copy" if lap else "rightdma_cut") if movem else "rightdma_lap" if lap else "rightdma",
                                                ("ONETRACK", "STOPS", "DMA") + (("LAP", "PROF_AT=%#x" % mm.CAVE_PROF[0]) if lap else ())
-                                               + (("MOVEM",) if movem else ()))    # the lap image, a tool: five more readings of the profile's timer
+                                               + (("MOVEM",) if movem else ()))  # the lap image, a tool: five more readings of the profile's timer
         for cave, (start, end) in sorted(caves.items()):
             new = code[cave] + build_engine.NOP * ((end - start - len(code[cave])) // 2)
             out.append(fw.Patch(3, mm.off(start), image[mm.off(start):mm.off(end)], new, "the right channels by a transfer: the code"))
@@ -1242,7 +1241,8 @@ def right_patches(image, stops=False, dma=False, lap=False, movem=False):
             _expect(image, site, PEA + be32(ret), "one-track stereo, a return copied before a right-hand pass")
             out.append(fw.Patch(3, mm.off(site + 2), be32(ret), be32(mm.RIGHT_SRAM + ret - mm.TRACKS),
                                 "the right channels by a transfer: a right return goes after the second set"))
-        # the place stock waits for the first set: jsr right_mid ; tstl %d0 ; nop, as the images before have it with their routine.
+        # the place stock waits for the first set: jsr right_mid ; tstl %d0 ; nop, as the images before have it with
+        # their routine.
         out.append(fw.Patch(3, mm.off(mm.RIGHT_HOOK), bytes.fromhex(RIGHT_HOOK_STOCK), b"\x4e\xb9" + be32(syms["right_mid_lap" if lap else "right_mid"]) + b"\x4a\x80" + build_engine.NOP,
                             "the right channels by a transfer: stock's wait, and the CPU's reads there if the transfers were given up"))
         # two calls go to ours, which go on to what stock called.
@@ -1273,8 +1273,8 @@ def right_patches(image, stops=False, dma=False, lap=False, movem=False):
     return out, syms
 
 
-EXTRA_DEFS = ()     # set by a tool image (tools/build.py, probe17): more defines for the page, under its own object's name
-EVLAP = False       # set by a tool image (tools/build.py, evtime): four laps in the events and knobs stretch, the mixer not timed
+EXTRA_DEFS = ()  # set by a tool image (tools/build.py, probe17): more defines for the page, under its own object's name
+EVLAP = False  # set by a tool image (tools/build.py, evtime): four laps in the events and knobs stretch, the mixer not timed
 
 
 def page_patches(image, bank=False, reclock=False, meter=False, save_start=None, probe=False, timed=False, gain=False, auto=False, peak=False,
@@ -1288,24 +1288,24 @@ def page_patches(image, bank=False, reclock=False, meter=False, save_start=None,
     caves = {"g": mm.CAVE_PAGE, "j": mm.CAVE_PAGE2}
     if meter:
         caves["k"] = mm.CAVE_PAGE3
-    if gain:                             # the gain image: a fourth run, the first three being full
+    if gain:  # the gain image: a fourth run, the first three being full
         for addr, stock in ((mm.CAVE_PAGE4[0] - 2, "4e75"), (mm.CAVE_PAGE4[1] - 2, "4e75")):
             _expect(image, addr, bytes.fromhex(stock), "the page's fourth run starts and ends a routine")
         caves["l"] = mm.CAVE_PAGE4
-    if stops:                            # the stops image: a fifth and a sixth, for what a turn of SMPL stops at
+    if stops:  # the stops image: a fifth and a sixth, for what a turn of SMPL stops at
         for lo, hi in (mm.CAVE_PAGE5, mm.CAVE_PAGE6):
             for addr in (lo - 2, hi - 2):
                 _expect(image, addr, bytes.fromhex("4e75"), "the page's fifth and sixth runs start and end a routine")
         caves["n"], caves["q"] = mm.CAVE_PAGE5, mm.CAVE_PAGE6
-    if xfade >= 4:                       # the apage image: a seventh, for the analog tracks' page
+    if xfade >= 4:  # the apage image: a seventh, for the analog tracks' page
         for addr in (mm.CAVE_PAGE7[0] - 2, mm.CAVE_PAGE7[1] - 2):
             _expect(image, addr, bytes.fromhex("4e75"), "the page's seventh run starts and ends a routine")
         caves["r"] = mm.CAVE_PAGE7
-    if xfade >= 5:                       # the slock image: an eighth, for a step's solo
+    if xfade >= 5:  # the slock image: an eighth, for a step's solo
         for addr in (mm.CAVE_PAGE8[0] - 2, mm.CAVE_PAGE8[1] - 2):
             _expect(image, addr, bytes.fromhex("4e75"), "the page's eighth run starts and ends a routine")
         caves["s"] = mm.CAVE_PAGE8
-    if xfade >= 9:                       # the gear image: the page's knobs turn through stock's routines, from a tenth run
+    if xfade >= 9:  # the gear image: the page's knobs turn through stock's routines, from a tenth run
         for addr, stock, what in GEAR_CONTEXT:
             _expect(image, addr, bytes.fromhex(stock), "the page's knobs, " + what)
         for addr in (mm.CAVE_PAGE10[0] - 2, mm.CAVE_PAGE10[1] - 2):
@@ -1313,53 +1313,53 @@ def page_patches(image, bank=False, reclock=False, meter=False, save_start=None,
         if image.count(be32(mm.CAVE_PAGE10[0])):
             raise fw.GuardError("the page's tenth run is named in the main program")
         caves["v"] = mm.CAVE_PAGE10
-    if xfade >= 8:                       # the srr image: a ninth, for the track's own word on slot 24
+    if xfade >= 8:  # the srr image: a ninth, for the track's own word on slot 24
         for addr in (mm.CAVE_PAGE9[0] - 2, mm.CAVE_PAGE9[1] - 2):
             _expect(image, addr, bytes.fromhex("4e75"), "the page's ninth run starts and ends a routine")
         if image.count(be32(mm.CAVE_PAGE9[0])):
             raise fw.GuardError("the page's ninth run is named in the main program")
         caves["u"] = mm.CAVE_PAGE9
-    if xfade >= 23:                      # the trig image: SOLO and REC on a sampler track's TRIG page, from an eleventh run
+    if xfade >= 23:  # the trig image: SOLO and REC on a sampler track's TRIG page, from an eleventh run
         for addr in (mm.CAVE_TRIG[0] - 2, mm.CAVE_TRIG[1] - 2, mm.CAVE_TRIG2[0] - 2, mm.CAVE_TRIG2[1] - 2):
             _expect(image, addr, bytes.fromhex("4e75"), "the TRIG page's runs start and end a routine")
         if any(image.count(be32(a)) for a in range(mm.CAVE_TRIG2[0], mm.CAVE_TRIG2[1], 2)):
             raise fw.GuardError("an address in the TRIG page's second run is named in the main program")
         caves["x"], caves["z"] = mm.CAVE_TRIG, mm.CAVE_TRIG2
-        if xfade >= 24:                  # the switch image: a third, for drawing a switch
+        if xfade >= 24:  # the switch image: a third, for drawing a switch
             for addr in (mm.CAVE_TRIG3[0] - 2, mm.CAVE_TRIG3[1] - 2):
                 _expect(image, addr, bytes.fromhex("4e75"), "the TRIG page's third run starts and ends a routine")
             if any(image.count(be32(a)) for a in range(mm.CAVE_TRIG3[0], mm.CAVE_TRIG3[1], 2)):
                 raise fw.GuardError("an address in the TRIG page's third run is named in the main program")
             caves["y"] = mm.CAVE_TRIG3
-    if xfade >= 26:                      # the xknob image: two more runs for knob D's crossfade
+    if xfade >= 26:  # the xknob image: two more runs for knob D's crossfade
         for run in (mm.CAVE_XKNOB, mm.CAVE_XKNOB2):
             for addr in (run[0] - 2, run[1] - 2):
                 _expect(image, addr, bytes.fromhex("4e75"), "the xknob image's runs start and end a routine")
             if any(image.count(be32(a)) for a in range(run[0], run[1], 2)):
                 raise fw.GuardError("an address in the xknob image's runs is named in the main program")
         caves["w"], caves["f"] = mm.CAVE_XKNOB, mm.CAVE_XKNOB2
-        if xfade >= 27:                  # the xshare image: one more
+        if xfade >= 27:  # the xshare image: one more
             run = mm.CAVE_XSHARE
             for addr in (run[0] - 2, run[1] - 2):
                 _expect(image, addr, bytes.fromhex("4e75"), "the xshare image's run starts and ends a routine")
             if any(image.count(be32(a)) for a in range(run[0], run[1], 2)):
                 raise fw.GuardError("an address in the xshare image's run is named in the main program")
             caves["h"] = run
-            if xfade >= 28:              # the fltr image: one more, for FLTR2's G and H
+            if xfade >= 28:  # the fltr image: one more, for FLTR2's G and H
                 run = mm.CAVE_FLTR
                 for addr in (run[0] - 2, run[1] - 2):
                     _expect(image, addr, bytes.fromhex("4e75"), "the fltr image's run starts and ends a routine")
                 if any(image.count(be32(a)) for a in range(run[0], run[1], 2)):
                     raise fw.GuardError("an address in the fltr image's run is named in the main program")
                 caves["d"] = run
-                if xfade >= 53:          # the stretch image: KEYS's four settings, in a run of their own
+                if xfade >= 53:  # the stretch image: KEYS's four settings, in a run of their own
                     run = mm.CAVE_STRETCH
                     for addr in (run[0] - 2, run[1] - 2):
                         _expect(image, addr, bytes.fromhex("4e75"), "the stretch image's run starts and ends a routine")
                     if any(image.count(be32(a)) for a in range(run[0], run[1], 2)):
                         raise fw.GuardError("an address in the stretch image's run is named in the main program")
                     caves["i"] = run
-                    if xfade >= 54:      # the lock image: KEYS's six names in another
+                    if xfade >= 54:  # the lock image: KEYS's six names in another
                         run = mm.CAVE_LOCK2
                         for addr in (run[0] - 2, run[1] - 2):
                             _expect(image, addr, bytes.fromhex("4e75"), "the lock image's second run starts and ends a routine")
@@ -1393,53 +1393,53 @@ def page_patches(image, bank=False, reclock=False, meter=False, save_start=None,
                                     if any(image.count(be32(a)) for a in range(run[0], run[1], 2)):
                                         raise fw.GuardError("an address in the kind image's run is named in the main program")
                                     caves["ks"] = run
-                    if "SLOTPROBE" in EXTRA_DEFS or "TUNEPROBE" in EXTRA_DEFS:   # the slotprobe tool (and the tuneprobe tool's place): the long image's run, which nothing of this chain uses
+                    if "SLOTPROBE" in EXTRA_DEFS or "TUNEPROBE" in EXTRA_DEFS:  # the slotprobe tool (and the tuneprobe tool's place): the long image's run, which nothing of this chain uses
                         run = mm.CAVE_LONG
                         for addr in (run[0] - 2, run[1] - 2):
                             _expect(image, addr, bytes.fromhex("4e75"), "the slotprobe tool's run starts and ends a routine")
                         if any(image.count(be32(a)) for a in range(run[0], run[1], 2)):
                             raise fw.GuardError("an address in the slotprobe tool's run is named in the main program")
                         caves["b"] = run
-                        run = mm.CAVE_EDIT2     # and the long image's last run, for its places
+                        run = mm.CAVE_EDIT2  # and the long image's last run, for its places
                         for addr in (run[0] - 2, run[1] - 2):
                             _expect(image, addr, bytes.fromhex("4e75"), "the slotprobe tool's second run starts and ends a routine")
                         if any(image.count(be32(a)) for a in range(run[0], run[1], 2)):
                             raise fw.GuardError("an address in the slotprobe tool's second run is named in the main program")
                         caves["a"] = run
-    if save_start:                       # the save image: the page's fifth place starts a save, in the keep code
+    if save_start:  # the save image: the page's fifth place starts a save, in the keep code
         code, syms = build_engine.compile_code(("recpage.c",), caves,
                                                "recpage_" + EXTRA_DEFS[0].lower() if EXTRA_DEFS else "recpage_probe" if probe else "recpage_time" if timed
-                                               else "recpage_destnum" if xfade >= 74 and peak            # 74: the destnum image, DEST's numbers back
-                                               else "recpage_onedest" if xfade >= 73 and peak            # 73: the onedest image, DEST SMPL only
-                                               else "recpage_gainup" if xfade >= 72 and peak             # 72: the gainup image, the gain in D, the peak in E, STRC in G
-                                               else "recpage_axf" if xfade >= 71 and peak                # 71: the axf image, P off the analog page's G
-                                               else "recpage_kind" if xfade >= 63 and peak               # 63: the kind image, SMPL's stops by KIND
-                                               else "recpage_pbank" if xfade >= 62 and peak              # 62: the pbank image, BANK off the page
-                                               else "recpage_next" if xfade >= 61 and peak               # 61: the next image, DEST SMPL or NEXT, C the KIND
-                                               else "recpage_stsw" if xfade >= 58 and peak               # 58: the stsw image, KEYS's two and the stretch's switch
-                                               else "recpage_lock" if xfade >= 54 and peak               # 54: the lock image, KEYS's six settings
-                                               else "recpage_stretch" if xfade >= 53 and peak            # 53: the stretch image, KEYS's four settings
-                                               else "recpage_atrig" if xfade >= 51 and peak              # 51: the atrig image, an analog track's SOLO on TRIG, LFO.T on FLTR2
-                                               else "recpage_eucl" if xfade >= 49 and peak               # 49: the eucl image, SOLO and REC off TRIG's euclidean page
-                                               else "recpage_xcarry" if xfade >= 45 and peak             # 45: the xcarry image, the amount through the page
-                                               else "recpage_xcont" if xfade >= 44 and peak              # 44: the xcont image, a turn takes the live amount
-                                               else "recpage_xfix" if xfade >= 43 and peak               # 43: the xfix image, the others' live crossfade cleared too
-                                               else "recpage_slice" if xfade >= 31 and peak              # 31: the slice image, KEYS on H, P on G
-                                               else "recpage_tlsolo" if xfade >= 29 and peak             # 29: the tlsolo image, a held step's solo always locked
-                                               else "recpage_fltr" if xfade >= 28 and peak               # 28: the fltr image, LFO.T and FLT.T on FLTR2's G and H
-                                               else "recpage_xshare" if xfade >= 27 and peak             # 27: the xshare image, D the pattern's one crossfade
-                                               else "recpage_xknob" if xfade >= 26 and peak              # 26: the xknob image, the crossfade on the first page's D
-                                               else "recpage_box" if xfade >= 25 and peak                # 25: the box image, no dotted box, REC OFF or ONCE
-                                               else "recpage_switch" if xfade >= 24 and peak             # 24: the switch image, SOLO and REC as stock's switch
-                                               else "recpage_trig" if xfade >= 23 and peak               # 23: the trig image, SOLO and REC on the TRIG page
-                                               else ("recpage_prof" if peak else "recpage_prof0") if prof_on           # the prof image: the last knob switches the profile
-                                               else ("recpage_gear" if peak else "recpage_gear0") if xfade >= 9         # 9: the gear image, the page's knobs as stock's turn
-                                               else ("recpage_srr" if peak else "recpage_srr0") if xfade == 8           # 8: the srr image, REC and SRC from the track's own word
-                                               else ("recpage_alock" if peak else "recpage_alock0") if xfade >= 6       # 6: the alock image, an analog track's solo as a lock too
-                                               else ("recpage_slock" if peak else "recpage_slock0") if xfade == 5       # 5: the slock image, a sampler track's solo as a lock
-                                               else ("recpage_apage" if peak else "recpage_apage0") if xfade == 4       # 4: the apage image, the page on the analog tracks too
-                                               else ("recpage_dma" if peak else "recpage_dma0") if xfade == 3           # 3: the dma image, the gfade image's page with a letter
-                                               else ("recpage_gfade" if peak else "recpage_gfade0") if xfade == 2       # 2: the gfade image, one crossfade for the unit
+                                               else "recpage_destnum" if xfade >= 74 and peak  # 74: the destnum image, DEST's numbers back
+                                               else "recpage_onedest" if xfade >= 73 and peak  # 73: the onedest image, DEST SMPL only
+                                               else "recpage_gainup" if xfade >= 72 and peak  # 72: the gainup image, the gain in D, the peak in E, STRC in G
+                                               else "recpage_axf" if xfade >= 71 and peak  # 71: the axf image, P off the analog page's G
+                                               else "recpage_kind" if xfade >= 63 and peak  # 63: the kind image, SMPL's stops by KIND
+                                               else "recpage_pbank" if xfade >= 62 and peak  # 62: the pbank image, BANK off the page
+                                               else "recpage_next" if xfade >= 61 and peak  # 61: the next image, DEST SMPL or NEXT, C the KIND
+                                               else "recpage_stsw" if xfade >= 58 and peak  # 58: the stsw image, KEYS's two and the stretch's switch
+                                               else "recpage_lock" if xfade >= 54 and peak  # 54: the lock image, KEYS's six settings
+                                               else "recpage_stretch" if xfade >= 53 and peak  # 53: the stretch image, KEYS's four settings
+                                               else "recpage_atrig" if xfade >= 51 and peak  # 51: the atrig image, an analog track's SOLO on TRIG, LFO.T on FLTR2
+                                               else "recpage_eucl" if xfade >= 49 and peak  # 49: the eucl image, SOLO and REC off TRIG's euclidean page
+                                               else "recpage_xcarry" if xfade >= 45 and peak  # 45: the xcarry image, the amount through the page
+                                               else "recpage_xcont" if xfade >= 44 and peak  # 44: the xcont image, a turn takes the live amount
+                                               else "recpage_xfix" if xfade >= 43 and peak  # 43: the xfix image, the others' live crossfade cleared too
+                                               else "recpage_slice" if xfade >= 31 and peak  # 31: the slice image, KEYS on H, P on G
+                                               else "recpage_tlsolo" if xfade >= 29 and peak  # 29: the tlsolo image, a held step's solo always locked
+                                               else "recpage_fltr" if xfade >= 28 and peak  # 28: the fltr image, LFO.T and FLT.T on FLTR2's G and H
+                                               else "recpage_xshare" if xfade >= 27 and peak  # 27: the xshare image, D the pattern's one crossfade
+                                               else "recpage_xknob" if xfade >= 26 and peak  # 26: the xknob image, the crossfade on the first page's D
+                                               else "recpage_box" if xfade >= 25 and peak  # 25: the box image, no dotted box, REC OFF or ONCE
+                                               else "recpage_switch" if xfade >= 24 and peak  # 24: the switch image, SOLO and REC as stock's switch
+                                               else "recpage_trig" if xfade >= 23 and peak  # 23: the trig image, SOLO and REC on the TRIG page
+                                               else ("recpage_prof" if peak else "recpage_prof0") if prof_on  # the prof image: the last knob switches the profile
+                                               else ("recpage_gear" if peak else "recpage_gear0") if xfade >= 9  # 9: the gear image, the page's knobs as stock's turn
+                                               else ("recpage_srr" if peak else "recpage_srr0") if xfade == 8  # 8: the srr image, REC and SRC from the track's own word
+                                               else ("recpage_alock" if peak else "recpage_alock0") if xfade >= 6  # 6: the alock image, an analog track's solo as a lock too
+                                               else ("recpage_slock" if peak else "recpage_slock0") if xfade == 5  # 5: the slock image, a sampler track's solo as a lock
+                                               else ("recpage_apage" if peak else "recpage_apage0") if xfade == 4  # 4: the apage image, the page on the analog tracks too
+                                               else ("recpage_dma" if peak else "recpage_dma0") if xfade == 3  # 3: the dma image, the gfade image's page with a letter
+                                               else ("recpage_gfade" if peak else "recpage_gfade0") if xfade == 2
                                                else ("recpage_xfade" if peak else "recpage_xfade0") if xfade
                                                else ("recpage_soloknob" if peak else "recpage_soloknob0") if soloknob
                                                else ("recpage_once" if peak else "recpage_once0") if once
@@ -1452,19 +1452,19 @@ def page_patches(image, bank=False, reclock=False, meter=False, save_start=None,
                                                ("BANKS", "RECLOCK", "METER", "SAVE", "SAVE_START=%#x" % save_start) + (("PROBE",) if probe else ())
                                                + (("TIMED",) if timed else ()) + (("GAIN",) if gain else ()) + (("AUTO",) if auto else ())
                                                + (("PEAK",) if peak else ()) + (("PACK",) if pack else ()) + (("STOPS",) if stops else ())
-                                               + (("PTN",) if ptn else ())       # the ptn image: no SAVE box, and FAIL alone in its place
-                                               + (("FEED",) if feed else ())     # the feed image: no FAIL, and the held step asked for once a drawing
-                                               + (("ONCE",) if once else ())     # the once image: REC's third setting
-                                               + (("SOLOKNOB",) if soloknob else ())     # the soloknob image: knob E is the track's solo
+                                               + (("PTN",) if ptn else ())  # the ptn image: no SAVE box, and FAIL alone in its place
+                                               + (("FEED",) if feed else ())  # the feed image: no FAIL, and the held step asked for once a drawing
+                                               + (("ONCE",) if once else ())  # the once image: REC's third setting
+                                               + (("SOLOKNOB",) if soloknob else ())  # the soloknob image: knob E is the track's solo
                                                + (("XFADE",) if xfade else ())
-                                               + (("GFADE",) if xfade >= 2 else ())   # the xfade image: knob G is the track's crossfade
-                                               + (("DMA",) if xfade >= 3 else ())     # the dma image: the load's letter says how the right channels come
-                                               + (("APAGE",) if xfade >= 4 else ())   # the apage image: the analog tracks have the second page
-                                               + (("SLOCK",) if xfade >= 5 else ())   # the slock image: knob E with a step held locks the step's solo
-                                               + (("ALOCK",) if xfade >= 6 else ())   # the alock image: on an analog track too
-                                               + (("SRR",) if xfade >= 8 else ())     # the srr image: the first page's sixth knob is back, the reduction
-                                               + (("GEAR",) if xfade >= 9 else ())    # the gear image: the page's knobs, and SMPL, turn as stock's do
-                                               + (("PROF", "PROF_ON_AT=%#x" % prof_on) if prof_on else ())    # the prof image: knob H is the profile's switch
+                                               + (("GFADE",) if xfade >= 2 else ())  # the xfade image: knob G is the track's crossfade
+                                               + (("DMA",) if xfade >= 3 else ())  # the dma image: the load's letter says how the right channels come
+                                               + (("APAGE",) if xfade >= 4 else ())  # the apage image: the analog tracks have the second page
+                                               + (("SLOCK",) if xfade >= 5 else ())  # the slock image: knob E with a step held locks the step's solo
+                                               + (("ALOCK",) if xfade >= 6 else ())  # the alock image: on an analog track too
+                                               + (("SRR",) if xfade >= 8 else ())  # the srr image: the first page's sixth knob is back, the reduction
+                                               + (("GEAR",) if xfade >= 9 else ())  # the gear image: the page's knobs, and SMPL, turn as stock's do
+                                               + (("PROF", "PROF_ON_AT=%#x" % prof_on) if prof_on else ())  # the prof image: knob H is the profile's switch
                                                + (("TRIGPAGE",) if xfade >= 23 else ())
                                                + (("SWITCH",) if xfade >= 24 else ())
                                                + (("BOX", "ERASER=%#x" % mm.CAVE_TRIG4[0]) if xfade >= 25 else ())
@@ -1485,7 +1485,7 @@ def page_patches(image, bank=False, reclock=False, meter=False, save_start=None,
     for cave, (start, end) in sorted(caves.items()):
         new = code[cave] + build_engine.NOP * ((end - start - len(code[cave])) // 2)
         out.append(fw.Patch(3, mm.off(start), image[mm.off(start):mm.off(end)], new, "second SYN page: code"))
-    if "TUNEPROBE" in EXTRA_DEFS:       # the tuneprobe tool: stock's page knob routine's change through ours, kept
+    if "TUNEPROBE" in EXTRA_DEFS:  # the tuneprobe tool: stock's page knob routine's change through ours, kept
         _expect(image, 0x4003b9b6, b"\x4e\xb9" + be32(0x400f6a96), "the page knob routine's call of the change routine")
         out.append(fw.Patch(3, mm.off(0x4003b9b8), be32(0x400f6a96), be32(syms["tp_change"]), "the tuneprobe tool: the change kept"))
     # the builder: a list of two, ours
@@ -1496,7 +1496,7 @@ def page_patches(image, bank=False, reclock=False, meter=False, save_start=None,
     _expect(image, mm.SYN_BUILD + 0x18, b"\x48\x78" + mm.SYN_SIZE.to_bytes(2, "big"), "second SYN page, the size of SYN's object")
     out.append(fw.Patch(3, mm.off(mm.SYN_BUILD + 0x1a), mm.SYN_SIZE.to_bytes(2, "big"), (mm.SYN_SIZE + mm.SYN_ROOM).to_bytes(2, "big"),
                         "second SYN page: room after SYN's object for our state"))
-    apage = xfade >= 4                   # the apage image: the three methods go to the analog tracks' routines first
+    apage = xfade >= 4  # the apage image: the three methods go to the analog tracks' routines first
     for method, stock, ours, what in ((mm.PAGE_KNOB_METHOD, mm.SYN_KNOB, "apage_knob" if apage else "syn_knob", "which record is behind a knob"),
                                       (mm.PAGE_DRAW_METHOD, mm.SYN_DRAW, "apage_draw" if apage else "syn_draw", "the draw"),
                                       (mm.PAGE_TURN_METHOD, mm.SYN_TURN, "apage_turn" if apage else "stops_turn" if stops else "syn_turn", "a turn of a knob")):
@@ -1508,19 +1508,19 @@ def page_patches(image, bank=False, reclock=False, meter=False, save_start=None,
     _expect(image, slot, be32(mm.SYN_TURN_THUNK), "second SYN page, the second base's entry for a turn")
     out.append(fw.Patch(3, mm.off(slot), be32(mm.SYN_TURN_THUNK), be32(syms["apage_turn_side" if apage else "stops_turn_side" if stops else "syn_turn_side"]),
                         "second SYN page: a turn of a knob goes to our routine first"))
-    if xfade >= 25:                      # the box image: the eraser, a picture of stock's dotted box's size, its bits 0 under its mask
+    if xfade >= 25:  # the box image: the eraser, a picture of stock's dotted box's size, its bits 0 under its mask
         lo, hi = mm.CAVE_TRIG4
         for addr in (lo - 2, hi - 2):
             _expect(image, addr, bytes.fromhex("4e75"), "the eraser's run starts and ends a routine")
         if any(image.count(be32(a)) for a in range(lo, hi, 2)):
             raise fw.GuardError("an address in the eraser's run is named in the main program")
         _expect(image, mm.DOTTED_MASK, bytes.fromhex(fw.sx("dcc37a7f54180919")) * 17, "the dotted box's mask")
-        eraser = be32(0) + be32(17) + be32(17) + be32(0) + be32(lo + 24) + be32(mm.DOTTED_MASK) + be32(0)     # a row stride of 0: one row read for all 17
-        if xfade >= 26:                  # the xknob image: a second, 19 by 17, a plain knob's picture's size; then knob D's two names
+        eraser = be32(0) + be32(17) + be32(17) + be32(0) + be32(lo + 24) + be32(mm.DOTTED_MASK) + be32(0)  # a row stride of 0: one row read for all 17
+        if xfade >= 26:  # the xknob image: a second, 19 by 17, a plain knob's picture's size; then knob D's two names
             eraser += be32(0) + be32(19) + be32(17) + be32(0) + be32(lo + 24) + be32(mm.DOTTED_MASK) + XKNOB_NAMES
             assert lo + 52 == XKNOB_SHORT and len(eraser) <= hi - lo
         out.append(fw.Patch(3, mm.off(lo), image[mm.off(lo):mm.off(lo) + len(eraser)], eraser, "the box image: the eraser of the dotted box"))
-    if xfade >= 28:                      # the fltr image: the filter class's + 188 to ours first, LFO.T and FLT.T on FLTR2's G and H
+    if xfade >= 28:  # the fltr image: the filter class's + 188 to ours first, LFO.T and FLT.T on FLTR2's G and H
         slot = mm.FILTER_CLASS + mm.PAGE_KNOB_METHOD
         _expect(image, slot, be32(mm.FILTER_KNOB), "the filter class's method: which record is behind a knob")
         out.append(fw.Patch(3, mm.off(slot), be32(mm.FILTER_KNOB), be32(syms["fltr_knob"]), "the fltr image: FLTR2's G and H are LFO.T and FLT.T"))
@@ -1528,7 +1528,7 @@ def page_patches(image, bank=False, reclock=False, meter=False, save_start=None,
         _expect(image, mm.FLTR2_FLAT, stock, "FLTR2's loop: FENR's test for the record's own picture")
         out.append(fw.Patch(3, mm.off(mm.FLTR2_FLAT), stock, b"\x4e\xf9" + be32(syms["fltr_flat"]) + bytes.fromhex("4e71") * 3,
                             "the fltr image: LFO.T and FLT.T drawn as their switches on FLTR2, as FENR is"))
-    if xfade >= 23:                      # the trig image: the TRIG class's three methods, and its second base's turn, to ours first
+    if xfade >= 23:  # the trig image: the TRIG class's three methods, and its second base's turn, to ours first
         for method, stock, ours, what in ((mm.PAGE_KNOB_METHOD, mm.TRIG_KNOB, "trig_knob", "which record is behind a knob"),
                                           (mm.PAGE_DRAW_METHOD, mm.TRIG_DRAW, "trig_draw", "the draw"),
                                           (mm.PAGE_TURN_METHOD, mm.TRIG_TURN, "trig_turn", "a turn of a knob")):
@@ -1544,9 +1544,9 @@ def page_patches(image, bank=False, reclock=False, meter=False, save_start=None,
 
 # ---- the pattern's mutes as solos (the "solo" image) ---------------------------------------------
 #
-# engine/solo.S. The four places that store a copy of the pattern's word of mutes for the two engines
-# store the tracks its solos silence; the keys' colours, and the one draw that asks the same of a
-# pattern, ask "silenced by a solo" where they asked for the track's bit. Stock code it leans on:
+# engine/solo.S. The four places that store a copy of the pattern's word of mutes for the two engines store the tracks
+# its solos silence; the keys' colours, and the one draw that asks the same of a pattern, ask "silenced by a solo"
+# where they asked for the track's bit. Stock code it leans on:
 SOLO_CONTEXT = [
     (mm.PATTERN_MUTES_SET, fw.sx("2b5d57b2035058ffa1b4a3d47d31a31b"), "the routine that stores the per-block routine's copy, all of it"),
     (mm.MIDI_MUTES_SET, fw.sx("522efd33dd9a2a3151418772b77236cc"), "the routine that stores the MIDI engine's copy, all of it"),
@@ -1587,7 +1587,8 @@ JMP, JSR = b"\x4e\xf9", b"\x4e\xb9"
 def solo_patches(image):
     for addr, stock, what in SOLO_CONTEXT:
         _expect(image, addr, bytes.fromhex(stock), "the pattern's mutes as solos, " + what)
-    # each copy: two writers and the readers above, by its address. Anything else that names one would be a place not looked at
+    # each copy: two writers and the readers above, by its address. Anything else that names one would be a place not
+    # looked at
     for addr, n in ((mm.PATTERN_MUTES, 6), (mm.MIDI_PATTERN_MUTES, 4)):
         if image.count(be32(addr)) != n:
             raise fw.GuardError("the copy of the pattern's mutes at %#x is not named %d times" % (addr, n))
@@ -1600,7 +1601,8 @@ def solo_patches(image):
     start, end = mm.CAVE_SOLO
     new = code["s"] + build_engine.NOP * ((end - start - len(code["s"])) // 2)
     out = [fw.Patch(3, mm.off(start), image[mm.off(start):mm.off(end)], new, "the pattern's mutes as solos: the code")]
-    # lea %sp@(6),%a0 ; movew %a0@,(the copy) -> jmp (the routine): its first six bytes. The six after them are never run
+    # lea %sp@(6),%a0 ; movew %a0@,(the copy) -> jmp (the routine): its first six bytes. The six after them are never
+    # run
     for site, copy, ours in ((mm.PATTERN_MUTES_SET, mm.PATTERN_MUTES, "solo_set"), (mm.MIDI_MUTES_SET, mm.MIDI_PATTERN_MUTES, "solo_set_midi")):
         out.append(fw.Patch(3, mm.off(site), bytes.fromhex(fw.sx("251af8a6ba5f6fcd4bd2")), JMP + be32(syms[ours]),
                             "the pattern's mutes as solos: the routine that stores the copy at %#x" % copy))
@@ -1679,8 +1681,9 @@ HANDREC_CONTEXT = [
 
 def mirror_patches(image, shadow=False, pieces=False):
     """The mirror image (engine/mirror.c): the UI's send to the panel and its asking whether to draw go through ours,
-    which sends the frame shown to a viewer that asked. shadow: the shadow image, the frame sent copied from what stock's
-    column sender gives the panel. pieces: the sink image, no write into the sink crossing one of its sends."""
+    which sends the frame shown to a viewer that asked. shadow: the shadow image, the frame sent copied from what
+    stock's column sender gives the panel. pieces: the sink image, no write into the sink crossing one of its sends.
+    """
     caves = {"m": mm.CAVE_MIRROR, "n": mm.CAVE_MIRROR2, "o": mm.CAVE_MIRROR3}
     if pieces:
         caves["p"] = mm.CAVE_MIRROR4
@@ -1701,7 +1704,7 @@ def mirror_patches(image, shadow=False, pieces=False):
     out.append(fw.Patch(3, mm.off(mm.UI_PAINT_LEA + 2), be32(mm.PANEL_PAINT), be32(syms["mirror_paint"]), "the mirror image: the UI's send to the panel through ours"))
     _expect(image, mm.UI_DIRTY_CALL, b"\x4e\xb9" + be32(mm.UI_DIRTY), "the UI's asking whether to draw")
     out.append(fw.Patch(3, mm.off(mm.UI_DIRTY_CALL + 2), be32(mm.UI_DIRTY), be32(syms["mirror_tick"]), "the mirror image: the UI's asking through ours"))
-    if shadow:                          # leal -16(%sp),%sp ; movem.l ... -> jmp mirror_cols (which does the two and goes on at + 8)
+    if shadow:  # leal -16(%sp),%sp ; movem.l ... -> jmp mirror_cols (which does the two and goes on at + 8)
         stock = bytes.fromhex(fw.sx("aed6f6419d57131cf17b1835"))
         _expect(image, mm.PANEL_COLUMNS, stock, "the panel's column sender, its first two instructions")
         if mm.PANEL_COLUMNS_ON != mm.PANEL_COLUMNS + len(stock):
@@ -1715,19 +1718,20 @@ TUNE_RECORDS = [100, 108, 116, 124, 132, 140, 148, 156, 164, 172, 180, 204, 212,
                 290, 294, 295, 302, 318, 322, 325, 331, 335, 339, 343, 349, 352, 361, 386, 399, 407, 415, 431]
 
 
-# The three feels the TUNE records have, as stock's start-up builds them (0x400f66e0, after the display table is filled):
-# three flags and a byte, then a plain turn's {speed raised by, ticks a step, step} and a pushed one's. Held against the
-# start-up run in emulation by tests/test_tune.py; the copies take a pushed step of 1.
+# The three feels the TUNE records have, as stock's start-up builds them (0x400f66e0, after the display table is
+# filled): three flags and a byte, then a plain turn's {speed raised by, ticks a step, step} and a pushed one's. Held
+# against the start-up run in emulation by tests/test_tune.py; the copies take a pushed step of 1.
 TUNE_FEELS = {
-    0x443db178: (0x01010100, 2, 3, 1, 2, 3, 4),     # the plain knob's
-    0x443db140: (0x00010100, 0, 6, 1, 0, 6, 4),     # the sample picker's
+    0x443db178: (0x01010100, 2, 3, 1, 2, 3, 4),  # the plain knob's
+    0x443db140: (0x00010100, 0, 6, 1, 0, 6, 4),  # the sample picker's
     0x443db194: (0x01000100, 18, 1, 1, 2, 3, 1),
 }
 
 
 def tune_patches(image):
-    """The tune image (engine/tunepush.S): every machine's TUNE (short name TUNE, TUN1 or TUN2, but the sampler's
-    TUN2, our LOOP), its pushed turn's multiplier its unpushed one's, after record 431's entry is filled."""
+    """The tune image (engine/tunepush.S): every machine's TUNE (short name TUNE, TUN1 or TUN2, but the sampler's TUN2,
+    our LOOP), its pushed turn's multiplier its unpushed one's, after record 431's entry is filled.
+    """
     recs = [k for k, p in enumerate(params.load(image, "1.42")) if p.short in ("TUNE", "TUN1", "TUN2") and k != 435]
     if recs != TUNE_RECORDS:
         raise fw.GuardError("the tune image: the TUNE records are %s" % recs)
@@ -1746,7 +1750,7 @@ def tune_patches(image):
         f.write("".join("        .short %d\n" % (mm.UI_STRIDE * k) for k in TUNE_RECORDS))
         f.write("tune_end:\n")
         f.write("        .section .cave.u,\"ax\"\n        .globl tune_feels, tune_feels_end\ntune_feels:\n")
-        for addr, longs in TUNE_FEELS.items():  # the third build: each feel's stock address, then its copy with a pushed step of 1
+        for addr, longs in TUNE_FEELS.items():
             f.write("        .long %#x\n" % addr + "".join("        .long %#x\n" % v for v in longs[:6] + (1,)))
         f.write("tune_feels_end:\n")
     lo, hi = mm.CAVE_TUNE
@@ -1774,22 +1778,22 @@ def tune_patches(image):
 def once_patches(image, srr=False, stay=False, scratch=None, nxt=None, handrec=False, firstrec=False):
     for addr, stock, what in ONCE_CONTEXT + (STAY_CONTEXT if stay else []):
         _expect(image, addr, bytes.fromhex(stock), "REC's ONCE, " + what)
-    if stay and image.count(be32(mm.STEP_PLAY)):     # its two callers are by calls relative to the pc: no third by a long
+    if stay and image.count(be32(mm.STEP_PLAY)):  # its two callers are by calls relative to the pc: no third by a long
         raise fw.GuardError("the routine that plays a step is named by a long in the main program")
-    # no address of a changed place, and none inside one, is named anywhere: a branch to it would leave no long, so the
-    # listing was searched too (docs/FINDINGS.md)
+    # no address of a changed place, and none inside one, is named anywhere: a branch to it would leave no long, so
+    # the listing was searched too (docs/FINDINGS.md)
     for addr in (mm.STEP_LOCKS_PUSH, mm.STEP_LOCKS_PUSH + 2, mm.STEP_LOCKS_PUSH + 6, mm.STEP_NO_LOCKS, mm.MAIN_LOOP_WAIT, mm.MAIN_LOOP_WAIT + 6,
                  mm.CAVE_ONCE[0]):
         if image.count(be32(addr)):
             raise fw.GuardError("the address %#x is named in the main program" % addr)
     caves = {"o": mm.CAVE_ONCE}
-    if stay:                             # the stay image: the main task's routine in a run of its own
+    if stay:  # the stay image: the main task's routine in a run of its own
         for addr in (mm.CAVE_STAY[0] - 2, mm.CAVE_STAY[1] - 2):
             _expect(image, addr, bytes.fromhex("4e75"), "the stay image's run starts and ends a routine")
         if image.count(be32(mm.CAVE_STAY[0])):
             raise fw.GuardError("the stay image's run is named in the main program")
         caves["e"] = mm.CAVE_STAY
-    if handrec:                          # the handrec image: a start's two stores of the state, through ours; its own in the long image's run
+    if handrec:  # the handrec image: a start's two stores of the state, through ours; its own in the long image's run
         for addr in (mm.CAVE_LONG[0] - 2, mm.CAVE_LONG[1] - 2):
             _expect(image, addr, bytes.fromhex("4e75"), "the handrec image's run starts and ends a routine")
         if any(image.count(be32(a)) for a in range(mm.CAVE_LONG[0], mm.CAVE_LONG[1], 2)):
@@ -1801,19 +1805,19 @@ def once_patches(image, srr=False, stay=False, scratch=None, nxt=None, handrec=F
         _expect(image, 0x4008ad40, bytes.fromhex(fw.sx("f3d1e43732840933")), "the handrec image: MIDI start sent before the first store of state 1")
         for addr, stock, what in HANDREC_CONTEXT:
             _expect(image, addr, bytes.fromhex(stock), "the handrec image: " + what)
-    if firstrec:                         # the firstrec image: what a start queues for the first step
+    if firstrec:  # the firstrec image: what a start queues for the first step
         for addr, stock, what in FIRSTREC_CONTEXT:
             _expect(image, addr, bytes.fromhex(stock), "the firstrec image: " + what)
     code, syms = build_engine.compile_code(("once.S", "onceclean.c"), caves, "once_firstrec" if firstrec else "once_handrec" if handrec else "once_next" if nxt else "once_scratch" if scratch else "once_stay" if stay else "once_srr" if srr else "once",
                                            ("STEP_LOCKS=%#x" % mm.STEP_LOCKS, "MAIN_WAIT=%#x" % mm.MAIN_WAIT, "PARAM_SENT=%#x" % mm.PARAM_SENT,
                                             "LOCK_ONCE=%#x" % mm.ONCE_WORD, "LOCK_SPENT=%#x" % mm.ONCE_SPENT)
-                                           + (("SRR",) if srr else ())   # the srr image: an old pattern's locks of MODE are taken off there too
+                                           + (("SRR",) if srr else ())  # the srr image: an old pattern's locks of MODE are taken off there too
                                            + (("STAY", "SRR_DIRTY_AT=%#x" % mm.SRR_DIRTY) if stay else ())
                                            + (("SCRATCH", "SCRATCH_POLL_AT=%#x" % scratch) if scratch else ())
                                            + (("NEXT", "NEXT_POLL_AT=%#x" % nxt) if nxt else ())
                                            + (("HANDREC", "SEQ_STATE=%#x" % mm.SEQ_STATE, "TEMPO=%#x" % mm.TEMPO, "PATTERN_DATA=%#x" % mm.PATTERN_DATA,
                                                "LEN_TABLE=%#x" % mm.LEN_TABLE) if handrec else ())
-                                           + (("FIRSTREC", "PLACES=%#x" % mm.SEQ_PLACES) if firstrec else ()))   # the next image: DEST's NEXT kept at each message     # the scratch image: the poll at each message    # the stay image: nothing is spent where a step is only brought up to date
+                                           + (("FIRSTREC", "PLACES=%#x" % mm.SEQ_PLACES) if firstrec else ()))  # the next image: DEST's NEXT kept at each message     # the scratch image: the poll at each message    # the stay image: nothing is spent where a step is only brought up to date
     start, end = mm.CAVE_ONCE
     if handrec and (syms["hand_hold"], syms["hand_left"], syms["hand_rec"]) != (mm.HAND_HOLD, mm.HAND_LEFT, mm.HAND_REC):
         raise fw.GuardError("the handrec image's numbers and hand_rec must be first in the long image's run")
@@ -1837,19 +1841,19 @@ def once_patches(image, srr=False, stay=False, scratch=None, nxt=None, handrec=F
     # jsr (the wait) -> jsr once_loop
     out.append(fw.Patch(3, mm.off(mm.MAIN_LOOP_WAIT), JSR + be32(mm.MAIN_WAIT), JSR + be32(syms["once_loop"]),
                         "REC's ONCE: the main task takes a spent lock off when a message has come"))
-    if handrec:                          # the handrec image: its run
+    if handrec:  # the handrec image: its run
         lo, hi = mm.CAVE_LONG
         out.append(fw.Patch(3, mm.off(lo), image[mm.off(lo):mm.off(hi)], code["b"] + build_engine.NOP * ((hi - lo - len(code["b"])) // 2),
                             "REC's ONCE: a take played by hand, held for the TRIG page's LEN"))
-    if handrec:                          # movel %d0,SEQ_STATE -> jsr hand_start
+    if handrec:  # movel %d0,SEQ_STATE -> jsr hand_start
         for at in mm.SEQ_STARTS:
             out.append(fw.Patch(3, mm.off(at), b"\x23\xc0" + be32(mm.SEQ_STATE), JSR + be32(syms["hand_start"]),
                                 "REC's ONCE: a start takes every track's ONCE back"))
     return out, syms
 
 
-# The hits image: the per-block routine's call of the filter's envelope comes to ours, which hands it a trig of its own
-# for each hit DEL lets through on a sampler track and DEL at 0 there (engine/hits.c). Stock code it leans on:
+# The hits image: the per-block routine's call of the filter's envelope comes to ours, which hands it a trig of its
+# own for each hit DEL lets through on a sampler track and DEL at 0 there (engine/hits.c). Stock code it leans on:
 HITS_CONTEXT = [
     (mm.FILTER_ENV_CALL - 14, fw.sx("0ea2ff69e7a987f6acd0b0a3dd64294eed2d81d6") + "%08x" % mm.FILTER_ENV + fw.sx("36f1f38d930cad77"),
      "the per-block routine hands the envelope (the block, the trigs, the releases, the tracks it skips)"),
@@ -1902,7 +1906,7 @@ def hits_patches(image, ui=False, soloend=False, trans=False):
                             "the hitui image: FLTR1's picture is handed DEL through ours"))
         out.append(fw.Patch(3, mm.off(mm.POPUP_NAME), bytes.fromhex(fw.sx("89f24dd00698da0dbd04")), b"\x4e\xb9" + be32(syms["hit_popname"]),
                             "the hitui image: the pop-up's name through ours"))
-    if trans:       # the trans image: FLTR2 draws DEL as a knob on a sampler track
+    if trans:  # the trans image: FLTR2 draws DEL as a knob on a sampler track
         a, b = mm.CAVE_TRANS
         for addr in (a - 2, b - 2):
             _expect(image, addr, bytes.fromhex("4e75"), "the trans image's run starts and ends a routine")
@@ -1922,19 +1926,19 @@ def hits_patches(image, ui=False, soloend=False, trans=False):
 def patches(image, mixer=True, rec=False, big=False, keep=False, double=False, screen=False, page=False, load=False, bank=False,
             mute=False, floor=False, reclock=False, meter=False, save=False, probe=False, stereo=False, timed=False, gain=False,
             auto=False, peak=True, pack=False, stops=False, solo=False, ptn=False, feed=False, once=False, soloknob=False, xfade=False, prof=False):
-    soloknob = soloknob or xfade         # the xfade image: the soloknob image's main program, with a crossfade on the sampling page's knob G
-    once = once or soloknob              # the soloknob image: the once image's main program, with a solo on the sampling page's knob E
-    feed = feed or once                  # the once image: the feed image's main program, with REC's third setting
-    ptn = ptn or feed                    # the feed image: the ptn image's main program, with a block of a take written in a third of the instructions or less
-    solo = solo or ptn                   # the ptn image: the solo image's main program, with the takes written when a whole pattern is saved
-    stops = stops or solo                # the solo image: the stops image's main program, with the pattern's mutes as solos
-    pack = pack or stops                 # the stops image: the pack image's main program, with a turn of SMPL that skips what is no sample
-    auto = auto or pack                  # the pack image: the mode image's main program, with SMPL and DEST reading 33 to 64 as single slots
-    gain = gain or auto                  # the mode image: the gain image's main program, with what a take is on the sampling page,
-    #                                      MODE gone from the first, and (peak) the audio CPU's load in the page's last place
-    stereo = stereo or timed or gain     # the time image: the stereo image's main program with the audio CPU's load on the page.
-    #                                      The gain image: the stereo image's with a record gain on the page and in the feed
-    save = save or probe or stereo       # the probe image: the save image's main program with three numbers on the page
+    soloknob = soloknob or xfade  # the xfade image: the soloknob image's main program, with a crossfade on the sampling page's knob G
+    once = once or soloknob  # the soloknob image: the once image's main program, with a solo on the sampling page's knob E
+    feed = feed or once  # the once image: the feed image's main program, with REC's third setting
+    ptn = ptn or feed  # the feed image: the ptn image's main program, with a block of a take written in a third of the instructions or less
+    solo = solo or ptn  # the ptn image: the solo image's main program, with the takes written when a whole pattern is saved
+    stops = stops or solo  # the solo image: the stops image's main program, with the pattern's mutes as solos
+    pack = pack or stops  # the stops image: the pack image's main program, with a turn of SMPL that skips what is no sample
+    auto = auto or pack  # the pack image: the mode image's main program, with SMPL and DEST reading 33 to 64 as single slots
+    gain = gain or auto  # the mode image: the gain image's main program, with what a take is on the sampling page,
+    # MODE gone from the first, and (peak) the audio CPU's load in the page's last place
+    stereo = stereo or timed or gain  # the time image: the stereo image's main program with the audio CPU's load on the page.
+    # The gain image: the stereo image's with a record gain on the page and in the feed
+    save = save or probe or stereo  # the probe image: the save image's main program with three numbers on the page
     meter = meter or save
     reclock = reclock or meter
     floor = floor or reclock
@@ -1946,8 +1950,8 @@ def patches(image, mixer=True, rec=False, big=False, keep=False, double=False, s
     double = double or screen
     keep = keep or double
     rec, big = rec or keep, big or keep
-    srr = xfade >= 8                     # the srr image: the multi image with sample rate reduction in MODE's parameter
-    prof = prof or xfade >= 11           # the prof image: the stay image with the profile of the main CPU, kept from here on
+    srr = xfade >= 8  # the srr image: the multi image with sample rate reduction in MODE's parameter
+    prof = prof or xfade >= 11  # the prof image: the stay image with the profile of the main CPU, kept from here on
     out = descriptor_patches(image, page, floor, meter, auto, srr, xknob=xfade >= 26) + display_patches(image, words=screen, srr=srr, xknob=xfade >= 26)
     syms = {}
     if mixer or rec:
@@ -1971,10 +1975,10 @@ def patches(image, mixer=True, rec=False, big=False, keep=False, double=False, s
         out += more
         syms = dict(syms, **page_syms)
     if stereo:
-        more, right_syms = right_patches(image, stops, dma=xfade >= 3, lap=15 <= xfade < 41, movem=xfade >= 37)     # 41: the cut image, no laps      # 3: the dma image, the gfade image with the right channels by a transfer
+        more, right_syms = right_patches(image, stops, dma=xfade >= 3, lap=15 <= xfade < 41, movem=xfade >= 37)  # 41: the cut image, no laps      # 3: the dma image, the gfade image with the right channels by a transfer
         out += more
         syms = dict(syms, **right_syms)
-    if solo and not soloknob:            # (the soloknob image: the purple keys are stock's pattern mutes again)
+    if solo and not soloknob:  # (the soloknob image: the purple keys are stock's pattern mutes again)
         more, solo_syms = solo_patches(image)
         out += more
         syms = dict(syms, **solo_syms)
@@ -1983,32 +1987,32 @@ def patches(image, mixer=True, rec=False, big=False, keep=False, double=False, s
                                        nxt=syms["next_poll"] if xfade >= 61 else None, handrec=xfade >= 81, firstrec=xfade >= 82)
         out += more
         syms = dict(syms, **once_syms)
-    if xfade >= 16:                      # the hits image: a long sample's hits start the filter's envelope again, by DEL
-        more, hit_syms = hits_patches(image, ui=xfade >= 17, soloend=xfade >= 48, trans=xfade >= 60)      # 17: the hitui image, DEL named HITS and no delay drawn
+    if xfade >= 16:  # the hits image: a long sample's hits start the filter's envelope again, by DEL
+        more, hit_syms = hits_patches(image, ui=xfade >= 17, soloend=xfade >= 48, trans=xfade >= 60)  # 17: the hitui image, DEL named HITS and no delay drawn
         out += more
         syms = dict(syms, **hit_syms)
-    if xfade >= 64:                      # the mirror image: the screen to a viewer over USB
-        more, mirror_syms = mirror_patches(image, shadow=xfade >= 66, pieces=xfade >= 67)       # 66: the shadow image. 67: the sink image
+    if xfade >= 64:  # the mirror image: the screen to a viewer over USB
+        more, mirror_syms = mirror_patches(image, shadow=xfade >= 66, pieces=xfade >= 67)  # 66: the shadow image. 67: the sink image
         out += more
         syms = dict(syms, **mirror_syms)
-    if xfade >= 68:                      # the tune image: a pushed turn of the sampler's TUNE by 1
+    if xfade >= 68:  # the tune image: a pushed turn of the sampler's TUNE by 1
         more, tune_syms = tune_patches(image)
         out += more
         syms = dict(syms, **tune_syms)
-    if xfade >= 23:                      # the trig image: STRT and LOOP, LEN and SRR changed over on the first page
+    if xfade >= 23:  # the trig image: STRT and LOOP, LEN and SRR changed over on the first page
         out += first_page_patches(image)
-    if xfade == 30:                      # the long image: patterns 1..64 long, 65..128 their tails
+    if xfade == 30:  # the long image: patterns 1..64 long, 65..128 their tails
         more, long_syms = long_patches(image)
         out += more
         syms = dict(syms, **long_syms)
-    if xfade >= 35:                      # the rxoff image: stock's USB audio receive not run while the unit sends its own
+    if xfade >= 35:  # the rxoff image: stock's USB audio receive not run while the unit sends its own
         lo, hi = mm.CAVE_RXGATE
         for addr in (lo - 2, hi - 2):
             _expect(image, addr, bytes.fromhex("4e75"), "the rxoff image's run starts and ends a routine")
         if any(image.count(be32(a)) for a in range(lo, hi, 2)):
             raise fw.GuardError("an address in the rxoff image's run is named in the main program")
         code, rx_syms = build_engine.compile_code(("rxgate.S",), {"x": mm.CAVE_RXGATE}, "rxgate_cap" if xfade >= 36 else "rxgate",
-                                                  ("CAPTURE",) if xfade >= 36 else ())       # the rxcap image: and the phone has said a capture is on
+                                                  ("CAPTURE",) if xfade >= 36 else ())  # the rxcap image: and the phone has said a capture is on
         if xfade >= 36 and rx_syms["rx_capture"] != mm.CAVE_RXGATE[0]:
             raise fw.GuardError("the rxcap image's word must be first in the gate's run, where the phone's code finds it")
         out.append(fw.Patch(3, mm.off(lo), image[mm.off(lo):mm.off(hi)], code["x"] + build_engine.NOP * ((hi - lo - len(code["x"])) // 2),
@@ -2017,12 +2021,12 @@ def patches(image, mixer=True, rec=False, big=False, keep=False, double=False, s
         _expect(image, mm.RX_CALL - 10, bytes.fromhex("4878002048794551200040"[:20]) , "its two arguments, 32 and 0x45512000")
         out.append(fw.Patch(3, mm.off(mm.RX_CALL + 2), be32(0x400041cc), be32(rx_syms["rx_gate"]), "the rxoff image: the receive through the gate"))
         syms = dict(syms, **rx_syms)
-    if xfade >= 62:                      # the pbank image: the sample bank in the PROJECT menu, off the sampling page
+    if xfade >= 62:  # the pbank image: the sample bank in the PROJECT menu, off the sampling page
         more, pb_syms = pbank_patches(image)
         out += more
         syms = dict(syms, **pb_syms)
-    if EVLAP:                            # the evtime tool: four laps in the events and knobs stretch
-        more, ev_syms = evlap_patches(image, skip=(mm.RX_CALL,) if xfade >= 35 else ())   # the evrx tool: the receive's call is the gate's
+    if EVLAP:  # the evtime tool: four laps in the events and knobs stretch
+        more, ev_syms = evlap_patches(image, skip=(mm.RX_CALL,) if xfade >= 35 else ())  # the evrx tool: the receive's call is the gate's
         out += more
         syms = dict(syms, **ev_syms)
     return out, syms
@@ -2030,7 +2034,8 @@ def patches(image, mixer=True, rec=False, big=False, keep=False, double=False, s
 
 def pbank_patches(image):
     """The pbank image (engine/pbank.c): the PROJECT menu's constructor ends in ours, which adds a fourth entry, SAMPLE
-    BANK, that moves BANK_WANT on when chosen."""
+    BANK, that moves BANK_WANT on when chosen.
+    """
     lo, hi = mm.CAVE_PBANK
     for addr in (lo - 2, hi - 2):
         _expect(image, addr, bytes.fromhex("4e75"), "the pbank image's run starts and ends a routine")
@@ -2048,7 +2053,8 @@ def pbank_patches(image):
 
 def evlap_patches(image, skip=()):
     """The evtime tool (engine/evlap.S): each of four of stock's calls in the events and knobs stretch goes to a stub
-    that reads the profile's timer into the record and jumps on to the routine."""
+    that reads the profile's timer into the record and jumps on to the routine.
+    """
     lo, hi = mm.CAVE_EVLAP
     for addr in (lo - 2, hi - 2):
         _expect(image, addr, bytes.fromhex("4e75"), "the evtime tool's run starts and ends a routine")
@@ -2058,7 +2064,7 @@ def evlap_patches(image, skip=()):
     out = [fw.Patch(3, mm.off(lo), image[mm.off(lo):mm.off(hi)], code["e"] + build_engine.NOP * ((hi - lo - len(code["e"])) // 2),
                     "the evtime tool: four laps")]
     for k, (site, target) in enumerate(mm.EV_LAPS):
-        if site in skip:                 # a call another patch of this image takes: its lap is not reached
+        if site in skip:  # a call another patch of this image takes: its lap is not reached
             continue
         _expect(image, site, b"\x4e\xb9" + be32(target), "the evtime tool: a call in the events stretch")
         out.append(fw.Patch(3, mm.off(site + 2), be32(target), be32(syms["ev_lap%d" % (k + 1)]), "the evtime tool: lap %d" % (k + 1)))
@@ -2066,8 +2072,8 @@ def evlap_patches(image, skip=()):
 
 
 # The long image: every cue of a pattern sets stock's play queue (mm.QUEUE_SET, thirteen calls); ours sets it and puts
-# each head's tail after it with the head's kit. The UI's kit follows the playing pattern's number (mm.KIT_FOLLOW_CALL):
-# ours gives the head's while a tail plays with the head's kit.
+# each head's tail after it with the head's kit. The UI's kit follows the playing pattern's number
+# (mm.KIT_FOLLOW_CALL): ours gives the head's while a tail plays with the head's kit.
 def long_patches(image):
     lo, hi = mm.CAVE_LONG
     for addr in (lo - 2, hi - 2):
@@ -2086,7 +2092,7 @@ def long_patches(image):
     elo, ehi = mm.CAVE_EDIT
     for addr in (elo - 2, ehi - 2):
         _expect(image, addr, bytes.fromhex("4e75"), "the edit run starts and ends a routine")
-    named = lambda a: [i for i in range(len(image)) if image.startswith(be32(a), i) and i % 2 == 0]   # 0x40018d20's one match is at an odd place
+    named = lambda a: [i for i in range(len(image)) if image.startswith(be32(a), i) and i % 2 == 0]  # 0x40018d20's one match is at an odd place
     if any(image.count(be32(a)) and named(a) for a in range(elo, ehi, 2)):
         raise fw.GuardError("an address in the edit run is named in the main program")
     rlo, rhi = mm.CAVE_EDIT2
@@ -2131,17 +2137,16 @@ def long_patches(image):
     return out, {k: syms[k] for k in ("long_queue", "long_kitnum", "long_when", "long_rec", "long_now", "long_num", "long_clear", "long_copy", "long_paste")}
 
 
-# The trig image: the sampler's own page has STRT and LOOP changed over, and LEN and SRR. 
-# The start-up
-# routine stores each knob's record into machine 44's page entry (mm.PAGE_TABLE - 44, the record of knob k at + 8 + 4 k)
-# with a movel of a register to an absolute long: the four stores change places, nothing else. A lock is kept by knob
-# slot, so a project's locks stay with their knobs. (instruction, the record it stores, the knob it is stored for)
+# The trig image: the sampler's own page has STRT and LOOP changed over, and LEN and SRR. The start-up routine stores
+# each knob's record into machine 44's page entry (mm.PAGE_TABLE - 44, the record of knob k at + 8 + 4 k) with a movel
+# of a register to an absolute long: the four stores change places, nothing else. A lock is kept by knob slot, so a
+# project's locks stay with their knobs. (instruction, the record it stores, the knob it is stored for)
 FIRST_PAGE = mm.PAGE_TABLE - mm.PAGE_STRIDE + 8
 FIRST_SWAP = [
-    (0x40196a42, "23c8", 499, 2, 4),     # STRT: C -> E
-    (0x40196a48, "23c1", 501, 4, 2),     # LOOP: E -> C
-    (0x40196a5c, "23c2", 502, 5, 6),     # SRR: F -> G
-    (0x40196a62, "23c8", 500, 6, 5),     # LEN: G -> F
+    (0x40196a42, "23c8", 499, 2, 4),  # STRT: C -> E
+    (0x40196a48, "23c1", 501, 4, 2),  # LOOP: E -> C
+    (0x40196a5c, "23c2", 502, 5, 6),  # SRR: F -> G
+    (0x40196a62, "23c8", 500, 6, 5),  # LEN: G -> F
 ]
 
 

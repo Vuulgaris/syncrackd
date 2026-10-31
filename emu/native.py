@@ -61,7 +61,7 @@ def lib():
     path = os.path.join(OUT, "emac_native_%s.%s" % (tag, ext))
     if not os.path.exists(path):
         os.makedirs(OUT, exist_ok=True)
-        part = "%s.%d" % (path, os.getpid())        # built aside and moved in whole: test workers start together
+        part = "%s.%d" % (path, os.getpid())  # built aside and moved in whole: test workers start together
         subprocess.run([cc, "-O2", "-shared", "-fPIC", "-Wall", "-Werror", "-o", part, SRC],
                        check=True, capture_output=True)
         os.replace(part, path)

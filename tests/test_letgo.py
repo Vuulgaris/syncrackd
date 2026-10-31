@@ -1,15 +1,4 @@
-"""The letgo image (engine/sampler.h, LETGO): the tune image with two things on the audio CPU.
-
-):
-  - a stereo note that is over lets go of its right channel once both sides are under LETGO_QUIET: its track leaves the
-    mask, stock's stages are not run on its silence, the main CPU copies the left. Here: the left as the trap image's to
-    the bit, the right as the main CPU takes it within -100 dB of full scale of the trap image's, a panned sample and filter tails among
-    them; what eight silent stereo tracks cost now;
-  - the normalizer by what each take was. Here, each fault first shown on the trap image's section 7, then gone: a mono
-    take next to one being scaled stopped it part done; a mono take in slot 63 wrote the first long of slot 0; a take cut
-    short by the next on its track was never scaled;
-  - the image: section 3 the tune image's, section 7 the trap image's but for our runs.
-Emulation only."""
+"""The letgo image (engine/sampler.h, LETGO): the tune image with two things on the audio CPU."""
 import shutil
 
 import numpy as np
@@ -30,7 +19,7 @@ from tools import fw
 pytestmark = pytest.mark.skipif(not shutil.which("m68k-elf-gcc"), reason="no ColdFire cross-compiler")
 
 QUIET = 1 << 11
-FLOOR = 21474            # -100 dB of full scale, 2^31
+FLOOR = 21474  # -100 dB of full scale, 2^31
 
 
 @pytest.fixture(autouse=True)
@@ -53,7 +42,8 @@ def letgo(official):
 def scene(image, factory, seed, blocks=330):
     """Eight stereo one-shots of 1,200 frames, the four stages' knobs anywhere, trigged together every 110 blocks; track
     0's sample all left. -> a block's (the left after the last stage, the right as the main CPU takes it, the count,
-    the mask)."""
+    the mask).
+    """
     r = Rig(image)
     rng = np.random.default_rng(seed)
     pool = {k: rng.integers(-20000, 20000, 1200).astype(np.int16) for k in range(8)}
@@ -95,7 +85,7 @@ def test_the_left_is_the_trap_images_and_the_right_within_minus_100_db(scenes, s
 @pytest.mark.parametrize("seed", [5, 6])
 def test_a_silent_stereo_track_leaves_the_mask_and_comes_back_with_its_next_note(scenes, seed):
     was, now = scenes[seed]
-    assert all(a[3] == 0xff for a in was[5:])                       # the trap image: every track, ever after
+    assert all(a[3] == 0xff for a in was[5:])  # the trap image: every track, ever after
     masks = [b[3] for b in now]
     print("seed %d, the mask by block: %s" % (seed, " ".join("%d:%02x" % (b, masks[b]) for b in range(0, 110, 10))))
     assert masks[3] == 0xff and not masks[100] & 1 and bin(masks[100]).count("1") <= 3 and masks[113] == 0xff
@@ -120,8 +110,9 @@ def norm_engine(built, places):
 
 
 def back_to_back(built):
-    """Two mono takes in single slots side by side, the second begun as the first ends. -> the first's slot, frames,
-    its take as it was, and what is in its slot after."""
+    """Two mono takes in single slots side by side, the second begun as the first ends. -> the first's slot, frames, its
+    take as it was, and what is in its slot after.
+    """
     e = norm_engine(built, {4: 40, 5: 39})
     k, n, (left, _) = N.take(e, built, 4, N.sine(24, 2000, 11))
     k2, _, _ = N.take(e, built, 5, N.sine(10, 2000, 12), count=200)
@@ -133,7 +124,7 @@ def back_to_back(built):
 def test_a_mono_take_beside_one_being_scaled_stopped_it_on_the_trap_image(trap):
     k, n, left, got = back_to_back(trap)
     assert not np.array_equal(got, N.scaled(left, N.loudest(left)))
-    assert not np.array_equal(got, left)                            # part done
+    assert not np.array_equal(got, left)  # part done
 
 
 def test_now_it_is_scaled_whole(letgo):
@@ -160,8 +151,9 @@ def test_now_slot_0_and_the_neighbours_mark_are_left(letgo):
 
 
 def cut_short(built):
-    """A stereo take on track 3 cut short by the track's next trig, into another place. -> the first's slot, frames,
-    both sides as taken, and both after."""
+    """A stereo take on track 3 cut short by the track's next trig, into another place. -> the first's slot, frames, both
+    sides as taken, and both after.
+    """
     e = norm_engine(built, {3: 7})
     a = N.sine(14, 700, 14)
     N.tick(e, built, 1 << 3)

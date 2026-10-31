@@ -1,7 +1,4 @@
-"""The file protocol the phone speaks (tools/rpc.py), checked against the unit's own parser.
-
-Bytes only: nothing here opens a MIDI port. docs/FINDINGS.md, "The file protocol, for the phone".
-"""
+"""The file protocol the phone speaks (tools/rpc.py), checked against the unit's own parser."""
 import re
 import struct
 import zlib
@@ -11,7 +8,7 @@ import pytest
 from tools import mainmap as mm
 from tools import rpc
 
-SKIP = {0x4010394c, 0x4016f43a, 0x4016dfac}    # allocate, and the shared pointer's two helpers
+SKIP = {0x4010394c, 0x4016f43a, 0x4016dfac}  # allocate, and the shared pointer's two helpers
 
 
 @pytest.fixture(scope="module")
@@ -62,7 +59,7 @@ def built_by(img, classes, a, depth=0):
 def test_the_parser_reads_ids_through_a_table(sec3):
     assert mm.BASE == 0x40000400
     at = mm.off(mm.RPC_PARSE + 0x26)
-    assert sec3[at:at + 12] == bytes.fromhex("53807180 0c80000000de 6200")    # subql #1 ; mvzb ; cmpil #222 ; bhi
+    assert sec3[at:at + 12] == bytes.fromhex("53807180 0c80000000de 6200")  # subql #1 ; mvzb ; cmpil #222 ; bhi
 
 
 @pytest.mark.parametrize("ident,name", [
@@ -86,7 +83,7 @@ def test_each_id_is_the_request_the_unit_builds_for_it(sec3, classes, ident, nam
     case = case_of(sec3, ident)
     assert case != mm.RPC_NONE
     assert name in built_by(sec3, classes, case)
-    assert case_of(sec3, ident | 0x80) != mm.RPC_NONE      # and the unit knows the response
+    assert case_of(sec3, ident | 0x80) != mm.RPC_NONE  # and the unit knows the response
 
 
 def test_an_id_past_the_unit_s_last_goes_nowhere(sec3):
@@ -115,7 +112,7 @@ def test_a_frame_and_its_parse():
 
 
 def test_a_ping_frame_is_these_bytes():
-    assert rpc.frame(1, *rpc.ping()).hex() == "f000203c1000" + "000001000001" + "f7"   # the high bits, then 0 1 0 0 1
+    assert rpc.frame(1, *rpc.ping()).hex() == "f000203c1000" + "000001000001" + "f7"  # the high bits, then 0 1 0 0 1
 
 
 def test_a_write_block_carries_its_crc():
@@ -134,8 +131,8 @@ def test_a_sample_file_holds_the_unit_s_slot_format():
     slot = blob[top:top + rpc.SAMPLE_HEADER]
     assert rpc.SAMPLE_HEADER == mm.SAMPLE_HEADER
     assert slot[:4] == b"SAMP"
-    assert struct.unpack(">I", slot[8:12])[0] == len(frames)              # frames at + 8, as the store reads
-    assert slot[12:16] == b"KICK"                                          # name at + 12
+    assert struct.unpack(">I", slot[8:12])[0] == len(frames)  # frames at + 8, as the store reads
+    assert slot[12:16] == b"KICK"  # name at + 12
     assert len(blob) == top + mm.SAMPLE_HEADER + 2 * len(frames) + 12
     payload = mm.SAMPLE_HEADER + 2 * len(frames)
     assert struct.unpack(">III", blob[-12:]) == (zlib.crc32(blob[top:-12], 0xFFFFFFFF), payload, rpc.FILE_TAIL)

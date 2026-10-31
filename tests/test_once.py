@@ -1,21 +1,4 @@
-"""The once image: REC's third setting, ONCE (engine/once.S, engine/onceclean.c, engine/recpage.c under ONCE).
-
-
-
-
-What runs here, all from the built image:
-- the page: the knob's three settings and their words, on held steps and on the track, with stock's lock routines
-  run as they are on a table laid out as they index it (tests/test_reclock.py's rig);
-- the sequencer: the stretch of stock's routine that plays a step, from its test of the event to where both of its
-  ways go on (0x4008bc18..0x4008bc6e), run as it is with our two places in it, and stock's routine that gathers a
-  step's locks under it;
-- the main task's side: our wait, with stock's own wait played by the test, and under it stock's routine for a lock
-  removed by hand, and the two of stock's that give a track's steps;
-- stock's per-block loop that writes the hold flag (tests/test_save.py), for what the audio CPU is sent;
-- the audio CPU's engine, which is the feed image's, for the take.
-
-Played by the test, not run: the main task's loop around the wait, and whatever calls the step routine.
-"""
+"""The once image: REC's third setting, ONCE (engine/once.S, engine/onceclean.c, engine/recpage.c under ONCE)."""
 import shutil
 
 import numpy as np
@@ -41,11 +24,11 @@ SLOT = m.K_REC
 ON, OFF, ONCE, SPENT = m.REC_WORD_ON, m.REC_WORD_OFF, mm.ONCE_WORD, mm.ONCE_SPENT
 REC, STEREO = m.MODE_REC, m.MODE_STEREO
 P_REC = m.PARAM_KNOBS + 2 * SLOT
-FRAGMENT = 0x4008bc18                           # tstl %fp: the step routine with an event or none
-DATA = TABLE - 15301                            # the pattern's data, as the step routine holds it in a2
-X = 0x41234560                                  # the step routine's own argument at sp + 80: only pushed on
-MSG = HEAP + 0xe800                             # a message, as stock's wait answers one
-NUMBER, STEPS_AT = 0, MANAGER + 13204           # the selected pattern, and where stock's two routines put its tracks' steps
+FRAGMENT = 0x4008bc18  # tstl %fp: the step routine with an event or none
+DATA = TABLE - 15301  # the pattern's data, as the step routine holds it in a2
+X = 0x41234560  # the step routine's own argument at sp + 80: only pushed on
+MSG = HEAP + 0xe800  # a message, as stock's wait answers one
+NUMBER, STEPS_AT = 0, MANAGER + 13204  # the selected pattern, and where stock's two routines put its tracks' steps
 GAIN_KNOB, TAKE_KNOB, DEST_KNOB, BANK_KNOB = 6, 7, 2, 4
 
 
@@ -73,7 +56,8 @@ def audio(official):
 class OncePage(StopsPage):
     """The page rig on the sampling page, with what the sequencer's side and the main task's side need: the block the
     audio CPU is sent (for a track's machine), the eight tracks' steps objects where stock's own routines look for
-    them, and stock's wait."""
+    them, and stock's wait.
+    """
 
     def __init__(self, built, machines=None, **kw):
         self.once_writes, self.waits = [], []
@@ -125,7 +109,8 @@ class OncePage(StopsPage):
         self.mc.call(mm.LOCK_TABLE_MAKE, PATTERN_OBJ, self.track if track is None else track, step, slot, word)
 
     def play(self, step, track=None, event=True):
-        """The step is played: stock's routine from its test of the event on. -> the event's locks, [(slot, value)]."""
+        """The step is played: stock's routine from its test of the event on. -> the event's locks, [(slot, value)].
+        """
         mc, track = self.mc, self.track if track is None else track
         sp = STACK[1] - 0x800
         mc.write(LOCKS, b"\x77" * 0x400)
@@ -142,7 +127,7 @@ class OncePage(StopsPage):
         raw = bytes(mc.read(LOCKS, 0x400))
         assert raw[:8] == b"\x77" * 8 and raw[12:20] == b"\x77" * 8
         n = int.from_bytes(raw[8:12], "big")
-        assert raw[20 + 8 * n:] == b"\x77" * (0x400 - 20 - 8 * n)                 # nothing past the count
+        assert raw[20 + 8 * n:] == b"\x77" * (0x400 - 20 - 8 * n)  # nothing past the count
         return [(int.from_bytes(raw[20 + 8 * k:][:2], "big"), int.from_bytes(raw[22 + 8 * k:][:2], "big")) for k in range(n)]
 
     def wait(self):
@@ -165,11 +150,11 @@ def test_the_tracks_rec_has_three_settings_and_their_words(main, track):
     assert r.rec() == "OFF"
     assert r.twist(REC_KNOB, 1) == 1
     assert r.rec() == "ON" and r.mode == STEREO | REC and r.popped[-1] == ("REC", "ON") and r.arm == [0] * 8
-    r.twist(REC_KNOB, 1)                                            # ONCE: the bit of MODE off, the track's byte set
+    r.twist(REC_KNOB, 1)  # ONCE: the bit of MODE off, the track's byte set
     assert r.rec() == "ONCE" and r.mode == STEREO and r.popped[-1] == ("REC", "ONCE")
     assert r.arm == [int(t == track) for t in range(8)]
     shown = len(r.popped)
-    r.twist(REC_KNOB, 1)                                            # the end of the knob
+    r.twist(REC_KNOB, 1)  # the end of the knob
     assert r.rec() == "ONCE" and r.mode == STEREO and len(r.popped) == shown and r.arm[track] == 1
     r.twist(REC_KNOB, -1)
     assert r.rec() == "ON" and r.mode == STEREO | REC and r.popped[-1] == ("REC", "ON") and r.arm == [0] * 8
@@ -186,7 +171,7 @@ def test_a_fast_turn_goes_from_off_to_once_and_back_and_the_bit_of_mode_is_never
     assert r.rec() == "OFF" and r.arm == [0] * 8 and not r.changes and r.popped == [("REC", "ONCE"), ("REC", "OFF")]
     r.popups = False
     r.twist(REC_KNOB, 2)
-    assert r.arm[0] == 1 and len(r.popped) == 2                    # no pop-up where stock shows none
+    assert r.arm[0] == 1 and len(r.popped) == 2  # no pop-up where stock shows none
 
 
 def test_a_held_steps_rec_has_three_settings_and_only_slot_24_is_locked(main):
@@ -196,7 +181,7 @@ def test_a_held_steps_rec_has_three_settings_and_only_slot_24_is_locked(main):
     assert r.rec_locks == {5: ON} and r.rec() == "ON"
     r.twist(REC_KNOB, 1)
     assert r.rec_locks == {5: ONCE} and r.rec() == "ONCE" and r.count(5) == 1
-    assert r.notes[-1] == (NOTE, SLOT, 3)                          # stock tells the pattern's listeners, as for any lock
+    assert r.notes[-1] == (NOTE, SLOT, 3)  # stock tells the pattern's listeners, as for any lock
     r.twist(REC_KNOB, 1)
     assert r.rec_locks == {5: ONCE} and r.count(5) == 1
     # MODE and SRC are not locked by it, the track is as it was, and no byte of the track's ONCE moves
@@ -204,12 +189,12 @@ def test_a_held_steps_rec_has_three_settings_and_only_slot_24_is_locked(main):
     assert r.edited and r.done and not r.stray
     r.twist(REC_KNOB, -1)
     assert r.rec_locks == {5: ON} and r.rec() == "ON"
-    r.twist(REC_KNOB, -1)                                           # as the track: no lock
+    r.twist(REC_KNOB, -1)  # as the track: no lock
     assert not r.rec_locks and r.count(5) == 0 and r.rec() == "OFF"
-    r.twist(REC_KNOB, 2)                                            # two at once
+    r.twist(REC_KNOB, 2)  # two at once
     assert r.rec_locks == {5: ONCE}
     r.hold()
-    assert r.rec() == "OFF"                                         # with no step held it is the track's
+    assert r.rec() == "OFF"  # with no step held it is the track's
 
 
 def test_on_a_track_in_record_a_step_can_be_off_as_the_track_or_once(main):
@@ -230,14 +215,14 @@ def test_every_held_step_gets_its_own_and_a_step_with_no_trig_gets_one_first(mai
     r = page(main)
     r.hold(2, 3, 40)
     r.trigs = {2, 40}
-    r.put(40, ON)                                                   # one of them was locked on already
+    r.put(40, ON)  # one of them was locked on already
     r.twist(REC_KNOB, 1)
-    assert r.rec_locks == {2: ON, 3: ON, 40: ONCE}                 # each one setting up from where it was
+    assert r.rec_locks == {2: ON, 3: ON, 40: ONCE}  # each one setting up from where it was
     assert r.locked == [("trig", 3, 0)] and r.trigs == {2, 3, 40}
     r.length = 16
     r.hold(4, 20)
     r.twist(REC_KNOB, 2)
-    assert r.rec_locks == {2: ON, 3: ON, 4: ONCE, 40: ONCE}        # a step past the pattern's length is no held step
+    assert r.rec_locks == {2: ON, 3: ON, 4: ONCE, 40: ONCE}  # a step past the pattern's length is no held step
 
 
 def test_a_held_step_on_a_track_at_once_reads_as_the_track_and_can_be_locked_on_or_off(main):
@@ -277,13 +262,14 @@ def scene(built, mode, locks, held, turns):
 @pytest.mark.parametrize("mode", [0, REC, STEREO | REC, 5 << 2])
 @pytest.mark.parametrize("held", [(), (5,), (5, 9)])
 def test_a_project_the_feed_image_saved_reads_and_turns_the_same(main, before, mode, held):
-    """A step locked on or off, a track on or off: what the page shows, and every turn that stays between OFF and ON
-    and every turn of the other knobs, is the feed image's."""
+    """A step locked on or off, a track on or off: what the page shows, and every turn that stays between OFF and ON and
+    every turn of the other knobs, is the feed image's.
+    """
     locks = {5: ON, 9: OFF, 20: ON}
     turns = [(SRC_KNOB, 2), (DEST_KNOB, 3), (BANK_KNOB, 1), (GAIN_KNOB, 5), (TAKE_KNOB, 1), (TAKE_KNOB, -1), (REC_KNOB, -1), (REC_KNOB, -1)]
     assert scene(main, mode, locks, held, turns) == scene(before, mode, locks, held, turns)
     if not held:
-        up = [(REC_KNOB, -1), (REC_KNOB, 1)]                        # the track's, off and to on: a turn to the right from ON is new
+        up = [(REC_KNOB, -1), (REC_KNOB, 1)]  # the track's, off and to on: a turn to the right from ON is new
         assert scene(main, mode & ~REC, locks, held, up) == scene(before, mode & ~REC, locks, held, up)
 
 
@@ -303,7 +289,8 @@ def test_a_step_locked_once_is_played_as_one_locked_on_and_is_spent(main, track)
     locked(on, 9, ON), locked(once, 9, ONCE)
     was, made = once.table(), len(on.table_writes)
     assert on.play(9) == [(SLOT, ON)] and once.play(9) == [(SLOT, ONCE)] and on.kept and once.kept
-    # what stock's routine that applies an event's locks leaves for both: the mark of a step locked on, in slot 24's word
+    # what stock's routine that applies an event's locks leaves for both: the mark of a step locked on, in slot 24's
+    # word
     for r, word in ((on, ON), (once, ONCE)):
         r.mc.write(WORDS, bytes(0x800))
         r.mc.call(mm.LOCKS_APPLY, track, LOCKS, WORDS)
@@ -324,21 +311,21 @@ def test_a_step_locked_once_is_played_as_one_locked_on_and_is_spent(main, track)
 def test_the_main_task_takes_the_spent_lock_off_with_stocks_routine_and_the_trig_plays_on(main):
     r = page(main, track=2)
     locked(r, 9, ONCE), locked(r, 30, ON)
-    r.lay(9, 0x4000, slot=20)                                      # another lock on the same step, and a lock of another track
+    r.lay(9, 0x4000, slot=20)  # another lock on the same step, and a lock of another track
     r.lay(9, ONCE, track=4)
-    assert r.wait() == MSG and not r.notes and not r.once_writes    # nothing to do: stock's wait and its answer
+    assert r.wait() == MSG and not r.notes and not r.once_writes  # nothing to do: stock's wait and its answer
     idle = r.cost
     r.play(9)
     writes, trigs = len(r.table_writes), set(r.trigs)
-    assert r.wait() == MSG                                          # the message is stock's, whatever was done after it came
+    assert r.wait() == MSG  # the message is stock's, whatever was done after it came
     assert r.rec_locks == {30: ON} and r.lock_at(9) == NONE and r.count(9) == 1 and r.lock_at(9, 20) == 0x4000
     assert r.lock_at(9, track=4) == ONCE and r.dirty == [0] * 8
-    assert (NOTE, SLOT, 2) in r.notes                               # stock's routine told the pattern's listeners, as by hand
+    assert (NOTE, SLOT, 2) in r.notes  # stock's routine told the pattern's listeners, as by hand
     assert len(r.table_writes) > writes and r.trigs == trigs and not r.stray
-    assert r.play(9) == [(20, 0x4000)] and r.kept                   # the next pass: the step plays, with what else it holds
+    assert r.play(9) == [(20, 0x4000)] and r.kept  # the next pass: the step plays, with what else it holds
     assert r.wait() == MSG and r.cost == idle and idle <= 12
     r.hold(9)
-    assert r.rec() == "OFF"                                         # and the page reads the track's for it
+    assert r.rec() == "OFF"  # and the page reads the track's for it
 
 
 def test_a_step_locked_on_records_every_pass_and_nothing_is_taken_off(main):
@@ -365,10 +352,10 @@ def test_a_spent_lock_in_a_pattern_that_is_no_longer_selected_is_left_and_a_turn
     r = page(main)
     locked(r, 3, ONCE)
     r.play(3)
-    r.stub(0x400c2154, lambda obj: 1)                              # another pattern is selected: its steps objects are not these
+    r.stub(0x400c2154, lambda obj: 1)  # another pattern is selected: its steps objects are not these
     r.mc.uc.ctl_flush_tb()
     for t in range(12):
-        r.mc.w32(STEPS_AT + 1664 + 112 * (t + 1) + 44, 0)         # no pattern data behind them: stock's routines answer "none"
+        r.mc.w32(STEPS_AT + 1664 + 112 * (t + 1) + 44, 0)  # no pattern data behind them: stock's routines answer "none"
     r.wait()
     assert r.rec_locks == {3: SPENT} and r.dirty == [0] * 8
     r.hold(3)
@@ -389,9 +376,9 @@ def armed(built, track=0, **kw):
 def test_the_next_step_played_records_as_a_step_locked_on_and_the_track_is_off_after(main, track):
     r = armed(main, track=track)
     was = r.table()
-    assert r.play(11) == [(SLOT, ON)] and r.kept                   # a step with no locks: one, (slot 24, on)
+    assert r.play(11) == [(SLOT, ON)] and r.kept  # a step with no locks: one, (slot 24, on)
     assert r.arm == [0] * 8 and r.rec() == "OFF" and r.table() == was and r.dirty == [0] * 8
-    assert r.play(12) == [] and r.play(11) == []                    # and no other
+    assert r.play(12) == [] and r.play(11) == []  # and no other
     assert r.wait() == MSG and not r.notes and r.table() == was
 
 
@@ -410,14 +397,14 @@ def test_a_step_locked_off_leaves_it_for_the_next_and_one_locked_on_or_once_uses
     for word in (ON, ONCE):
         r = armed(main)
         r.lay(4, word)
-        assert r.play(4) == [(SLOT, word)] and r.arm == [0] * 8    # a take is made by the step's own lock: one take
+        assert r.play(4) == [(SLOT, word)] and r.arm == [0] * 8  # a take is made by the step's own lock: one take
         assert r.play(5) == []
 
 
 def test_a_spent_lock_on_the_step_does_not_stand_in_its_way(main):
     r = armed(main)
     r.lay(4, SPENT)
-    assert r.play(4) == [(SLOT, SPENT), (SLOT, ON)]                 # stock applies them in order: the last one stands
+    assert r.play(4) == [(SLOT, SPENT), (SLOT, ON)]  # stock applies them in order: the last one stands
     r.mc.write(WORDS, bytes(0x800))
     r.mc.call(mm.LOCKS_APPLY, 0, LOCKS, WORDS)
     assert bytes(r.mc.read(WORDS + P_REC, 2)) == ON.to_bytes(2, "big")
@@ -428,11 +415,11 @@ def test_an_event_that_is_full_is_left_as_it_is(main):
     for slot in range(71):
         if slot != SLOT:
             r.lay(4, 0x0100 + slot, slot=slot)
-    assert len(r.play(4)) == 71 and r.arm == [0] * 8               # 70 of its own and ours: all an event has room for
+    assert len(r.play(4)) == 71 and r.arm == [0] * 8  # 70 of its own and ours: all an event has room for
     r = armed(main)
     for slot in range(71):
         r.lay(4, SPENT if slot == SLOT else 0x0100 + slot, slot=slot)
-    assert len(r.play(4)) == 71 and r.arm[0] == 1                  # 71 of its own: nothing is added, and it waits
+    assert len(r.play(4)) == 71 and r.arm[0] == 1  # 71 of its own: nothing is added, and it waits
 
 
 def test_only_the_armed_track_and_a_turn_back_disarms(main):
@@ -447,7 +434,7 @@ def test_only_the_armed_track_and_a_turn_back_disarms(main):
 @pytest.mark.parametrize("track, machine", [(3, OTHER), (5, 35), (8, 0), (11, 0), (12, 0)])
 def test_a_track_that_is_no_sampler_is_played_as_stock_plays_it(main, track, machine):
     r = page(main, machines={track: machine} if track < 12 else None)
-    r.lay(9, ONCE, track=track)                                    # there the slot is a knob, or the hold flag
+    r.lay(9, ONCE, track=track)  # there the slot is a knob, or the hold flag
     r.mc.write(mm.ONCE_ARM, b"\x01" * 8)
     was = r.table()
     assert r.play(9, track=track) == [(SLOT, ONCE)] and r.play(10, track=track) == [] and r.kept
@@ -473,7 +460,7 @@ def test_with_nothing_at_once_the_step_routine_leaves_what_the_feed_images_leave
         there.setdefault((track, step), {}).update(locks)
         got, want = new.play(step, track=track), old.play(step, track=track)
         assert got == want == sorted(there[track, step].items()) and new.kept and old.kept and new.table() == old.table()
-        assert new.cost - old.cost <= (40 if got else 18)           # ours, a step: with locks the six pushes, the track's test, the row
+        assert new.cost - old.cost <= (40 if got else 18)  # ours, a step: with locks the six pushes, the track's test, the row
     assert new.arm == new.dirty == [0] * 8
 
 
@@ -505,18 +492,19 @@ def take(audio, mode, word, own=0):
 @pytest.mark.parametrize("mode", [0, STEREO, 5 << 2, STEREO | 9 << 2])
 def test_the_take_of_a_step_locked_once_is_the_take_of_a_step_locked_on(audio, mode):
     on, once = take(audio, mode, ON), take(audio, mode, ONCE)
-    assert on[0] == once[0] and on[1] == once[1] and not on[3] and len(once[1]) == 2    # a mono take leaves one frame in the second slot
-    assert len(once[1][0]) >= 2 * 8 * 32                            # eight blocks or more of the feed, in the first slot
+    assert on[0] == once[0] and on[1] == once[1] and not on[3] and len(once[1]) == 2  # a mono take leaves one frame in the second slot
+    assert len(once[1][0]) >= 2 * 8 * 32  # eight blocks or more of the feed, in the first slot
 
 
 @pytest.mark.parametrize("word", [SPENT, 0, 1])
 def test_on_the_second_pass_nothing_is_taken_and_the_tracks_own_rec_decides(audio, word):
-    assert take(audio, STEREO, word)[3]                             # REC off on the track: the step plays
-    assert not take(audio, STEREO, word, own=REC)[3]                # REC on: it records, as a step with no lock does
+    assert take(audio, STEREO, word)[3]  # REC off on the track: the step plays
+    assert not take(audio, STEREO, word, own=REC)[3]  # REC on: it records, as a step with no lock does
 
 
 def test_the_whole_way_from_the_knob_to_the_take_and_the_second_pass(main, audio):
-    """The page's lock, stock's gathering and applying, the per-block loop, the engine: ONCE against ON, pass by pass."""
+    """The page's lock, stock's gathering and applying, the per-block loop, the engine: ONCE against ON, pass by pass.
+    """
     out = {}
     for word in (ON, ONCE):
         r = page(main, track=4)
@@ -532,8 +520,8 @@ def test_the_whole_way_from_the_knob_to_the_take_and_the_second_pass(main, audio
             passes.append(take(audio, STEREO, int.from_bytes(sent[STRIDE * 4 + P_REC:][:2], "big")))
         out[word] = passes
         assert r.rec_locks == ({9: ON} if word == ON else {})
-    assert out[ONCE][0][:2] == out[ON][0][:2] and not out[ONCE][0][3]      # the first pass: the same take
-    assert out[ONCE][1][3] and out[ON][1][:2] == out[ON][0][:2]            # the second: none, where ON takes again
+    assert out[ONCE][0][:2] == out[ON][0][:2] and not out[ONCE][0][3]  # the first pass: the same take
+    assert out[ONCE][1][3] and out[ON][1][:2] == out[ON][0][:2]  # the second: none, where ON takes again
 
 
 # ---- the image -------------------------------------------------------------------------------------------------
@@ -569,7 +557,7 @@ def test_the_main_program_is_the_feed_images_but_for_its_declared_places(main, b
     for lo, hi in (mm.CAVE, mm.CAVE_AMUTE, mm.CAVE_REC, mm.CAVE_METER, mm.CAVE_FEED, mm.CAVE_KEEP, mm.CAVE_BANK, mm.CAVE_PAGE4, mm.CAVE_PAGE5,
                    mm.CAVE_SOLO, mm.CAVE_RIGHT, mm.CAVE_HALVES, mm.CAVE_TEXT):
         assert image[mm.off(lo):mm.off(hi)] == old[mm.off(lo):mm.off(hi)]
-    lo, hi = mm.CAVE_PAGE6                                          # the page's sixth run: the feed image's but for one operand
+    lo, hi = mm.CAVE_PAGE6  # the page's sixth run: the feed image's but for one operand
     assert sum(image[k] != old[k] for k in range(mm.off(lo), mm.off(hi))) <= 4
     for a, n in ((mm.STEP_LOCKS, 0x52), (mm.LOCK_DROP, 0x42), (mm.LOCK_TABLE_DROP, 0xd0), (mm.NOW_PATTERN, 0x36), (mm.STEPS_OF, 0x22),
                  (mm.MAIN_WAIT, 0x40), (mm.HOLD_LOOP, mm.HOLD_END - mm.HOLD_LOOP)):
@@ -597,7 +585,7 @@ def test_no_branch_goes_into_a_changed_place(stock3):
     landed = set()
     for a, raw, _ in boundaries(code, lo):
         op = int.from_bytes(raw[:2], "big")
-        if op >> 12 == 6:                                           # a branch
+        if op >> 12 == 6:  # a branch
             d = op & 0xff
             if d == 0:
                 landed.add(a + 2 + int.from_bytes(code[a - lo + 2:a - lo + 4], "big", signed=True))

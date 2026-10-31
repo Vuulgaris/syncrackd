@@ -1,8 +1,4 @@
-"""Phase 2: every address in tools/audiomap.py, checked against the pinned section 7.
-
-Each check reads an operand at the place the code uses it, so a different
-OS build fails here before anything is built on a wrong address.
-"""
+"""Phase 2: every address in tools/audiomap.py, checked against the pinned section 7."""
 import pytest
 
 from tools import audiomap as m
@@ -21,14 +17,14 @@ def op32(img, insn_addr):
 def test_image_and_entry(img):
     assert len(img) == m.SIZE
     assert m.u32(img, m.BASE) == m.ENTRY
-    assert op32(img, 0x4000107a) == m.STACK_TOP           # movea.l #,sp at entry
+    assert op32(img, 0x4000107a) == m.STACK_TOP  # movea.l #,sp at entry
 
 
 def test_boot_copies_and_bss(img):
     assert op32(img, 0x400004be) == m.SRAM_LO_SRC[0]
     assert op32(img, 0x400004c4) == m.SRAM
     assert op32(img, 0x400004d0) == m.SRAM_LO_SRC[1]
-    assert op32(img, 0x400004de) == m.SRAM_HI              # zero fill up to here
+    assert op32(img, 0x400004de) == m.SRAM_HI  # zero fill up to here
     assert op32(img, 0x400004e6) == m.SRAM_HI_SRC[0]
     assert op32(img, 0x400004ec) == m.SRAM_HI
     assert op32(img, 0x400004f8) == m.SRAM_HI_SRC[1] == m.IMAGE_END
@@ -38,8 +34,8 @@ def test_boot_copies_and_bss(img):
 
 
 def test_voice_loop_operands(img):
-    assert op32(img, 0x4000433c) == 0xA0                   # MACSR during the loop
-    assert op32(img, 0x400044d2) == 0x20                   # MACSR after
+    assert op32(img, 0x4000433c) == 0xA0  # MACSR during the loop
+    assert op32(img, 0x400044d2) == 0x20  # MACSR after
     assert op32(img, 0x400043aa) == m.VOICES
     assert op32(img, 0x400043be) == m.VOICE_SIZE
     assert op32(img, 0x400043c4) == m.PARAM_STRIDE
@@ -65,7 +61,7 @@ def test_engine_tables(img):
     ren = [m.u32(img, m.RENDER_TABLE + 4 * i) for i in range(m.N_ENGINES)]
     assert m.RENDER_TABLE + 4 * m.N_ENGINES == m.UPDATE_TABLE
     assert m.UPDATE_TABLE + 4 * m.N_ENGINES == m.TYPE_TO_ENGINE
-    assert (upd[6], ren[6]) == (0x40008074, 0x4000847a)    # SD VINTAGE, as in the notes
+    assert (upd[6], ren[6]) == (0x40008074, 0x4000847a)  # SD VINTAGE, as in the notes
     assert (upd[11], ren[11]) == (m.TWIN_UPDATE, m.TWIN_RENDER)
     code = range(m.BASE, m.CODE_END)
     assert all(a in code and a % 2 == 0 for a in upd + ren)
@@ -97,14 +93,14 @@ def test_twinshot_and_pool(img):
     assert op32(img, 0x40000d7e) == m.POOL_SIZE
     assert op32(img, 0x40000d84) == m.POOL
     assert op32(img, 0x40000d12) == m.POOL
-    assert op32(img, 0x40000d58) == m.POOL + 4             # first frame follows a u32 length
+    assert op32(img, 0x40000d58) == m.POOL + 4  # first frame follows a u32 length
     assert op32(img, 0x40000d30) == m.SLOT_LEN
     assert op32(img, 0x40000d2a) == m.SLOT_PTR
     assert op32(img, 0x40000d6c) == 8 * m.SLOTS
     assert m.POOL + m.POOL_SIZE == m.SLOT_LEN - 4
     # the chunk copy in init: memcpy(POOL + (index << 11), 0x800, 0x800)
     assert op32(img, 0x40000fba) == m.POOL
-    assert op32(img, 0x40000fae) >> 16 == op32(img, 0x40000fb2) >> 16 == m.POOL_CHUNK   # pea (xxx).W
+    assert op32(img, 0x40000fae) >> 16 == op32(img, 0x40000fb2) >> 16 == m.POOL_CHUNK  # pea (xxx).W
     # the SPI reader has no caller: its address appears nowhere as a 32-bit value
     assert img.find(m.POOL_LOAD.to_bytes(4, "big")) < 0
     assert m.SLOT_LEN + 8 * m.SLOTS <= m.BSS[1]

@@ -1,13 +1,4 @@
-"""The long image: the tlsolo image with patterns 1..64 long and 65..128 their tails.
-
-
-Every cue of a pattern sets stock's play queue
-(mm.QUEUE_SET, thirteen calls); engine/longpat.c sets it with stock's own routine and then puts each head's tail after
-it with the head's kit. The UI's kit object follows the playing pattern's number (mm.KIT_FOLLOW_CALL): ours gives the
-head's while a tail plays with the head's kit. Stock's queue routine runs here; the sequencer's hop and the main task's
-message that re-points the UI's kit do not: only the unit can show that the hop is clean and a knob turn in the second
-half is heard.
-"""
+"""The long image: the tlsolo image with patterns 1..64 long and 65..128 their tails."""
 import shutil
 
 import pytest
@@ -57,7 +48,7 @@ def rig(built, numbered=range(128)):
     mc.uc.reg_write(UC_M68K_REG_SR, 0x2000)  # a task runs as the supervisor: stock's own tasks mask with move to SR (0x4008b4e8)
     for n in numbered:
         mc.w32(data(n) + NUMBER, n)
-    mc.w32(RUNNING, 1)              # playing, so stock's routine only fills the queue
+    mc.w32(RUNNING, 1)  # playing, so stock's routine only fills the queue
     mc.w32(HANDOFF, 0)
     return mc, syms
 
@@ -145,10 +136,8 @@ def test_the_image_differs_from_the_tlsolo_image_only_where_declared(built, tlso
     assert a[mm.off(mm.KIT_FOLLOW_CALL) + 2:mm.off(mm.KIT_FOLLOW_CALL) + 6] == built[1]["long_kitnum"].to_bytes(4, "big")
 
 
-# The seam (the long image's second build). Stand-ins: the sequencer's routine that gives a hit's step
-# (mm.HIT_STEP) answers what a test says, and the live trig's writer (mm.LIVE_WRITE) keeps the step it is given and
-# the half it is told. Neither stock routine runs here: what the step routine answers at a pattern's end, and the
-# writer's going into another pattern than the playing one, only the unit shows.
+# Stand-ins: the sequencer's routine that gives a hit's step (mm.HIT_STEP) answers what a test says, and the live
+# trig's writer (mm.LIVE_WRITE) keeps the step it is given and the half it is told.
 SCRATCH = 0x43a10000
 TARGET = mm.CAVE_SEAM[1] - 4
 
@@ -164,22 +153,22 @@ def hit(built, playing, step, micro, pattern):
 
 
 def test_a_hit_carries_its_half_when_its_step_is_of_the_playing_pair(built):
-    assert hit(built, 3, 0, -5, 67) == (0xc0, 0xfb, 67)     # early for step 65: the tail's step 1
-    assert hit(built, 67, 0, -5, 3) == (0x40, 0xfb, 3)      # early for the loop's start: the head's step 1
+    assert hit(built, 3, 0, -5, 67) == (0xc0, 0xfb, 67)  # early for step 65: the tail's step 1
+    assert hit(built, 67, 0, -5, 3) == (0x40, 0xfb, 3)  # early for the loop's start: the head's step 1
     assert hit(built, 3, 10, 2, 3) == (0x4a, 2, 3)
     assert hit(built, 67, 63, 0, 67) == (0xff, 0, 67)
 
 
 def test_a_hit_of_another_pattern_is_stocks(built):
-    assert hit(built, 3, 0, -5, 9) == (0, 0xfb, 9)          # a chain to another pattern
+    assert hit(built, 3, 0, -5, 9) == (0, 0xfb, 9)  # a chain to another pattern
     assert hit(built, 3, 0, -5, 200) == (0, 0xfb, 200)
 
 
 def write(built, playing, step):
     mc, syms = rig(built)
     mc.w32(PLAYING, data(playing))
-    stub = (bytes.fromhex(fw.sx("052956b0aee643ed")) + b"\x23\xc0" + SCRATCH.to_bytes(4, "big")           # the step it is given
-            + b"\x20\x39" + TARGET.to_bytes(4, "big") + b"\x23\xc0" + (SCRATCH + 4).to_bytes(4, "big")   # the half
+    stub = (bytes.fromhex(fw.sx("052956b0aee643ed")) + b"\x23\xc0" + SCRATCH.to_bytes(4, "big")  # the step it is given
+            + b"\x20\x39" + TARGET.to_bytes(4, "big") + b"\x23\xc0" + (SCRATCH + 4).to_bytes(4, "big")  # the half
             + bytes.fromhex("4e75"))
     mc.write(mm.LIVE_WRITE, stub)
     mc.call(syms["long_rec"], 0x41000000, 2, 0, 0, 0, step, 0, 0, 0, 0)
@@ -188,10 +177,10 @@ def write(built, playing, step):
 
 
 def test_the_writer_is_told_the_half_and_the_plain_step(built):
-    assert write(built, 3, -64) == (0, 67, 0xffffffff)      # 0xc0 sign-extended: the tail, step 1
+    assert write(built, 3, -64) == (0, 67, 0xffffffff)  # 0xc0 sign-extended: the tail, step 1
     assert write(built, 67, 0x40) == (0, 3, 0xffffffff)
-    assert write(built, 70, -1) == (63, 70, 0xffffffff)     # a tail cued by itself: its own last step
-    assert write(built, 3, 10) == (10, -1, 0xffffffff)      # a step with no half given: stock's
+    assert write(built, 70, -1) == (63, 70, 0xffffffff)  # a tail cued by itself: its own last step
+    assert write(built, 3, 10) == (10, -1, 0xffffffff)  # a step with no half given: stock's
 
 
 def test_the_writers_pattern_and_number_are_the_halfs_while_it_runs(built):
@@ -212,9 +201,8 @@ def test_the_seams_five_places_point_at_ours(built):
     assert image[mm.off(TARGET):mm.off(TARGET) + 4] == b"\xff\xff\xff\xff"
 
 
-# The third build: clear, copy and paste of a head carry its tail. Stand-ins, assembled here, for stock's clear, paste,
-# copy and allocator, keeping what they are given; stock's copy of bytes (0x4011613c) runs. That stock's own routines
-# take the longer list as they take a list of the grid's, and the undo of both, only the unit shows.
+# Stand-ins, assembled here, for stock's clear, paste, copy and allocator, keeping what they are given; stock's copy
+# of bytes (0x4011613c) runs.
 import subprocess
 import tempfile
 
@@ -253,7 +241,7 @@ def edit_rig(built):
         mc.write(at, asm(text, at))
     note = 0x43a1ff00
     mc.write(note, asm("    addq.l #1,%#x\n    rts\n" % NOTES, note))
-    for t in range(128):            # each pattern object's method table: + 16, the "changed" stand-in
+    for t in range(128):  # each pattern object's method table: + 16, the "changed" stand-in
         obj = MANAGER + 13204 + 1664 * t
         mc.w32(obj, 0x43a1fe00)
     mc.w32(0x43a1fe00 + 16, note)
@@ -295,7 +283,7 @@ def test_a_paste_on_a_head_puts_the_copied_tail_on_its_tail(built):
     fill(mc, 67, 0xab)
     assert mc.call(syms["long_copy"], MANAGER, 3) & 0xff == 1
     assert mc.r32(EDIT_DATA) == KEPT_BUF and mc.r32(EDIT_DATA + 4) == 3
-    fill(mc, 67, 0x11)              # the tail changed after the copy: the paste is of what was copied
+    fill(mc, 67, 0x11)  # the tail changed after the copy: the paste is of what was copied
     assert run_with_list(mc, syms, "long_paste", [10, 70], 1) == [10, 70, 74]
     assert mc.read(data(74), 64) == bytes([0xab]) * 64
     assert mc.read(data(74) + NUMBER - 8, 8) == bytes([0xab]) * 8

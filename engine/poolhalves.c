@@ -1,34 +1,30 @@
-/* Main CPU (section 3, OS 1.42 only): the audio CPU's sample pool, sent in two
- * halves. The "double" image only; it takes the place of engine/poolstage.c.
+/* Main CPU (section 3, OS 1.42 only): the audio CPU's sample pool, sent in two halves. The "double" image only; it
+ * takes the place of engine/poolstage.c.
  *
- * The pool is a stream: for each of the 64 slots its frame count and its
- * samples. Stock builds all of it in one block of main CPU memory (a marker
- * byte, 4 bytes of length, the stream) and a task hands it to the audio CPU in
- * 2 KB chunks, numbered. The block is 32 MB and there is no second one, but the
- * audio CPU's pool is 64 MB and it puts each chunk where its number says.
+ * The pool is a stream: for each of the 64 slots its frame count and its samples. Stock builds all of it in one block
+ * of main CPU memory (a marker byte, 4 bytes of length, the stream) and a task hands it to the audio CPU in 2 KB
+ * chunks, numbered. The block is 32 MB and there is no second one, but the audio CPU's pool is 64 MB and it puts each
+ * chunk where its number says.
  *
  * So the block holds one half of the stream at a time:
- *   - pool_stage, which stock calls once before the exchange, fills it with the
- *     first half and writes the whole stream's length, so the sender counts all
- *     the chunks;
- *   - pool_chunk is called by the sender for every chunk in place of its own
- *     "block + 5 + (index << 11)". From chunk HALF_CHUNKS on it answers with the
- *     chunk's place in the second half, and fills the block with that half first.
+ * - pool_stage, which stock calls once before the exchange, fills it with the
+ * first half and writes the whole stream's length, so the sender counts all
+ * the chunks;
+ * - pool_chunk is called by the sender for every chunk in place of its own
+ * "block + 5 + (index << 11)". From chunk HALF_CHUNKS on it answers with the
+ * chunk's place in the second half, and fills the block with that half first.
  *
- * Which half the block holds is its marker byte: stock's 0xaa for the first,
- * 0xab for the second. Nothing in the program reads that byte. If the exchange
- * starts again from chunk 0 the first half is staged again.
+ * Which half the block holds is its marker byte: stock's 0xaa for the first, 0xab for the second. Nothing in the
+ * program reads that byte. If the exchange starts again from chunk 0 the first half is staged again.
  *
- * A pool of no more than one half never leaves the first path: the block is
- * what engine/poolstage.c builds and every chunk comes from where stock took it.
+ * A pool of no more than one half never leaves the first path: the block is what engine/poolstage.c builds and every
+ * chunk comes from where stock took it.
  *
- * The refill reads up to 32 MB from the drive while the exchange stands still,
- * and a stock timer calls a timeout when its count of ticks without progress
- * passes 18. The count is cleared here after every piece of at most 16 KB.
+ * The refill reads up to 32 MB from the drive while the exchange stands still, and a stock timer calls a timeout when
+ * its count of ticks without progress passes 18. The count is cleared here after every piece of at most 16 KB.
  *
- * Each half is no more of the block than stock could use at its fullest, in
- * whole chunks. A slot that does not fit in two halves gets a count of 0.
- */
+ * Each half is no more of the block than stock could use at its fullest, in whole chunks. A slot that does not fit in
+ * two halves gets a count of 0. */
 #include "sampler.h"
 
 #define STAGE ((u8 *)0x4d84f2c0)
@@ -46,9 +42,8 @@
 
 struct header { u32 magic, unused, frames; u8 rest[52]; };
 
-/* Fill the block with the stream's bytes [part * HALF, part * HALF + HALF).
- * Returns the whole stream's length. Both halves size every slot the same way,
- * from its header: the drive does not change while the unit boots. */
+/* Fill the block with the stream's bytes [part * HALF, part * HALF + HALF). Returns the whole stream's length. Both
+ * halves size every slot the same way, from its header: the drive does not change while the unit boots. */
 __attribute__((section(".cave.h"), noinline))
 static u32 stage(u32 part)
 {

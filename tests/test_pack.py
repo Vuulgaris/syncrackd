@@ -1,33 +1,4 @@
-"""The "pack" image: mono samples in single slots at the back.
-
-
-
-
-
-
-
-
-
-So (engine/sampler.h, PACK):
-  - SMPL's 64 numbers are 64 places. 1 to 32 are the stereo samples as they were, number n in Transfer's slots
-    2n - 1 and 2n. 33 to 64 are the slots of those numbers, each a mono sample whatever the slot after it holds:
-    the number says which kind a place is, and nothing is found out from what two slots hold;
-  - a take lands in the place it is sent to. In a stereo place it is what MODE says, as on the mode image. In a
-    single slot it is half of the source's two sides added, whatever MODE says, and nothing of the slot after it
-    is written: not its frames, not its line of the table, not its mark;
-  - DEST on the sampling page goes to 64, and SMPL past 32 reads the slot's own name.
-
-What is held here, in emulation:
-  - the 32 stereo places play the frames the cross image plays, and a single slot plays the frames the cross image
-    plays of the same sample alone in a stereo place;
-  - the engine is the reference model (emu/sampler_ref.py, pack=True);
-  - the routine a take is made by, which is written by hand on this image: against the cross image's for a stereo
-    place's takes, block for block through a stalled feed, a feed ahead, a ring overrun, a full buffer, a note let
-    go and a new trig; and for a single slot's take against the stereo take of the same feed;
-  - the page's DEST, the knob's text, and that the two programs differ from the cross image's only where meant.
-
-Not held: anything on the unit.
-"""
+"""The "pack" image: mono samples in single slots at the back."""
 import shutil
 
 import numpy as np
@@ -52,10 +23,10 @@ from tools import mainmap as mm
 
 pytestmark = pytest.mark.skipif(not shutil.which("m68k-elf-gcc"), reason="no ColdFire cross-compiler")
 
-S_STEREO, S_REC, S_RK, S_RSEQ, S_RPOS = 48, 51, 52, 54, 56      # in a voice's sampler state
-SINGLE = 0x80                           # what `link` holds while a single slot's take runs
-SINGLES = 32                            # the first place that is a single slot
-DEST_KNOB = 2                           # the sampling page's second knob, as a turn names it
+S_STEREO, S_REC, S_RK, S_RSEQ, S_RPOS = 48, 51, 52, 54, 56  # in a voice's sampler state
+SINGLE = 0x80  # what `link` holds while a single slot's take runs
+SINGLES = 32  # the first place that is a single slot
+DEST_KNOB = 2  # the sampling page's second knob, as a turn names it
 
 
 @pytest.fixture(scope="module")
@@ -148,14 +119,16 @@ def test_a_loops_seam_is_the_cross_images(pack, cross, name, note):
     assert np.array_equal(left, was_l) and np.array_equal(right, was_r) and np.any(left)
 
 
-# ---- a single slot is a mono sample ---------------------------------------------------------------------------------
+# ---- a single slot is a mono sample
+# ---------------------------------------------------------------------------------
 
 @pytest.mark.parametrize("after", ["as long", "longer", "nothing"])
 @pytest.mark.parametrize("place", [32, 33, 40, 47, 62, 63])
 def test_a_single_slot_is_a_mono_sample_whatever_the_slot_after_it_holds(pack, cross, place, after):
-    """A slot of the back half by its own number: the frames the cross image plays of the same sample alone in a
-    stereo place, no right channel made, and the reference model's. With a slot after it that is as long to the
-    frame, which in a stereo place is a right channel."""
+    """A slot of the back half by its own number: the frames the cross image plays of the same sample alone in a stereo
+    place, no right channel made, and the reference model's. With a slot after it that is as long to the frame, which
+    in a stereo place is a right channel.
+    """
     if place == 63 and after != "nothing":
         pytest.skip("there is no slot after the last")
     data = noise(1500, place)
@@ -186,8 +159,9 @@ def test_the_engine_is_the_reference_model_in_a_single_slot(pack, place, reverse
 
 @pytest.mark.parametrize("reverse", [False, True])
 def test_every_number_of_the_knob_is_its_own_place(pack, reverse):
-    """All 64 slots hold a sample of one length, the worst there is for telling a pair from two. 1 to 32: the two
-    slots 2n - 1 and 2n. 33 to 64: the slot of that number and no right channel."""
+    """All 64 slots hold a sample of one length, the worst there is for telling a pair from two. 1 to 32: the two slots
+    2n - 1 and 2n. 33 to 64: the slot of that number and no right channel.
+    """
     pool = {k: noise(600, k) for k in range(64)}
     e = P.engine(pack, pool=pool)
     table = [P.slot_entry(e, k)[1] for k in range(64)]
@@ -204,8 +178,9 @@ def test_every_number_of_the_knob_is_its_own_place(pack, reverse):
 
 
 def test_a_single_slot_costs_a_mono_voices_work(pack):
-    """Instructions of the voice loop's call with one voice playing three octaves down: a single slot's, a mono
-    sample's in a stereo place, and a stereo sample's."""
+    """Instructions of the voice loop's call with one voice playing three octaves down: a single slot's, a mono sample's
+    in a stereo place, and a stereo sample's.
+    """
     def cost(pool, place):
         e = P.engine(pack, pool=pool)
         for t in range(1, m.N_VOICES):
@@ -224,7 +199,8 @@ def test_a_single_slot_costs_a_mono_voices_work(pack):
     assert abs(single - alone) < 40 and two - single > 1000
 
 
-# ---- a take lands in its place ---------------------------------------------------------------------------------------
+# ---- a take lands in its place
+# ---------------------------------------------------------------------------------------
 
 def half(data, n):
     """What a single slot's take holds of n blocks fed: half of the two sides added."""
@@ -254,8 +230,9 @@ def fence(e, k, frames=777):
 @pytest.mark.parametrize("mode", [P.REC, P.REC | P.STEREO | src(3)])
 @pytest.mark.parametrize("place", [32, 41, 62, 63])
 def test_a_take_in_a_single_slot_is_half_of_the_two_sides_and_touches_that_slot_alone(pack, place, mode):
-    """Whatever MODE says. The slots either side hold samples of their own, kept, with their buffers marked: their
-    lines of the table, their marks and their buffers are as they were. Past the last slot's buffer too."""
+    """Whatever MODE says. The slots either side hold samples of their own, kept, with their buffers marked: their lines
+    of the table, their marks and their buffers are as they were. Past the last slot's buffer too.
+    """
     e = P.engine(pack)
     P.box(e)
     track = 3
@@ -268,13 +245,14 @@ def test_a_take_in_a_single_slot_is_half_of_the_two_sides_and_touches_that_slot_
     data = P.hold(e, track=track, n=20)
     assert is_half(P.taken(e, place), data, 20) and all(ok() for ok in kept)
     assert P.untouched(e, but=(place - 1, place, place + 1)) and bytes(e.mc.read(past, 0x1000)) == b"\xa5" * 0x1000
-    assert e.mc.r32(m.KEPT + 4 * place) == 0                                # the take is not on the drive
+    assert e.mc.r32(m.KEPT + 4 * place) == 0  # the take is not on the drive
     assert e.mc.read(e.voice(track) + ST + S_LINK, 1)[0] == SINGLE
 
 
 @pytest.mark.parametrize("track, place", [(0, 0), (5, 16), (7, 31)])
 def test_a_take_in_a_stereo_place_is_what_mode_says_as_it_was(pack, track, place):
-    """In the back half's slots too: place 17 is slots 33 and 34 of Transfer, a stereo sample when it is used as one."""
+    """In the back half's slots too: place 17 is slots 33 and 34 of Transfer, a stereo sample when it is used as one.
+    """
     k = 2 * place
     for mode, second in ((P.REC | P.STEREO, None), (P.REC | src(1), 1)):
         e = P.engine(pack)
@@ -314,8 +292,9 @@ def test_a_number_that_is_no_place_means_smpl(pack, dest):
 
 
 def test_two_single_takes_of_one_length_side_by_side_are_two_mono_samples(pack):
-    """What length could not tell from a stereo pair. Each plays alone at its own number; and the stereo place
-    those two slots are, 21, takes them for a stereo sample: the knob's number says which."""
+    """What length could not tell from a stereo pair. Each plays alone at its own number; and the stereo place those two
+    slots are, 21, takes them for a stereo sample: the knob's number says which.
+    """
     e = P.engine(pack)
     P.box(e)
     for place, seed in ((40, 1), (41, 2)):
@@ -337,8 +316,9 @@ def test_two_single_takes_of_one_length_side_by_side_are_two_mono_samples(pack):
 
 
 def test_a_single_slots_take_is_handed_to_the_drive_alone(pack):
-    """The keep's requests (engine/keeptakes.c), a slot each: the take's slot has a take, the slot after it has
-    none to give."""
+    """The keep's requests (engine/keeptakes.c), a slot each: the take's slot has a take, the slot after it has none to
+    give.
+    """
     e = P.engine(pack)
     P.box(e)
     e.set_slot(5, SAMPLE, knob_of(50))
@@ -352,23 +332,26 @@ def test_a_single_slots_take_is_handed_to_the_drive_alone(pack):
     assert K.ask(e, 50, 0)[1] == 0 and e.mc.r32(m.KEPT + 4 * 50) == len(took) ^ m.KEEP_MARK
 
 
-# ---- the routine a take is made by, written by hand here ---------------------------------------------------------------
+# ---- the routine a take is made by, written by hand here
+# ---------------------------------------------------------------
 
 TRACK = 4
-# a block of the audio CPU each: (blocks the feed puts in the ring before it, a trig, the note let go, frames taken to jump to)
-TAKES = ([(1, 1, 0, None)] + [(1, 0, 0, None)] * 5                          # a take begins
-         + [(0, 0, 0, None)] * 2 + [(3, 0, 0, None), (1, 0, 0, None)]       # the feed stalls, then is three ahead
-         + [(8, 0, 0, None), (1, 0, 0, None)]                               # a whole ring ahead: still nothing lost
-         + [(9, 0, 0, None), (1, 0, 0, None), (1, 0, 0, None)]              # more than a ring: the take ends
-         + [(1, 1, 0, None), (1, 0, 0, None), (1, 0, 0, m.REC_MAX - 3 * BLOCK)]     # a new take, then nearly a full buffer
-         + [(1, 0, 0, None)] * 5                                            # which fills, and the take ends
-         + [(1, 1, 0, None)] + [(1, 0, 0, None)] * 3 + [(1, 0, 1, None)] + [(1, 0, 0, None)] * 2     # a new take, and the note let go
-         + [(2, 1, 0, None), (1, 0, 0, None), (1, 1, 0, None), (2, 0, 0, None), (1, 0, 1, None), (1, 0, 0, None)])   # a trig over a take
+# a block of the audio CPU each: (blocks the feed puts in the ring before it, a trig, the note let go, frames taken to
+# jump to)
+TAKES = ([(1, 1, 0, None)] + [(1, 0, 0, None)] * 5  # a take begins
+         + [(0, 0, 0, None)] * 2 + [(3, 0, 0, None), (1, 0, 0, None)]  # the feed stalls, then is three ahead
+         + [(8, 0, 0, None), (1, 0, 0, None)]  # a whole ring ahead: still nothing lost
+         + [(9, 0, 0, None), (1, 0, 0, None), (1, 0, 0, None)]  # more than a ring: the take ends
+         + [(1, 1, 0, None), (1, 0, 0, None), (1, 0, 0, m.REC_MAX - 3 * BLOCK)]  # a new take, then nearly a full buffer
+         + [(1, 0, 0, None)] * 5  # which fills, and the take ends
+         + [(1, 1, 0, None)] + [(1, 0, 0, None)] * 3 + [(1, 0, 1, None)] + [(1, 0, 0, None)] * 2  # a new take, and the note let go
+         + [(2, 1, 0, None), (1, 0, 0, None), (1, 1, 0, None), (2, 0, 0, None), (1, 0, 1, None), (1, 0, 0, None)])  # a trig over a take
 
 
-# What that is, in blocks the take holds after each (a trig acts a block after it is set): five blocks; a stalled feed adds
-# nothing; three at once; eight at once, the whole ring; nine, and the take ends where it was; a new one, jumped to two
-# blocks short of full, fills and ends; a new one ends where its note is let go; a trig over a running take begins again.
+# What that is, in blocks the take holds after each (a trig acts a block after it is set): five blocks; a stalled feed
+# adds nothing; three at once; eight at once, the whole ring; nine, and the take ends where it was; a new one, jumped
+# to two blocks short of full, fills and ends; a new one ends where its note is let go; a trig over a running take
+# begins again.
 FULL = m.REC_MAX // BLOCK
 STORY = ([0, 1, 2, 3, 4, 5, 5, 5, 8, 9, 17, 18, 18, 18, 18, 18, 1, FULL - 2, FULL - 1] + [FULL] * 5
          + [1, 2, 3, 4, 4, 4, 4, 1, 2, 1, 2, 2])
@@ -376,8 +359,9 @@ RUNNING = [0] + [1] * 11 + [0] * 4 + [1] * 3 + [0] * 5 + [1] * 3 + [0] * 4 + [1]
 
 
 def takes(built, place, mode, fenced=()):
-    """TAKES on a track with SMPL on a place. -> after every block the whole table, the marks, and the voice's take;
-    then the engine."""
+    """TAKES on a track with SMPL on a place. -> after every block the whole table, the marks, and the voice's take; then
+    the engine.
+    """
     e = P.engine(built)
     P.box(e)
     e.set_slot(TRACK, SAMPLE, knob_of(place))
@@ -392,7 +376,7 @@ def takes(built, place, mode, fenced=()):
             e.mc.write(m.MAILBOX, e.seq.to_bytes(2, "big"))
             fed += 1
         if jump is not None:
-            e.mc.w32(at + S_RPOS, jump)                                     # test only
+            e.mc.w32(at + S_RPOS, jump)  # test only
         e.block(trig << TRACK, release << TRACK)
         seen.append(([P.slot_entry(e, k) for k in range(64)], bytes(e.mc.read(m.KEPT, 4 * 64)),
                      e.mc.read(at + S_REC, 1)[0], e.mc.read(at + S_RK, 1)[0], bytes(e.mc.read(at + S_RSEQ, 6))))
@@ -417,17 +401,18 @@ def test_a_stereo_places_takes_are_the_cross_images_block_for_block(pack, cross,
     assert now == was
     for k in (2 * place, 2 * place + 1):
         assert all(np.array_equal(a, b) for a, b in zip(frames_of(e, k, WHERE), frames_of(old, k, WHERE)))
-    assert [table[2 * place][0] // BLOCK for table, *_ in now] == STORY     # and every way a take ends was gone through
+    assert [table[2 * place][0] // BLOCK for table, *_ in now] == STORY  # and every way a take ends was gone through
     assert [rec for _, _, rec, _, _ in now] == RUNNING
 
 
 @pytest.mark.parametrize("mode", [P.REC | P.STEREO, P.REC])
 @pytest.mark.parametrize("place", [40, 63])
 def test_a_single_slots_take_is_the_stereo_take_of_the_same_feed_added_and_halved(pack, place, mode):
-    """The same blocks of the ring taken at the same moments as a stereo take of the stereo place this slot is the
-    left of (41 is slots 41 and 42 of Transfer; 64 has none, so 32's right is read against it). The slot's line of
-    the table and the voice's count after every block are the stereo take's; its frames are half of the two; and
-    the slots either side, kept samples with marked buffers, are as they were after every block."""
+    """The same blocks of the ring taken at the same moments as a stereo take of the stereo place this slot is the left
+    of (41 is slots 41 and 42 of Transfer; 64 has none, so 32's right is read against it). The slot's line of the
+    table and the voice's count after every block are the stereo take's; its frames are half of the two; and the slots
+    either side, kept samples with marked buffers, are as they were after every block.
+    """
     left = place & ~1
     two, old = takes(pack, left // 2, P.REC | P.STEREO)
     one, e = takes(pack, place, mode, fenced=[k for k in (place - 1, place + 1) if k < 64])
@@ -450,11 +435,13 @@ def test_full_scale_on_both_sides_is_full_scale_in_a_single_slot(pack):
         assert set(P.taken(e, 63).tolist()) == {value}
 
 
-# ---- what it costs ------------------------------------------------------------------------------------------------------
+# ---- what it costs
+# ------------------------------------------------------------------------------------------------------
 
 def test_an_interrupt_costs_what_the_cross_images_did(pack, cross, factory):
-    """Eight pitched stereo loops: a steady block is the cross image's to a few instructions (a test more where a
-    pass begins), and the block eight notes start in is under 200 over it."""
+    """Eight pitched stereo loops: a steady block is the cross image's to a few instructions (a test more where a pass
+    begins), and the block eight notes start in is under 200 over it.
+    """
     was = costs(cross[0], factory, 55.25, 80, start=30, length=40)
     now = costs(pack[0], factory, 55.25, 80, start=30, length=40)
     assert abs(int(np.median(now[60:])) - int(np.median(was[60:]))) < 40 and abs(max(now) - max(was)) < 200
@@ -462,7 +449,8 @@ def test_an_interrupt_costs_what_the_cross_images_did(pack, cross, factory):
     assert 0 <= b[0] - a[0] < 200 and abs(b[1] - a[1]) < 40 and abs(b[2] - a[2]) < 40
 
 
-# ---- the page and the knob's text ------------------------------------------------------------------------------------------
+# ---- the page and the knob's text
+# ------------------------------------------------------------------------------------------
 
 def test_dest_goes_to_64_and_the_box_holds_the_place(main, before):
     r = GainPage(main, track=0)
@@ -472,15 +460,16 @@ def test_dest_goes_to_64_and_the_box_holds_the_place(main, before):
         assert r.twist(DEST_KNOB, steps) == 1 and r.dest == want
         word = "SMPL" if not want else "%02d" % want
         assert (59, 39, word) in r.show() and r.box[0] == (want - 1 if want else m.DEST_SMPL) and not r.stray
-    old = GainPage(before, track=0)                                         # (the mode image's stops at the last stereo sample)
+    old = GainPage(before, track=0)  # (the mode image's stops at the last stereo sample)
     old.mc.w32(PAGE + mm.PAGE_INDEX, 1)
     old.show()
     assert old.twist(DEST_KNOB, 50) == 1 and old.dest == 32
 
 
 def test_smpl_reads_a_single_slots_own_name_whole(main, before):
-    """1 to 32 as on the mode image: the first slot's name without its side. 33 to 64: the slot of that number,
-    its name as it is, on either half of the knob."""
+    """1 to 32 as on the mode image: the first slot's name without its side. 33 to 64: the slot of that number, its name
+    as it is, on either half of the knob.
+    """
     names = {1: "KICK L", 2: "KICK R", 3: "ALONE", 33: "HAT", 40: "TAKE 20 R", 41: "LOOP_L", 63: "PAD L", 64: "LAST"}
     shown = {1: "KICK", 2: "ALONE", 17: "HAT", 21: "LOOP", 32: "PAD"}
     s = S.Screen(main, 1, names)
@@ -490,15 +479,17 @@ def test_smpl_reads_a_single_slots_own_name_whole(main, before):
             assert s.text(S.SMPL, S.knob_value(n, reverse)) == want, (n, reverse)
     assert [S.stock_number(value) for _, value in s.slot_texts] == [2 * n - 1 if n <= 32 else n for n in range(1, 65) for _ in range(2)]
     assert not s.valued and not s.stray
-    old = S.Screen(before, 1, names)                                        # (the mode image: past 32 there was nothing)
+    old = S.Screen(before, 1, names)  # (the mode image: past 32 there was nothing)
     assert old.text(S.SMPL, S.knob_value(64)) == S.NO_SAMPLE and old.text(S.SMPL, S.knob_value(2)) == "ALONE"
 
 
-# ---- the programs, and the image -------------------------------------------------------------------------------------------
+# ---- the programs, and the image
+# -------------------------------------------------------------------------------------------
 
 def test_section_7_is_the_cross_images_but_for_our_code(stock, pack, cross):
-    """The same runs of code and the same pointers into them: no new run, and nothing of stock's touched that was
-    not. The routine of a take is the hand-written one, in the run the compiler's was in."""
+    """The same runs of code and the same pointers into them: no new run, and nothing of stock's touched that was not.
+    The routine of a take is the hand-written one, in the run the compiler's was in.
+    """
     image, syms = pack
     runs = dict(m.CAVES, **m.REC_CAVES, **m.FADE_CAVES, **m.LIVE_CAVES, **m.PITCH_CAVES, **m.ONE_CAVES, **m.QUICK_CAVES)
     runs.update(m.LEAN_CAVES, **{k: v for k, v in m.TIMED_CAVES.items() if k != "m"}, **m.CROSS_CAVES)

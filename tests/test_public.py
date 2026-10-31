@@ -1,8 +1,4 @@
-"""The public tree (tools/export_public.py) and its guard (tools/public_check.py). Needs no firmware.
-
-The export holds nothing the guard fails on, none of the private files, no Makefile target of the private
-workflow, the bench's notes as stubs; the guard fails on what it is for.
-"""
+"""The public tree (tools/export_public.py) and its guard (tools/public_check.py). Needs no firmware."""
 import os
 
 from tools import export_public, public_check
@@ -20,7 +16,7 @@ def test_the_export_passes_the_guard(tmp_path):
     with open(os.path.join(dest, "Makefile")) as f:
         make = f.read()
     assert "tools.pick" not in make and "tools.claim" not in make and "push.command" not in make
-    for doc in ("docs/FINDINGS.md", "docs/SAMPLER.md"):        # the bench's notes: a stub each, the notes private
+    for doc in ("docs/FINDINGS.md", "docs/SAMPLER.md"):  # the bench's notes: a stub each, the notes private
         with open(os.path.join(dest, doc)) as f:
             assert f.read() == export_public.STUBS[doc]
     assert not os.path.exists(os.path.join(dest, "docs/REPORT.md"))

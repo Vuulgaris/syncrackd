@@ -1,25 +1,4 @@
-"""The "stereo" image: a stereo sample on one track (engine/sampler.c and engine/rightfill.c built with ONETRACK).
-
-
-
-
-has the design.
-
-What is held here, all of it in emulation:
-  - Audio CPU. The right channel comes out of stock's four stages exactly as a stock track would
-    have made it, fed that signal with those knobs and trigs: the real interrupt of the built image
-    against the stock interrupt, bit for bit, with the knobs, trigs, MODE and machines moving. The
-    left channels and every other machine are what they were.
-  - Main CPU. The real mixer with its four right-hand passes pointed at a second set of buffers:
-    the left side of every sum is stock's of the left buffers, the right side stock's of the right
-    ones, and with the second set a copy of the first it is stock bit for bit.
-  - Across. What the audio CPU leaves in the window is what the main CPU's routine puts in the
-    second set, and a window that does not answer leaves every track as it was: mono.
-
-Not held here, and not to be had without the unit: that the two stretches of the window are real
-shared memory, what the right channels cost either CPU in time, and whether the main CPU always
-reads a right channel before the audio CPU writes the next.
-"""
+"""The "stereo" image: a stereo sample on one track (engine/sampler.c and engine/rightfill.c built with ONETRACK)."""
 import re
 import shutil
 
@@ -44,7 +23,7 @@ pytestmark = pytest.mark.skipif(not shutil.which("m68k-elf-gcc"), reason="no Col
 
 SAMPLER, TONE = 44, 4
 TUNE, SAMPLE, START, LENGTH, LOOP, MODE, DECAY = 18, 19, 20, 21, 22, 23, 25
-ST = 1712                   # a voice's sampler state
+ST = 1712  # a voice's sampler state
 RVALID, RLIVE = 50, m.RLIVE
 
 
@@ -100,8 +79,9 @@ def knobs_of(rng, tracks=range(8)):
 
 
 def scenario(seed, blocks=80):
-    """Blocks of (what to set before it, trig, release): eight sampler tracks, some stereo, with the stage knobs,
-    the notes, MODE and the machines moving. The same list drives the built image and stock."""
+    """Blocks of (what to set before it, trig, release): eight sampler tracks, some stereo, with the stage knobs, the
+    notes, MODE and the machines moving. The same list drives the built image and stock.
+    """
     rng = np.random.default_rng(seed)
     stereo_tracks = int(rng.integers(1, 256))
     steps = []
@@ -117,11 +97,11 @@ def scenario(seed, blocks=80):
         if n == 0 or rng.random() < 0.06:
             s2, cuts, flags = knobs_of(rng)
             sets += s2
-        if n and rng.random() < 0.08:                   # MODE turned on a track: its right channel goes or comes
+        if n and rng.random() < 0.08:  # MODE turned on a track: its right channel goes or comes
             t = int(rng.integers(0, 8))
             stereo_tracks ^= 1 << t
             sets.append((t, MODE, stereo_tracks >> t & 1))
-        if n and rng.random() < 0.05:                   # another machine on a track, or the sampler back
+        if n and rng.random() < 0.05:  # another machine on a track, or the sampler back
             t = int(rng.integers(0, 8))
             machines.append((t, TONE if rng.random() < 0.6 else SAMPLER))
         if n and rng.random() < 0.05:
@@ -145,8 +125,9 @@ def scenario(seed, blocks=80):
 
 
 def played(image, script, earlier=False):
-    """The built image through the script. -> a list a block of dict(voices, waiting, left, mask, right).
-    earlier: an image from before this one, which leaves nothing in the window to say."""
+    """The built image through the script. -> a list a block of dict(voices, waiting, left, mask, right). earlier: an
+    image from before this one, which leaves nothing in the window to say.
+    """
     r = Rig(image)
     r.load_pool(pool())
     out = []
@@ -178,9 +159,10 @@ def stretches(masks, t):
 
 @pytest.mark.parametrize("seed", range(6))
 def test_a_right_channel_comes_out_as_a_stock_track_would_have_made_it(stock, stereo, seed):
-    """The built image's interrupt, then stock's on the same signals. The left: stock fed what the voices made.
-    A right channel, for as long as its track has one: stock fed the left up to the block it came on and the
-    right from then, on that track. Bit for bit, the stage knobs, trigs, MODE and machines moving."""
+    """The built image's interrupt, then stock's on the same signals. The left: stock fed what the voices made. A right
+    channel, for as long as its track has one: stock fed the left up to the block it came on and the right from then,
+    on that track. Bit for bit, the stage knobs, trigs, MODE and machines moving.
+    """
     image, _ = stereo
     script = scenario(seed)
     _, got = played(image, script)
@@ -200,7 +182,7 @@ def test_a_right_channel_comes_out_as_a_stock_track_would_have_made_it(stock, st
     assert checked > 40 and loud > 20
 
 
-SWARM = 117348              # the audio CPU's whole interrupt with stock's heaviest machine on all eight tracks (docs/FINDINGS.md, Phase 5)
+SWARM = 117348  # the audio CPU's whole interrupt with stock's heaviest machine on all eight tracks (docs/FINDINGS.md, Phase 5)
 
 
 def test_all_eight_tracks_stereo(factory, stock, stereo):
@@ -221,14 +203,15 @@ def test_all_eight_tracks_stereo(factory, stock, stereo):
     for n in range(2, 24):
         fed[n] = got[n]["waiting"]
     want = stock_of(stock, script(1), fed)
-    for n in range(3, 24):                              # from the block after the one they all came on in: one reference for all
+    for n in range(3, 24):  # from the block after the one they all came on in: one reference for all
         for t in range(8):
             assert np.array_equal(got[n]["right"][t], want[n][t]) and got[n]["right"][t].any()
 
 
 def whole(image, factory, stereo_tracks, note, mode=1, earlier=False):
-    """Instructions of an interrupt, a steady block: eight sampler tracks looping, `stereo_tracks` of them on a
-    sample, the rest on an empty slot. -> (the voices, stock's stages, the last stage's call, all of it)"""
+    """Instructions of an interrupt, a steady block: eight sampler tracks looping, `stereo_tracks` of them on a sample,
+    the rest on an empty slot. -> (the voices, stock's stages, the last stage's call, all of it)
+    """
     def first(r):
         samplers(r, factory, loop=1, mode=mode)
         for t in range(stereo_tracks):
@@ -241,28 +224,22 @@ def whole(image, factory, stereo_tracks, note, mode=1, earlier=False):
 
 
 def test_what_the_right_channels_cost_the_audio_cpu(factory, stock, stereo, pitch):
-    """Instructions, which are a lower bound on time: the emulator knows nothing of the cache or of how long the
-    window takes to answer. Against the one thing known to work on the unit, stock's heaviest machine on all eight
-    tracks: SWARM instructions an interrupt."""
+    """Instructions, which are a lower bound on time: the emulator knows nothing of the cache or of how long the window
+    takes to answer.
+    """
     image, _ = stereo
     before, _ = pitch
     # no right channel anywhere: what the image costs a unit that never uses it
     idle, was = whole(image, factory, 8, 60, mode=0), whole(before, factory, 8, 60, mode=0, earlier=True)
-    assert idle[1] == was[1] and 0 < idle[2] - was[2] <= 30 and idle[3] <= was[3]      # 23 more in the last stage's call, fewer after the voices
-    # the right channels themselves: the first costs the two stages that do all eight tracks a call, each one after it its own two
-    # (the third build's copies move more longs a turn: 16,041, 2,703 and 34,962 before it)
+    assert idle[1] == was[1] and 0 < idle[2] - was[2] <= 30 and idle[3] <= was[3]  # 23 more in the last stage's call, fewer after the voices
     last = [whole(image, factory, n, 60)[2] - idle[2] for n in (1, 2, 8)]
     assert 13800 < last[0] < 14800 and 2300 < last[1] - last[0] < 2700 and 31000 < last[2] < 32500
     # whole interrupts. At a sample's own pitch all eight stereo are under stock's heaviest
     assert whole(image, factory, 8, 60)[3] < 0.66 * SWARM
-    # pitched, a stereo voice sums sixteen frames twice a frame. The image's first build made those sums as the pitch
-    # image does, and eight tracks of them were 160,319, 1.37 of stock's heaviest: on the unit, "major distortion".
-    # The second makes them stock's way, a run of frames a call (tests/test_quick.py): eight were 116,679, 0.99 of
-    # it by count, and on the unit's own meter 99 hundredths of a block and at times over, where stock's heaviest is
-    # about 88. The third takes 7,905 more off (tests/test_lean.py)
+    # pitched, a stereo voice sums sixteen frames twice a frame. The third takes 7,905 more off (tests/test_lean.py)
     four, eight = whole(image, factory, 4, 55.25)[3], whole(image, factory, 8, 55.25)[3]
     assert four < 0.69 * SWARM and 0.92 * SWARM < eight < 0.94 * SWARM
-    assert eight < whole(before, factory, 8, 55.25, earlier=True)[3]            # less than the pitch image's eight with four right channels
+    assert eight < whole(before, factory, 8, 55.25, earlier=True)[3]  # less than the pitch image's eight with four right channels
 
 
 # ---- the audio CPU: everything else is as it was ------------------------------------------------------
@@ -274,8 +251,9 @@ def descs(official):
 
 @pytest.mark.parametrize("mtype", [t for t in m.TYPE_OF_ENGINE if t != SAMPLER])
 def test_a_stock_machine_goes_through_the_interrupt_as_it_did(official, stock, stereo, descs, mtype):
-    """Every stock machine on all eight tracks through the whole interrupt, the stage knobs at their factory values:
-    what the audio CPU sends is stock's, bit for bit, and the long in the window says no track has a right channel."""
+    """Every stock machine on all eight tracks through the whole interrupt, the stage knobs at their factory values: what
+    the audio CPU sends is stock's, bit for bit, and the long in the window says no track has a right channel.
+    """
     image, _ = stereo
     track_defaults = {p.slot: p.default for p in params.load(official.section(3), official.version) if p.type in (47, 45)}
     out = []
@@ -291,7 +269,7 @@ def test_a_stock_machine_goes_through_the_interrupt_as_it_did(official, stock, s
         out.append((np.array(blocks), b))
     assert np.array_equal(out[0][0], out[1][0]) and out[0][0].any()
     assert out[1][1].word() == m.rw_word(0)
-    assert out[0][1].word() == 0                        # stock leaves that place alone
+    assert out[0][1].word() == 0  # stock leaves that place alone
 
 
 def voice(e, t):
@@ -323,7 +301,7 @@ def test_a_stereo_note_has_one_from_the_block_it_starts_in(stereo, factory, trac
     """And the last track can hold one, which it could not while a right channel took the next track."""
     image, _ = stereo
     r, got = one_note(image, factory, track, sample=64, mode=1)
-    assert [b["mask"] for b in got] == [0, 0] + [1 << track] * 12      # the trig's block has no note yet
+    assert [b["mask"] for b in got] == [0, 0] + [1 << track] * 12  # the trig's block has no note yet
     assert all(b["right"][track].any() and b["left"][track].any() for b in got[2:])
     assert not np.array_equal(got[4]["right"][track], got[4]["left"][track])
     assert voice(r, track)["rlive"] == 1
@@ -333,8 +311,9 @@ def test_a_stereo_note_has_one_from_the_block_it_starts_in(stereo, factory, trac
 
 
 def test_a_stereo_sample_whose_right_slot_is_the_shorter_plays_as_one_channel(stereo, factory):
-    """Sample 3 of the pool. The engine has always dropped such a right channel: now the main CPU is told there is
-    none and puts the left on both sides, where the next track played silence."""
+    """Sample 3 of the pool. The engine has always dropped such a right channel: now the main CPU is told there is none
+    and puts the left on both sides, where the next track played silence.
+    """
     image, _ = stereo
     r, got = one_note(image, factory, 2, sample=64 + 3, mode=1)
     assert {b["mask"] for b in got} == {0} and any(b["left"][2].any() for b in got)
@@ -355,16 +334,16 @@ def test_turning_mode_takes_the_right_channel_away_and_a_note_brings_it_back(ste
         + [(mode(0), 0, 0), (None, 2, 0)] + [(None, 0, 0)] * 3 + [(mode(1), 0, 0)] + [(None, 0, 0)] * 3
     _, got = played(image, script)
     masks = [b["mask"] for b in got]
-    assert masks[:10] == [0, 0, 2, 2, 2, 2, 0, 0, 0, 0]         # MODE to mono: gone in that block
-    assert masks[10:14] == [2, 2, 2, 2]                          # and back: the note is still a stereo one
-    assert masks[14:] == [0] * 9                                 # a note that started mono has no right channel, whatever MODE says after
+    assert masks[:10] == [0, 0, 2, 2, 2, 2, 0, 0, 0, 0]  # MODE to mono: gone in that block
+    assert masks[10:14] == [2, 2, 2, 2]  # and back: the note is still a stereo one
+    assert masks[14:] == [0] * 9  # a note that started mono has no right channel, whatever MODE says after
 
 
 # ---- the main CPU: the second set of buffers ----------------------------------------------------------
 
 RSET = mm.RIGHT_SET
-DMA_FLAG, DMA_STATUS = 0x43bde73c, 0xfc0455fe       # stock's "a transfer was started", and channel 47's status word
-SEND, SKIP = mm.RIGHT_HOOK + 12, 0x400a4e74         # after stock's test at the place we take: the audio CPU up, or down
+DMA_FLAG, DMA_STATUS = 0x43bde73c, 0xfc0455fe  # stock's "a transfer was started", and channel 47's status word
+SEND, SKIP = mm.RIGHT_HOOK + 12, 0x400a4e74  # after stock's test at the place we take: the audio CPU up, or down
 STACK = 0x407ff000
 
 
@@ -396,7 +375,8 @@ def window_of(rights, mask, word=None):
 
 
 class FillRig:
-    """The main CPU around our routine: stock's wait, the place in the per-block routine it is called from, the window."""
+    """The main CPU around our routine: stock's wait, the place in the per-block routine it is called from, the window.
+    """
 
     def __init__(self, image, syms=None):
         mc = self.mc = Machine()
@@ -421,7 +401,7 @@ class FillRig:
         mc.write(RSET - 64, b"\xee" * (64 + 1280 + 64))
         mc.w32(mm.AUDIO_UP, up)
         mc.write(DMA_FLAG, bytes([1 if busy else 0]))
-        mc.write(DMA_STATUS, b"\x00\x80")               # done, so stock's wait ends
+        mc.write(DMA_STATUS, b"\x00\x80")  # done, so stock's wait ends
         self.reads, self.writes = [], []
 
     def right(self):
@@ -458,8 +438,9 @@ def test_the_second_set_is_each_tracks_right_channel_or_a_copy_of_its_left(main,
 
 @pytest.mark.parametrize("word", [0, 0xffffffff, 0x52570000, 0x5257ffff, 0x5257fe00, 0x5357ff00, 0x1257a55a, 0x5a5aa55a, m.rw_word(0x3c) ^ 0x100])
 def test_a_long_that_does_not_agree_with_itself_leaves_every_track_mono(main, word):
-    """What that place holds if it is not memory the audio CPU can write: anything. Then no half is read, and
-    every right buffer is the left's: the unit sounds as it would with every sample mono."""
+    """What that place holds if it is not memory the audio CPU can write: anything. Then no half is read, and every right
+    buffer is the left's: the unit sounds as it would with every sample mono.
+    """
     assert word != m.rw_word(word & 0xff)
     r = FillRig(*main)
     tracks = some_tracks()
@@ -469,9 +450,10 @@ def test_a_long_that_does_not_agree_with_itself_leaves_every_track_mono(main, wo
 
 
 def test_with_the_audio_cpu_down_the_window_is_not_read_and_the_long_is_cleared(main):
-    """Stock clears the track buffers then, and the boot loader has the window: the copies are of silence. The long
-    is set to 0, so that the audio CPU's restart does not leave the main CPU a block of what was there before it:
-    the audio CPU clears stock's part of the window at its start and none of ours."""
+    """Stock clears the track buffers then, and the boot loader has the window: the copies are of silence. The long is
+    set to 0, so that the audio CPU's restart does not leave the main CPU a block of what was there before it: the
+    audio CPU clears stock's part of the window at its start and none of ours.
+    """
     r = FillRig(*main)
     tracks = np.zeros((8, 32), dtype=np.int32)
     window = window_of({t: some_tracks(40)[t] for t in range(8)}, 0xff)
@@ -493,15 +475,16 @@ def test_it_waits_for_the_left_buffers_as_stock_does_before_it_reads_anything(ma
     r.set(some_tracks(), window_of({0: some_tracks(40)[0]}, 1), busy=True)
     r.mc.call(r.fill)
     order = [a for a, s in r.reads if a in (DMA_FLAG, DMA_STATUS) or mm.SHARED <= a < mm.SHARED + 0x2000 or mm.TRACKS <= a < mm.TRACKS + 1024]
-    assert order[:2] == [DMA_FLAG, DMA_STATUS] and r.mc.read(DMA_FLAG, 1) == b"\0"     # stock's routine: it saw the transfer done and said so
+    assert order[:2] == [DMA_FLAG, DMA_STATUS] and r.mc.read(DMA_FLAG, 1) == b"\0"  # stock's routine: it saw the transfer done and said so
     assert (DMA_FLAG, 1) in r.writes
 
 
 @pytest.mark.parametrize("up", [0, 1, 0x100])
 def test_the_place_it_is_called_from_goes_on_as_stock_does(stock3, main, up):
-    """Stock: wait, test "the audio CPU is up", send the knobs or skip that. Ours: the routine, which waits and
-    answers what stock tested, then the same branch. Both run from that place to where the two ways part, every
-    register a routine may not change left as it was."""
+    """Stock: wait, test "the audio CPU is up", send the knobs or skip that. Ours: the routine, which waits and answers
+    what stock tested, then the same branch. Both run from that place to where the two ways part, every register a
+    routine may not change left as it was.
+    """
     image, syms = main
     ends = []
     for img in (stock3, image):
@@ -509,7 +492,7 @@ def test_the_place_it_is_called_from_goes_on_as_stock_does(stock3, main, up):
         r.set(some_tracks(), window_of({}, 0), up=up, busy=True)
         for k in range(2, 8):
             r.mc.set_reg(k, 0x1000 + k)
-            r.mc.set_reg(8 + k, 0x2000 + k)             # a2..a7: a7 is set again below
+            r.mc.set_reg(8 + k, 0x2000 + k)  # a2..a7: a7 is set again below
         r.mc.uc.reg_write(UC_M68K_REG_A7, STACK - 0x40)
         r.mc.uc.emu_start(mm.RIGHT_HOOK, 0)
         ends.append((r.mc.uc.reg_read(UC_M68K_REG_PC), [r.mc.reg(k) for k in range(2, 8)], [r.mc.reg(8 + k) for k in range(2, 8)],
@@ -519,8 +502,9 @@ def test_the_place_it_is_called_from_goes_on_as_stock_does(stock3, main, up):
 
 
 def test_what_it_costs_the_main_cpu(main):
-    """Instructions a block: eight copies when no track is stereo, the same from the window when all are. The
-    mixer without its effects is 21,381. What a long read from the window costs in time is not known."""
+    """Instructions a block: eight copies when no track is stereo, the same from the window when all are. The mixer
+    without its effects is 21,381. What a long read from the window costs in time is not known.
+    """
     r = FillRig(*main)
     counts = []
     for mask in (0, 1, 0xff):
@@ -531,18 +515,19 @@ def test_what_it_costs_the_main_cpu(main):
     assert counts == COST_MAIN
 
 
-COST_MAIN = [732, 762, 979]          # no track stereo, one, all eight
+COST_MAIN = [732, 762, 979]  # no track stereo, one, all eight
 
 
 # ---- the main CPU: the real mixer with its right-hand passes on the second set ---------------------------
 
 BUSES = dict(send=(mm.BUS_L, 256), dry=(mm.BUS_DRY_L, 256), fx=(mm.BUS_FX_L, 256), out=(W.OUT_FRAME, 1024), frame=(mm.FRAME, 4 * 32 * mm.FRAME_CH))
-RETURNS = (0x8000dcd0, 0x8000ddd0)      # what the delay and the reverb leave for the mix: a stereo pair each
+RETURNS = (0x8000dcd0, 0x8000ddd0)  # what the delay and the reverb leave for the mix: a stereo pair each
 
 
 class Mix(W.Mixer):
     """tests/test_mixer_whole.py's rig: the whole mixer, its effects made returns. Here the delay's and the reverb's
-    outputs are given numbers and their levels turned up, so that the two returns reach the sums too."""
+    outputs are given numbers and their levels turned up, so that the two returns reach the sums too.
+    """
 
     def __init__(self, image):
         super().__init__(image)
@@ -552,7 +537,7 @@ class Mix(W.Mixer):
         """One call. left: the eight track buffers. right: the second set's, or None for an image without one."""
         mc = self.mc
         b = bytearray(0x800)
-        b[1780:1782] = (90 << 8).to_bytes(2, "big")             # the delay's level into the mix, and the reverb's
+        b[1780:1782] = (90 << 8).to_bytes(2, "big")  # the delay's level into the mix, and the reverb's
         b[1798:1800] = (110 << 8).to_bytes(2, "big")
         for t in range(12):
             p = W.STRIDE * t
@@ -588,7 +573,8 @@ def mixed(image, lefts, rights, knobs, returns):
 
 @pytest.mark.parametrize("seed", range(4))
 def test_with_every_right_buffer_a_copy_of_its_left_the_mixer_is_stock(stock3, main, seed):
-    """Every sum, both output frames, and the gains it leaves for the next block: bit for bit, the returns sounding."""
+    """Every sum, both output frames, and the gains it leaves for the next block: bit for bit, the returns sounding.
+    """
     left, _, knobs, returns, _ = a_mix(seed)
     was, a = mixed(stock3, left, None, knobs, returns)
     now, b = mixed(main[0], left, left, knobs, returns)
@@ -598,16 +584,17 @@ def test_with_every_right_buffer_a_copy_of_its_left_the_mixer_is_stock(stock3, m
     assert was[-1]["dry"].any() and was[-1]["send"].any() and was[-1]["fx"].any()
     for gains in (mm.GAIN_L, mm.GAIN_R, mm.GAIN_DRY_L, mm.GAIN_DRY_R):
         assert a.mc.read(gains, 40) == b.mc.read(gains, 40)
-    assert np.frombuffer(a.mc.read(mm.GAIN_DRY_L, 40), dtype=">i4")[8:].all()          # the two returns are in the dry sum
-    assert a.mc.read(mm.RETURN_DELAY, 256) != b.mc.read(mm.RETURN_DELAY, 256)          # the right returns went to our set, the left stayed
+    assert np.frombuffer(a.mc.read(mm.GAIN_DRY_L, 40), dtype=">i4")[8:].all()  # the two returns are in the dry sum
+    assert a.mc.read(mm.RETURN_DELAY, 256) != b.mc.read(mm.RETURN_DELAY, 256)  # the right returns went to our set, the left stayed
     assert a.mc.insns == b.mc.insns
 
 
 @pytest.mark.parametrize("seed", range(4))
 def test_a_stereo_track_is_its_left_on_the_left_and_its_right_on_the_right(stock3, main, seed):
-    """Some tracks stereo. The left side of every sum is stock's with the left buffers, the right side stock's with
-    every track holding what its right buffer holds: pan is balance, the sends are stereo, the returns as they were.
-    In the frame of 20 the main mix's two channels follow, and a stereo track's own channel is its left."""
+    """Some tracks stereo. The left side of every sum is stock's with the left buffers, the right side stock's with every
+    track holding what its right buffer holds: pan is balance, the sends are stereo, the returns as they were. In the
+    frame of 20 the main mix's two channels follow, and a stereo track's own channel is its left.
+    """
     left, other, knobs, returns, stereo_tracks = a_mix(seed)
     right = left.copy()
     for t in range(8):
@@ -622,17 +609,19 @@ def test_a_stereo_track_is_its_left_on_the_left_and_its_right_on_the_right(stock
             assert np.array_equal(now[n][name][:, 1], of_right[n][name][:, 1]), (n, name)
             assert not np.array_equal(of_left[n][name][:, 1], of_right[n][name][:, 1])
         out, l, r = now[n]["out"], of_left[n]["out"], of_right[n]["out"]
-        assert np.array_equal(out[:, 7], l[:, 7]) and np.array_equal(out[:, 2], r[:, 2])           # the dry mix's two slots
+        assert np.array_equal(out[:, 7], l[:, 7]) and np.array_equal(out[:, 2], r[:, 2])  # the dry mix's two slots
         assert not np.array_equal(l[:, 2], r[:, 2])
         frame, l, r = now[n]["frame"], of_left[n]["frame"], of_right[n]["frame"]
         assert np.array_equal(frame[:, mm.F_MAIN_L], l[:, mm.F_MAIN_L]) and np.array_equal(frame[:, mm.F_MAIN_R], r[:, mm.F_MAIN_R])
-        assert np.array_equal(frame[:, mm.F_T1:mm.F_T1 + 8], l[:, mm.F_T1:mm.F_T1 + 8])           # a track's own channel: the left
+        assert np.array_equal(frame[:, mm.F_T1:mm.F_T1 + 8], l[:, mm.F_T1:mm.F_T1 + 8])  # a track's own channel: the left
         rest = [c for c in range(mm.FRAME_CH) if c not in (mm.F_MAIN_L, mm.F_MAIN_R)]
         assert np.array_equal(frame[:, rest], l[:, rest]) or np.array_equal(frame[:, rest][:, 8:], r[:, rest][:, 8:])
 
 
 def test_a_stereo_tracks_pan_is_its_balance(main):
-    """Hard left: the left channel alone, at full level. Hard right: the right alone. In the middle both, each on its side."""
+    """Hard left: the left channel alone, at full level. Hard right: the right alone. In the middle both, each on its
+    side.
+    """
     rng = np.random.default_rng(8)
     l, r = rng.integers(-2 ** 26, 2 ** 26, (2, 32))
     left, right = np.zeros((8, 32), dtype=np.int64), np.zeros((8, 32), dtype=np.int64)
@@ -641,13 +630,13 @@ def test_a_stereo_tracks_pan_is_its_balance(main):
     got = {}
     for pan in (0, 64, 127):
         mx = Mix(main[0])
-        for _ in range(6):                               # the ramped gains arrive
+        for _ in range(6):  # the ramped gains arrive
             dry = mx.block(left, right, returns=np.zeros((2, 64)), pans=[pan] * 12, **zero)["dry"].astype(np.int64)
         got[pan] = dry
     assert not got[0][:, 1].any() and np.corrcoef(got[0][:, 0], l)[0, 1] > 0.999999
     assert np.abs(got[127][:, 0]).max() < 16 and np.corrcoef(got[127][:, 1], r)[0, 1] > 0.999999
     assert np.corrcoef(got[64][:, 0], l)[0, 1] > 0.999999 and np.corrcoef(got[64][:, 1], r)[0, 1] > 0.999999
-    assert abs(np.abs(got[64][:, 0]).sum() / np.abs(got[0][:, 0]).sum() - 0.75) < 0.01      # the pan law's middle: 0.75 a side
+    assert abs(np.abs(got[64][:, 0]).sum() / np.abs(got[0][:, 0]).sum() - 0.75) < 0.01  # the pan law's middle: 0.75 a side
 
 
 # ---- from the audio CPU's interrupt to the mixer's sums ---------------------------------------------------
@@ -655,7 +644,8 @@ def test_a_stereo_tracks_pan_is_its_balance(main):
 def test_from_the_voices_to_the_mix(factory, stock, stereo, stock3, main):
     """The two programs together, as far as they can be run: the audio CPU's interrupt makes eight left buffers and
     leaves three right channels in the window; the main CPU's routine fills the second set from it; the mixer sums.
-    Held against stock all the way: stock's stages fed the left and the right signals, stock's mixer fed the results."""
+    Held against stock all the way: stock's stages fed the left and the right signals, stock's mixer fed the results.
+    """
     def first(r):
         samplers(r, factory, loop=1)
         for t, mode in ((0, 1), (3, 1), (7, 1), (5, 0)):
@@ -674,10 +664,10 @@ def test_from_the_voices_to_the_mix(factory, stock, stereo, stock3, main):
             prepare(audio)
         v, w, left = audio.block(trig, release)
         voices.append(v), waiting.append(w), masks.append(audio.mask())
-        fill.set(left, audio.mc.read(0, 0x1000))                # what stock's transfer brings, and the window as the audio CPU left it
+        fill.set(left, audio.mc.read(0, 0x1000))  # what stock's transfer brings, and the window as the audio CPU left it
         fill.mc.call(fill.fill)
         sums.append(mx.block(left, fill.right(), returns=silent, **knobs))
-    assert masks == [0, 0] + [0x89] * 8                         # tracks 1, 4 and 8; track 6 plays mono
+    assert masks == [0, 0] + [0x89] * 8  # tracks 1, 4 and 8; track 6 plays mono
     voices = np.array(voices)
     as_right = voices.copy()
     for n in range(2, 10):
@@ -694,15 +684,16 @@ def test_from_the_voices_to_the_mix(factory, stock, stereo, stock3, main):
 # ---- no track follows another any more --------------------------------------------------------------------
 
 def test_the_track_after_a_stereo_one_is_its_own_again(save3, main):
-    """Up to the save image the mixer was shown the next track's pan, volume and sends as the stereo track's, and
-    the two pans forced apart. Here it is shown every track as it is. The mute is as it was."""
+    """Up to the save image the mixer was shown the next track's pan, volume and sends as the stereo track's, and the two
+    pans forced apart. Here it is shown every track as it is. The mute is as it was.
+    """
     machines, modes = [SAMPLER] * 8 + [8, 9, 10, 11], [1, 0, 1, 1, 0, 1, 0, 1, 0, 0, 0, 0]
     block, frame = make_block(machines, modes), frames()
     now, was = FeedRig(*main), FeedRig(*save3)
     now.run(block, frame)
     was.run(block, frame)
     assert now.seen["params"] == block and was.seen["params"] != block
-    now.mc.w32(mm.MUTES, 0b101)                           # tracks 1 and 3 muted: their volumes are 0 for the mixer, and no other's
+    now.mc.w32(mm.MUTES, 0b101)  # tracks 1 and 3 muted: their volumes are 0 for the mixer, and no other's
     now.run(block, frame)
     shown = now.seen["params"]
     for t in range(12):
@@ -715,25 +706,26 @@ def test_the_track_after_a_stereo_one_is_its_own_again(save3, main):
 
 EARLIER = dict(m.CAVES, **m.REC_CAVES, **m.FADE_CAVES, **m.LIVE_CAVES, **m.PITCH_CAVES)
 OURS = dict(EARLIER, **m.ONE_CAVES)
-FREE = (m.STASH, m.STASH + 0xa00)       # the right channels, the mask, two copies of state and the shape of stock's filter memory
-NOT_A_POINTER = 0x4000cfba              # in stock's tables: reads as 0x440504c5. See the test of that memory
+FREE = (m.STASH, m.STASH + 0xa00)  # the right channels, the mask, two copies of state and the shape of stock's filter memory
+NOT_A_POINTER = 0x4000cfba  # in stock's tables: reads as 0x440504c5. See the test of that memory
 
 
 def test_the_four_new_runs_are_code_nothing_reaches(stock):
-    """The same rules the earlier runs are held to (tests/test_sampler.py). One of the four lies before the entry
-    point, where tools/deadcode.py calls everything live: with the entry's own piece as the one thing taken on
-    trust, the survey finds it reached by nothing, as it finds the other three."""
+    """The same rules the earlier runs are held to (tests/test_sampler.py). One of the four lies before the entry point,
+    where tools/deadcode.py calls everything live: with the entry's own piece as the one thing taken on trust, the
+    survey finds it reached by nothing, as it finds the other three.
+    """
     def ours(a):
         return any(lo <= a < hi for lo, hi in OURS.values())
 
     def new(a):
         return any(lo <= a < hi for lo, hi in m.ONE_CAVES.values())
     spans = sorted(OURS.values())
-    assert not any(b > c for (a, b), (c, d) in zip(spans, spans[1:]))                  # no two runs share a byte
-    for o in range(0, len(stock) - 3, 2):                                               # no 32-bit value points into one
+    assert not any(b > c for (a, b), (c, d) in zip(spans, spans[1:]))  # no two runs share a byte
+    for o in range(0, len(stock) - 3, 2):  # no 32-bit value points into one
         if not ours(m.BASE + o):
             assert not new(int.from_bytes(stock[o:o + 4], "big")), hex(m.BASE + o)
-    for addr, _, text in boundaries(stock[4:m.off(m.CODE_END)], m.BASE + 4):            # no instruction outside our runs names one
+    for addr, _, text in boundaries(stock[4:m.off(m.CODE_END)], m.BASE + 4):  # no instruction outside our runs names one
         if not ours(addr):
             for x in re.findall(r"0x([0-9a-f]{8})\b", text):
                 assert not new(int(x, 16)), hex(addr)
@@ -743,10 +735,9 @@ def test_the_four_new_runs_are_code_nothing_reaches(stock):
     unreached = {(lo, hi): named for lo, hi, named, clean in deadcode.survey(stock, m.BASE, m.CODE_END, m.BASE + 4) if clean}
     for lo, hi in m.ONE_CAVES.values():
         assert unreached[(lo, hi)] == 0
-    # the run before the entry: stock's reader of a pool from a flash chip, called by one routine that nothing calls
     lo, hi = m.ONE_CAVES["h"]
     assert hi == m.SLOT_BUILD and lo < m.POOL_LOAD < hi < m.ENTRY
-    assert stock[m.off(0x40000cfc):m.off(0x40000d00)] == bytes.fromhex(fw.sx("74900625854a03f9"))      # jsr %pc@(lo), inside the run
+    assert stock[m.off(0x40000cfc):m.off(0x40000d00)] == bytes.fromhex(fw.sx("74900625854a03f9"))  # jsr %pc@(lo), inside the run
 
 
 def test_the_new_runs_are_never_run_or_read_by_stock(official, stock, descs, factory):
@@ -769,15 +760,11 @@ def test_the_new_runs_are_never_run_or_read_by_stock(official, stock, descs, fac
 
 
 def test_the_engine_is_the_pitch_images_but_for_the_right_channel(stock, stereo, pitch):
-    """What differs from the save image's audio program: the four new runs, the runs the changed routines are in
-    (the render; the step after the voice loop with what it calls now; and with the second build the player, the
-    making of the table, and Twinshot's update and render, where the sums are made now), and one more call of the
-    interrupt's."""
     image, syms = stereo
-    lo, hi = m.CAVES["y"]                                               # the hook still calls the step after the voice loop
+    lo, hi = m.CAVES["y"]  # the hook still calls the step after the voice loop
     assert image.index(b"\x4e\xb9" + syms["sampler_post"].to_bytes(4, "big"), m.off(lo), m.off(hi)) > m.off(syms["sampler_hook"])
     spans = [m.CAVES["x"], m.CAVES["y"], m.PITCH_CAVES["p"], m.PITCH_CAVES["t"]] + list(m.ONE_CAVES.values()) + list(m.QUICK_CAVES.values())
-    spans += list(m.LEAN_CAVES.values()) + [m.PITCH_CAVES["s"]]         # the third build: the level and the gain in one pass, a note's start
+    spans += list(m.LEAN_CAVES.values()) + [m.PITCH_CAVES["s"]]
     # and where a routine that has moved is named by one that has not: in two of the earlier runs, three places
     moved = {syms[n].to_bytes(4, "big") for n in syms if n in pitch[1] and syms[n] != pitch[1][n]}
     assert pitch[1]["slot_frames"] != syms["slot_frames"] and m.ONE_CAVES["a"][0] <= syms["slot_frames"] < m.ONE_CAVES["a"][1]
@@ -785,13 +772,13 @@ def test_the_engine_is_the_pitch_images_but_for_the_right_channel(stock, stereo,
              for o in range(m.off(lo), m.off(hi), 2) if image[o:o + 4] in moved]
     assert len(named) == 3
     spans += named
-    spans += [(m.ISR_AMP_CALL + 2, m.ISR_AMP_CALL + 6), (m.ISR_VOICE_LOOP_CALL + 2, m.ISR_VOICE_LOOP_CALL + 6)]      # and the hook, which has moved in its run
+    spans += [(m.ISR_AMP_CALL + 2, m.ISR_AMP_CALL + 6), (m.ISR_VOICE_LOOP_CALL + 2, m.ISR_VOICE_LOOP_CALL + 6)]  # and the hook, which has moved in its run
     assert m.u32(image, m.ISR_VOICE_LOOP_CALL + 2) == syms["sampler_hook"] != pitch[1]["sampler_hook"] == m.u32(pitch[0], m.ISR_VOICE_LOOP_CALL + 2)
     diff = [m.BASE + k for k in range(len(image)) if image[k] != pitch[0][k]]
     assert diff and all(any(lo <= a < hi for lo, hi in spans) for a in diff)
     assert m.u32(stock, m.ISR_AMP_CALL + 2) == m.STAGE_AMPS and m.u32(image, m.ISR_AMP_CALL + 2) == syms["sampler_amp"]
     assert image[m.off(m.ISR_AMP_CALL):m.off(m.ISR_AMP_CALL) + 2] == stock[m.off(m.ISR_AMP_CALL):m.off(m.ISR_AMP_CALL) + 2] == b"\x4e\xb9"
-    for lo, hi in m.ONE_CAVES.values():                                 # stock's own bytes in the image before
+    for lo, hi in m.ONE_CAVES.values():  # stock's own bytes in the image before
         assert pitch[0][m.off(lo):m.off(hi)] == stock[m.off(lo):m.off(hi)]
     where = dict(right_track="h", right_pass="h", seed="a", send="b", seed_runs="b", sampler_amp="c")
     for name, cave in where.items():
@@ -799,18 +786,18 @@ def test_the_engine_is_the_pitch_images_but_for_the_right_channel(stock, stereo,
         assert lo <= syms[name] < hi, name
     lo, hi = m.PITCH_CAVES["p"]
     assert all(lo <= syms[name] < hi for name in ("swap_filters", "right_mask", "sampler_post"))
-    # the two that only move longs went, with the third build, to where there was room: tests/test_lean.py
     assert m.CAVES["x"][0] <= syms["swap"] < m.CAVES["x"][1] and m.QUICK_CAVES["k"][0] <= syms["longs"] < m.QUICK_CAVES["k"][1]
     # the stock routines it calls are where the interrupt calls them, and the four stages are untouched
     assert m.u32(stock, 0x40000a46 + 2) == m.STAGE_GAIN and m.u32(stock, 0x40000a5a + 2) == m.STAGE_DRIVE
-    assert m.u32(stock, 0x40000a72 + 2) == m.STAGE_FILTER and stock[m.off(0x400016ac):m.off(0x400016b0)] == bytes.fromhex(fw.sx("8357fb1c74367366"))   # lea %pc@(STAGE_AMP1),%a2
+    assert m.u32(stock, 0x40000a72 + 2) == m.STAGE_FILTER and stock[m.off(0x400016ac):m.off(0x400016b0)] == bytes.fromhex(fw.sx("8357fb1c74367366"))  # lea %pc@(STAGE_AMP1),%a2
     for lo, hi in ((m.STAGE_GAIN, 0x40001708), (m.STAGE_FILTER, 0x400024e0)):
         assert image[m.off(lo):m.off(hi)] == stock[m.off(lo):m.off(hi)]
 
 
 def test_the_memory_it_uses_is_no_one_elses(stock, stereo):
-    """Free memory after the program's data: nothing in stock names it, and in the built image only our code does.
-    The interpolation table and the takes are past it."""
+    """Free memory after the program's data: nothing in stock names it, and in the built image only our code does. The
+    interpolation table and the takes are past it.
+    """
     assert m.BSS[1] < FREE[0] and FREE[1] <= m.HQ_MARK < m.KEPT < m.REC_BASE
     assert m.STASH + 8 * 128 == m.R_MASK < m.R_GAIN and m.R_GAIN + (m.GAIN_STATE[1] - m.GAIN_STATE[0]) == m.R_AMP
     lo = min(a for a, b in m.FILTER_STATE) + m.R_SHADOW & 0xffffffff
@@ -842,9 +829,10 @@ def allowed_writes(mask_tracks):
 
 @pytest.mark.parametrize("seed", [1, 5])
 def test_the_right_channels_routines_write_only_what_is_theirs(stereo, seed):
-    """Every write made while one of our new routines is the one running, the stock stages it calls apart: the mask,
-    the two copies, stock's memory of the stages and its shape in free memory, a byte of a voice, and in the window
-    the long and the halves of the tracks that have a right channel. Stock's stages write what they always do."""
+    """Every write made while one of our new routines is the one running, the stock stages it calls apart: the mask, the
+    two copies, stock's memory of the stages and its shape in free memory, a byte of a voice, and in the window the
+    long and the halves of the tracks that have a right channel. Stock's stages write what they always do.
+    """
     image, syms = stereo
     names = ["longs", "swap", "swap_filters", "seed", "right_mask", "send", "right_track", "right_pass", "sampler_amp"]
     edges = sorted(set(syms.values()) | {hi for lo, hi in list(OURS.values()) + list(m.QUICK_CAVES.values()) + list(m.LEAN_CAVES.values())})
@@ -866,7 +854,7 @@ def test_the_right_channels_routines_write_only_what_is_theirs(stereo, seed):
         r.block(trig, release)
         ok = allowed_writes([t for t in range(8) if r.mask() >> t & 1])
         assert wrote and all(any(lo <= a and a + s <= hi for lo, hi in ok) for a, s in wrote)
-        assert all(s == 4 for a, s in wrote if a < 0x1000)                  # the window: longs only
+        assert all(s == 4 for a, s in wrote if a < 0x1000)  # the window: longs only
         seen += r.mask() != 0
     assert seen > 20
 
@@ -874,7 +862,8 @@ def test_the_right_channels_routines_write_only_what_is_theirs(stereo, seed):
 @pytest.mark.parametrize("seed", [0, 3])
 def test_nothing_in_free_memory_is_believed_from_before_the_start(stock, stereo, seed):
     """That memory is cleared by nothing and comes back from a restart mostly as it was. Filled with noise before the
-    first interrupt, and the two stretches of the window with it: every right channel is still stock's of it."""
+    first interrupt, and the two stretches of the window with it: every right channel is still stock's of it.
+    """
     image, _ = stereo
     script = scenario(seed, 50)
     r = Rig(image)
@@ -902,7 +891,8 @@ def test_nothing_in_free_memory_is_believed_from_before_the_start(stock, stereo,
 
 def test_a_voice_makes_the_two_channels_it_made(stereo, pitch):
     """The sampler's own part is not changed: the left in the track's buffer, and the right, which the save image put in
-    the next track's buffer, waiting in free memory. Whole, cut, looped, backwards, pitched, and on the last track."""
+    the next track's buffer, waiting in free memory. Whole, cut, looped, backwards, pitched, and on the last track.
+    """
     cases = [dict(), dict(loop=1, start=5, length=45), dict(sample=63), dict(loop=2, start=25, length=30), dict(start=30, length=50, note=55.25),
              dict(loop=1, note=67), dict(note=36)]
     for knobs in cases:
@@ -929,16 +919,17 @@ def test_a_voice_makes_the_two_channels_it_made(stereo, pitch):
                 right.append(np.frombuffer(e.mc.read(m.STASH + 128 * track, 128), dtype=">i4").astype(np.int32))
             out.append((np.array(left), np.array(right), np.array(nxt)))
         (l0, _, r0), (l1, r1, n1), (l7, r7, n7) = out
-        assert np.array_equal(l0, l1) and np.array_equal(r0, r1) and l0.any() and r0.any()     # the save image's next track is our waiting buffer
-        assert np.array_equal(l7, l0) and np.array_equal(r7, r0)                                 # the same on the last track
-        assert not n1.any() and not n7.any()                                                     # and the next track is left alone
+        assert np.array_equal(l0, l1) and np.array_equal(r0, r1) and l0.any() and r0.any()  # the save image's next track is our waiting buffer
+        assert np.array_equal(l7, l0) and np.array_equal(r7, r0)  # the same on the last track
+        assert not n1.any() and not n7.any()  # and the next track is left alone
 
 
 @pytest.mark.parametrize("track", [3, 7])
 def test_a_take_is_recorded_as_before_and_plays_back_in_stereo_on_its_own_track(stereo, track):
     """The recorder is not changed: REC on, a held trig, and the take is what was fed, left and right, in the track's
     stereo sample. REC off and a trig: the left in the track's buffer, the right waiting for the stages, where the
-    save image put it in the next track's buffer. On the last track too, which had no next one."""
+    save image put it in the next track's buffer. On the last track too, which had no next one.
+    """
     e = P.engine(stereo)
     e.set_slot(track, MODE, P.REC | P.STEREO)
     P.box(e)
@@ -957,7 +948,7 @@ def test_a_take_is_recorded_as_before_and_plays_back_in_stereo_on_its_own_track(
     want = P.taken(e, k).astype(np.float64), P.taken(e, k + 1).astype(np.float64)
     heard = lambda x, w: max(np.corrcoef(x[j:j + 5 * 32], w[:5 * 32])[0, 1] for j in range(33))
     assert heard(left, want[0]) > 0.99 and heard(right, want[1]) > 0.99 and not np.array(nxt).any()
-    assert e.mc.r32(m.R_MASK) == 1 << track                                    # and the track is one with a right channel
+    assert e.mc.r32(m.R_MASK) == 1 << track  # and the track is one with a right channel
 
 
 # ---- room: stock Twinshot's own code ------------------------------------------------------------------------
@@ -969,21 +960,22 @@ def reached_by_nothing(image, rooms, callers=()):
 
     def ours(a):
         return inside(a) or any(lo <= a < hi for lo, hi in callers)
-    for o in range(0, len(image) - 3, 2):                                                    # no 32-bit value names them
+    for o in range(0, len(image) - 3, 2):  # no 32-bit value names them
         v = int.from_bytes(image[o:o + 4], "big")
-        if not ours(m.BASE + o) and not v & 1:                                               # code is at even addresses
+        if not ours(m.BASE + o) and not v & 1:  # code is at even addresses
             assert not inside(v), hex(m.BASE + o)
-    for addr, _, text in boundaries(image[4:m.off(m.CODE_END)], m.BASE + 4):                 # no instruction outside them does
+    for addr, _, text in boundaries(image[4:m.off(m.CODE_END)], m.BASE + 4):  # no instruction outside them does
         if not ours(addr):
             for x in re.findall(r"0x([0-9a-f]{8})\b", text):
                 assert not inside(int(x, 16)), hex(addr)
-    src, dst = deadcode._reaches(image[:m.off(m.CODE_END)], m.BASE)                          # and no far branch, decoded or not
+    src, dst = deadcode._reaches(image[:m.off(m.CODE_END)], m.BASE)  # and no far branch, decoded or not
     assert not [hex(a) for a, d in zip(src.tolist(), dst.tolist()) if inside(d) and not ours(a)]
 
 
 def never_run(image, runs, descs, factory):
-    """Every machine through the whole interrupt of a built image, the sampler in stereo and pitched: -> the places
-    of `runs` that were run or read."""
+    """Every machine through the whole interrupt of a built image, the sampler in stereo and pitched: -> the places of
+    `runs` that were run or read.
+    """
     seen = []
     b = Rig(image)
     b.load_pool(pool())
@@ -1008,14 +1000,13 @@ def never_run(image, runs, descs, factory):
 
 
 def test_stock_twinshot_is_reached_by_nothing_and_is_room(official, stock, stereo, pitch, descs, factory):
-    """ and to keep what it leaves. Its update, render,
-    sample player and filter, 1,344 bytes, 830 in one run. In an image of ours that leaves them alone (the pitch
-    image, whose engine 11 is the sampler as in every one) they are stock's bytes, nothing names them, nothing
-    branches into them, and they are neither run nor read while every machine plays.
+    """and to keep what it leaves. Its update, render, sample player and filter, 1,344 bytes, 830 in one run. In an image
+    of ours that leaves them alone (the pitch image, whose engine 11 is the sampler as in every one) they are stock's
+    bytes, nothing names them, nothing branches into them, and they are neither run nor read while every machine
+    plays.
 
-    The stereo image uses both since its third build: the update and render hold the sums of sixteen frames
-    (tests/test_quick.py), the player and filter the pass of a voice's level and gain (tests/test_lean.py), each
-    named by our own runs and by nothing else. What is room still: 442 bytes in four small runs."""
+    What is room still: 442 bytes in four small runs.
+    """
     image, syms = stereo
     rooms = list(m.TWIN_ROOM.values())
     assert rooms == [(m.TWIN_UPDATE, 0x40009b1a), (m.SAMPLE_PLAY, 0x40006966)] and m.TWIN_UPDATE < m.TWIN_RENDER < 0x40009b1a
@@ -1024,8 +1015,8 @@ def test_stock_twinshot_is_reached_by_nothing_and_is_room(official, stock, stere
     assert list(m.QUICK_CAVES.values()) + list(m.LEAN_CAVES.values()) == rooms
     before = pitch[0]
     for lo, hi in rooms:
-        assert before[m.off(lo):m.off(hi)] == stock[m.off(lo):m.off(hi)]                    # not touched
-        assert stock[m.off(hi) - 2:m.off(hi)] == b"\x4e\x75" and stock[m.off(hi):m.off(hi) + 2] == b"\0\0"     # ends a routine, then padding
+        assert before[m.off(lo):m.off(hi)] == stock[m.off(lo):m.off(hi)]  # not touched
+        assert stock[m.off(hi) - 2:m.off(hi)] == b"\x4e\x75" and stock[m.off(hi):m.off(hi) + 2] == b"\0\0"  # ends a routine, then padding
         assert image[m.off(lo):m.off(hi)] != stock[m.off(lo):m.off(hi)]
     # nothing falls into them: an rts before the player, and before the update a jump away
     for img in (before, image):
@@ -1037,8 +1028,8 @@ def test_stock_twinshot_is_reached_by_nothing_and_is_room(official, stock, stere
         assert (m.u32(img, m.UPDATE_TABLE + 4 * m.TWIN_ENGINE), m.u32(img, m.RENDER_TABLE + 4 * m.TWIN_ENGINE)) == (s["sampler_update"], s["sampler_render"])
     reached_by_nothing(before, rooms)
     ours = list(OURS.values())
-    reached_by_nothing(image, [rooms[0]], callers=ours + [rooms[1]])        # the sums: called by the player, and one of them is there
-    reached_by_nothing(image, [rooms[1]], callers=ours + [rooms[0]])        # the level and the gain: called by the render
+    reached_by_nothing(image, [rooms[0]], callers=ours + [rooms[1]])  # the sums: called by the player, and one of them is there
+    reached_by_nothing(image, [rooms[1]], callers=ours + [rooms[0]])  # the level and the gain: called by the render
     # the one odd number that reads as an address there: two neighbours of a table of longs, across their join
     o = m.off(0x40017e3a)
     assert image[o - 2:o + 6] == bytes.fromhex(fw.sx("93a3d2fed5dcf7629df6f2be")) and 0x40017e3a > m.CODE_END
@@ -1049,7 +1040,7 @@ def test_stock_twinshot_is_reached_by_nothing_and_is_room(official, stock, stere
     seen, b = never_run(before, rooms + list(m.SPARE_RUNS), descs, factory)
     assert not seen
     seen, b = never_run(image, list(m.SPARE_RUNS), descs, factory)
-    assert b.mask() == 0xff and not seen                                                     # the sampler played, in stereo, and none of it ran
+    assert b.mask() == 0xff and not seen  # the sampler played, in stereo, and none of it ran
 
 
 # ---- the main CPU's program, and the image ----------------------------------------------------------------
@@ -1064,7 +1055,7 @@ def test_the_main_program_is_the_save_images_but_for_the_declared_places(stock3,
         assert mm.u32(stock3, a + 2) == mm.TRACKS and mm.u32(image, a + 2) == mm.RIGHT_SET and image[mm.off(a):mm.off(a) + 2] == b"\x48\x79"
     for a, ret in mm.RIGHT_RETURNS:
         assert mm.u32(stock3, a + 2) == ret and mm.u32(image, a + 2) == mm.RIGHT_SET + ret - mm.TRACKS
-    for a in mm.LEFT_PASSES + mm.TRACK_OUTS:                               # every other use of the track buffers is as it was
+    for a in mm.LEFT_PASSES + mm.TRACK_OUTS:  # every other use of the track buffers is as it was
         assert mm.u32(image, a + 2) == mm.TRACKS
     for a, ret in mm.LEFT_RETURNS:
         assert mm.u32(image, a + 2) == ret
@@ -1076,9 +1067,10 @@ def test_the_main_program_is_the_save_images_but_for_the_declared_places(stock3,
 
 
 def test_every_place_the_main_program_names_the_track_buffers_is_known(stock3):
-    """The eight track buffers and the two returns after them, by address, anywhere in the code: the mixer's four
-    left and four right passes, its six copies of a return, its two last uses, and the three places of the per-block
-    routine that fill or clear them. So nothing else reads the right side from where it was."""
+    """The eight track buffers and the two returns after them, by address, anywhere in the code: the mixer's four left
+    and four right passes, its six copies of a return, its two last uses, and the three places of the per-block
+    routine that fill or clear them. So nothing else reads the right side from where it was.
+    """
     where = {}
     for o in range(0, mm.off(mm.CODE_END), 2):
         v = mm.u32(stock3, mm.BASE + o)
@@ -1090,8 +1082,9 @@ def test_every_place_the_main_program_names_the_track_buffers_is_known(stock3):
 
 
 def test_nothing_branches_into_the_place_the_routine_is_called_from(stock3):
-    """Ten bytes of the per-block routine are replaced: a branch to their middle would land inside our instruction.
-    Every short branch near them, and every far one, call, lea and pea of the program: none goes there."""
+    """Ten bytes of the per-block routine are replaced: a branch to their middle would land inside our instruction. Every
+    short branch near them, and every far one, call, lea and pea of the program: none goes there.
+    """
     inside = range(mm.RIGHT_HOOK + 2, mm.RIGHT_HOOK + 10, 2)
     lo = mm.RIGHT_HOOK - 0x400
     for addr, _, text in boundaries(stock3[mm.off(lo):mm.off(mm.RIGHT_HOOK + 0x400)], lo):
@@ -1111,7 +1104,8 @@ def test_the_main_cpus_new_run_and_the_second_sets_memory(stock3, official):
     taken = [mm.CAVE, mm.CAVE_REC, mm.CAVE_AMUTE, mm.CAVE_KEEP, mm.CAVE_HALVES, mm.CAVE_TEXT, mm.CAVE_PAGE, mm.CAVE_BANK, mm.CAVE_PAGE2,
              mm.CAVE_METER, mm.CAVE_PAGE3, build_main.POOL_STAGE]
     assert not any(a < hi and lo < b for a, b in taken)
-    # the second set: after the program's data, before the effects' memory as it lies 0x08000000 lower, a page clear of both
+    # the second set: after the program's data, before the effects' memory as it lies 0x08000000 lower, a page clear
+    # of both
     first, last = mm.RIGHT_SET, mm.RIGHT_SET + 1280
     assert mm.MAIN_BSS_END + 0x1000 <= first and last + 0x1000 <= mm.EFFECTS_MEMORY[0] - mm.UNCACHED
     assert mm.MAIN_HEAP[1] < mm.MAIN_BSS_END and mm.RETURN_REVERB + 128 - mm.TRACKS == 1280

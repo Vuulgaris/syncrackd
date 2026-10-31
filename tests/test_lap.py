@@ -1,18 +1,4 @@
-"""The lap image, a tool: the tail image with five more readings of the timer in the profile's record.
-
-The first profile from the unit (2026-10-13) had the per-block interrupt at 93 hundredths of a block, half of a block
-of it before the mixer, and nothing to say what that half is. Five readings of the profile's timer go into the
-record's places for the first five longs of the stopped stack: at the per-block routine's first call, on either side
-of stock's wait for the audio CPU's buffers, and on either side of our last call before the mixer
-(engine/rightdma.c, LAP). tools/prof_read.py sees them for what they are and gives the way to the mixer in six parts.
-
-Held here: the three routines leave the readings in their places, in order, and do what the tail image's do (the
-right channels, the state, the answer stock tests); the reader tells a lap record from a plain one and adds the
-parts up to the whole; the image differs from the tail image only in the transfers' runs, the readings' run and
-the two calls.
-
-Not held: anything of the real interrupt or the real wait. That is what the take is for.
-"""
+"""The lap image, a tool: the tail image with five more readings of the timer in the profile's record."""
 import hashlib
 import shutil
 
@@ -49,7 +35,7 @@ class Rig(D.Rig):
         if "right_mid_lap" in self.syms:
             lo, hi = mm.CAVE_LAP
             mc.load_code(lo, image[mm.off(lo):mm.off(hi)])
-        mc.load_code(mm.PRE_MIX, b"\x4e\x75")                       # test only: stock's routine there is not run, it returns at once
+        mc.load_code(mm.PRE_MIX, b"\x4e\x75")  # test only: stock's routine there is not run, it returns at once
         mc.set_exits([0x40000100])
         self.now = 0
         mc.uc.hook_add(UC_HOOK_MEM_READ, self._timer, begin=TIMER, end=TIMER + 3)
@@ -84,8 +70,8 @@ def test_the_readings_are_left_in_order_and_the_routines_do_what_the_tail_images
         got, kept = new.block(tracks, window, up), old.block(tracks, window, up)
         assert got == kept and new.answer == old.answer == up
         assert [new.mc.r32(RECORD + 36 + 4 * k) for k in range(5)] == [was + 0x1000 * (k + 1) for k in range(5)]
-        assert new.mc.read(RECORD, 36) == b"\x77" * 36 and new.mc.read(RECORD + 56, 8) == b"\x77" * 8     # the rest of the record is the profile's
-    assert old.now == 0                                             # the tail image reads no timer there
+        assert new.mc.read(RECORD, 36) == b"\x77" * 36 and new.mc.read(RECORD + 56, 8) == b"\x77" * 8  # the rest of the record is the profile's
+    assert old.now == 0  # the tail image reads no timer there
 
 
 def record(rows, lapped, seed=1):
@@ -117,7 +103,7 @@ def test_the_image(official_path, official, lap, tail):
     quiet = lambda s: None
     raw, _, built, _, syms = build.build(official_path, log=quiet, xfade=15)
     was_raw, _, was, _, _ = build.build(official_path, log=quiet, xfade=14)
-    assert hashlib.sha256(was_raw).hexdigest().startswith("651975f3")      # the tail image, as it is
+    assert hashlib.sha256(was_raw).hexdigest().startswith("651975f3")  # the tail image, as it is
     new, old = built.section(3), was.section(3)
     assert new == lap[0] != old == tail[0] and len(new) == len(old)
     assert built.section(7) == was.section(7)

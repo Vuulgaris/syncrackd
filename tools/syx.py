@@ -3,13 +3,12 @@
 File = start marker, N data packets, end marker. Nothing else.
 
 Marker (16 bytes): F0 00 20 3C <product> 00 7F <01 start | 02 end>
-                   <base> <start seq, 3x7 bit> <packet count, 3x7 bit> F7
+<base> <start seq, 3x7 bit> <packet count, 3x7 bit> F7
 Packet (128 bytes): F0 00 20 3C <product> 00 7E <seq, 3x7 bit>
-                    <116 bytes 8-in-7> <checksum> F7
+<116 bytes 8-in-7> <checksum> F7
 
-Each packet carries 101 plain bytes. The checksum covers bytes 7..125.
-Layout and checksum follow syntakt-firmware-workbench (MIT) and were
-confirmed against the official 1.42 file, see docs/FINDINGS.md.
+Each packet carries 101 plain bytes. The checksum covers bytes 7..125. Layout and checksum follow
+syntakt-firmware-workbench (MIT) and were confirmed against the official 1.42 file, see docs/FINDINGS.md.
 """
 from dataclasses import dataclass
 
@@ -25,7 +24,7 @@ CK_FROM, CK_OFF = 7, 126
 @dataclass(frozen=True)
 class Transport:
     product: int
-    base: int        # checksum seed, from the start marker
+    base: int  # checksum seed, from the start marker
     start_seq: int
     count: int
 

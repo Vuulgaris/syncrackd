@@ -1,14 +1,4 @@
-"""The nodiv image: the copy image with the mixer link's crossfade shares made without the CPU's divide, exactly.
-
-With the unit's profile while the phone captures (the UI has 9.6 hundredths of a block, our links before the mixer
-2.2, a pattern with mutes, solos and a crossfade up, so the fast path is not taken): the busy path made cheaper. With a crossfade up the link divides each track's volume by 127 (about 35 cycles a
-divide, twelve a block). engine/sampler.h, NODIV: div127, three shifts and an add for a first quotient never above the
-true one, then up while 127 or more is left; the link in a run of its own (it outgrew CAVE). The analog mute keeps its
-eight divides by 127^2: done the same way it would not fit its run.
-
-Held here: div127 is the divide for every p the link can hand it, and the mixer is shown what the copy image shows it.
-Not held: cycles (emulation counts instructions; a divide is one instruction and many cycles).
-"""
+"""The nodiv image: the copy image with the mixer link's crossfade shares made without the CPU's divide, exactly."""
 import hashlib
 import shutil
 
@@ -45,7 +35,7 @@ def div127(p):
 
 
 def test_div127_is_the_divide_for_every_volume_times_every_share():
-    p = np.arange(0, 65536 * 128, dtype=np.uint64)                 # a volume word (16 bits) times a share (0..127)
+    p = np.arange(0, 65536 * 128, dtype=np.uint64)  # a volume word (16 bits) times a share (0..127)
     assert (div127(p) == p // 127).all()
 
 
@@ -80,14 +70,14 @@ def test_the_link_has_no_divide_and_lives_in_its_own_run(main, copy):
     run = image[mm.off(mm.CAVE_LINK2[0]):mm.off(mm.CAVE_LINK2[1])]
     assert not any(run[k:k + 2] == b"\x4c\x40" or run[k:k + 2] == b"\x4c\x41" or run[k:k + 2] == b"\x4c\x46" for k in range(0, len(run), 2))
     stock = copy[0]
-    assert image[mm.off(mm.CAVE[0]):mm.off(mm.CAVE[1])] != stock[mm.off(mm.CAVE[0]):mm.off(mm.CAVE[1])]   # the old run left as stock has it
+    assert image[mm.off(mm.CAVE[0]):mm.off(mm.CAVE[1])] != stock[mm.off(mm.CAVE[0]):mm.off(mm.CAVE[1])]  # the old run left as stock has it
 
 
 def test_the_image(official_path, official, main, copy):
     quiet = lambda s: None
     raw, _, built, _, _ = build.build(official_path, log=quiet, xfade=38, prof=True)
     was_raw, _, was, _, _ = build.build(official_path, log=quiet, xfade=37, prof=True)
-    assert hashlib.sha256(was_raw).hexdigest().startswith("681d603c")      # the copy image, as it is
+    assert hashlib.sha256(was_raw).hexdigest().startswith("681d603c")  # the copy image, as it is
     assert built.section(7) == was.section(7)
     new, old = built.section(3), was.section(3)
     assert new == main[0] and old == copy[0]

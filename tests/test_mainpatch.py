@@ -58,7 +58,7 @@ def test_shared_strings_are_left_alone(stock, patched):
         assert stock[mm.off(addr):mm.off(addr) + len(text) + 1] == text + b"\0"
         assert image[mm.off(addr):mm.off(addr) + len(text) + 1] == text + b"\0"
     for addr, old, new in build_main.REWRITE:
-        assert stock.count(build_main.be32(addr)) == 1           # only a Twinshot record points here
+        assert stock.count(build_main.be32(addr)) == 1  # only a Twinshot record points here
         assert len(new) <= len(old)
 
 
@@ -83,21 +83,20 @@ def shown(stock, patched):
 
 def test_display_table_is_indexed_by_descriptor_record(stock):
     code = stock[mm.off(mm.UI_ENTRY):mm.off(mm.UI_ENTRY) + 0x1e]
-    assert build_main.be32(mm.UI_COUNT) in code                   # cmpil #505
-    assert bytes((0x72, mm.UI_STRIDE)) in code                    # moveq #84,%d1
-    assert build_main.be32(mm.UI_TABLE) in code                   # addil #table
+    assert build_main.be32(mm.UI_COUNT) in code  # cmpil #505
+    assert bytes((0x72, mm.UI_STRIDE)) in code  # moveq #84,%d1
+    assert build_main.be32(mm.UI_TABLE) in code  # addil #table
     assert mm.SAMP_RECORDS == mm.UI_RECORDS + 0x34 * mm.SAMP_FIRST
     first, count = params.TABLES["1.42"][1]
     assert first + 0x34 * count == mm.UI_RECORDS + 0x34 * mm.UI_COUNT
 
 
 def test_stock_display_agrees_with_what_the_owner_saw(shown):
-    """Hardware log 2026-10-04: FLT1 and MIX read -64..+63, SMP2 reads -64 at the left end."""
     stock_table, _ = shown
     assert sum("text" in e for e in stock_table) > 495
     text = lambda name: stock_table[SAMP[name]]["text"]["target"]
-    assert text("STRT") == text("LEN") == mm.TEXT_MINUS_64        # value minus 64
-    assert text("SMPL") == text("MODE") == mm.TEXT_SLOT           # slot number, reversed below 64
+    assert text("STRT") == text("LEN") == mm.TEXT_MINUS_64  # value minus 64
+    assert text("SMPL") == text("MODE") == mm.TEXT_SLOT  # slot number, reversed below 64
     assert text("TUNE") == text("LOOP") == mm.TEXT_TUNE
     assert text("OVER") == mm.TEXT_PLAIN
 
@@ -116,8 +115,9 @@ def test_sampler_knobs_are_shown_as_plain_numbers(stock, shown):
 
 
 def test_display_patches_only_swap_objects_of_the_same_kind(stock, shown):
-    """Each new object is one stock knobs already use in that same field, copied by that same routine,
-    and it exists before the patched instruction runs."""
+    """Each new object is one stock knobs already use in that same field, copied by that same routine, and it exists
+    before the patched instruction runs.
+    """
     stock_table, _ = shown
     stores, _ = uitable.walk(stock)
     fields = {"text": mm.OBJ_TEXT_PLAIN, "graphic": mm.OBJ_GFX_PLAIN, "step": mm.OBJ_STEP_PLAIN}
@@ -144,7 +144,7 @@ def test_main_cpu_caves_are_unreferenced(stock):
     """The mixer link's cave, the recorder image's (three unused mix kernel variants) and the analog mute's."""
     caves = ((mm.CAVE, 2), (mm.CAVE_REC, 3), (mm.CAVE_AMUTE, 1))  # (range, whole functions in it)
     n = len(stock) // 4 * 4
-    for shift in (0, 2):                                         # every 32-bit value at an even offset
+    for shift in (0, 2):  # every 32-bit value at an even offset
         v = np.frombuffer(stock[shift:shift + (n - 4)], dtype=">u4")
         for (lo, hi), _ in caves:
             assert not np.any((v >= lo) & (v < hi))
@@ -154,7 +154,7 @@ def test_main_cpu_caves_are_unreferenced(stock):
         assert inside[0][0] == lo and inside[-1][1].startswith("rts")
         assert sum(t.startswith("rts") for _, t in inside) == functions
         prev = [t for a, _, t in listing if lo - 2 <= a < lo]
-        assert prev and prev[-1].startswith("rts")               # nothing falls into it
+        assert prev and prev[-1].startswith("rts")  # nothing falls into it
     for addr, _, text in listing:
         if addr >= 0x40400000:
             continue
@@ -178,8 +178,8 @@ def test_main_cpu_caves_are_unreferenced(stock):
 # ---- the mixer link, with the mixer stubbed -----------------------------------------------
 
 PARAMS = 0x80002000
-CONTROL_BYTES = 80                                           # the level, cutoff and tune words of the control block
-STUB = bytes.fromhex("203c8000dbd04e75")                     # move.l #0x8000dbd0,d0 ; rts
+CONTROL_BYTES = 80  # the level, cutoff and tune words of the control block
+STUB = bytes.fromhex("203c8000dbd04e75")  # move.l #0x8000dbd0,d0 ; rts
 
 
 class Rig:
@@ -189,7 +189,7 @@ class Rig:
         mc.map(0x80000000, 0x10000)
         mc.map(mm.PATTERN_MUTES & ~0xffff, 0x10000)
         mc.write(mm.BASE, image)
-        mc.write(mm.MIX, STUB)                               # test only: the real mixer is not run
+        mc.write(mm.MIX, STUB)  # test only: the real mixer is not run
         for a, b in ((mm.PAN_HELPER, mm.PAN_END), mm.CAVE, mm.CAVE_AMUTE, (mm.MIX_GAIN, mm.MIX_GAIN_END)):
             mc.load_code(a, image[mm.off(a):mm.off(b)])
         mc.set_stack(0x407ff000, 0x40000100)
@@ -229,12 +229,12 @@ def rig(patched):
 
 def test_mixer_sees_a_linked_pair_and_everything_is_put_back(rig):
     machines = [44, 0, 4, 44, 6, 44, 38, 44, 9, 10, 11, 12]
-    modes = [1, 0, 1, 5, 0, 0, 1, 1, 0, 0, 0, 0]     # linked: 0->1 and 3->4. Not: 2, 5, 6 (wrong machine or mode), 7 (last)
+    modes = [1, 0, 1, 5, 0, 0, 1, 1, 0, 0, 0, 0]  # linked: 0->1 and 3->4. Not: 2, 5, 6 (wrong machine or mode), 7 (last)
     block, level2 = make_block(machines, modes)
     ret, after, level2_after = rig.run(block, level2)
-    assert ret == 0x8000DBD0                           # the mixer's return value comes back
+    assert ret == 0x8000DBD0  # the mixer's return value comes back
     assert rig.seen["args"] == [0x11111111, 0x22222222, PARAMS]
-    assert after == block and level2_after == level2   # nothing is left changed
+    assert after == block and level2_after == level2  # nothing is left changed
 
     want = bytearray(block)
     want_l2 = bytearray(level2)
@@ -254,7 +254,8 @@ def test_no_sampler_no_change(rig):
     ret, after, level2_after = rig.run(block, level2)
     assert rig.seen["params"] == block and rig.seen["level2"] == level2
     assert after == block and level2_after == level2
-    # the sampler, never stereo on 1..8: mono, the two record modes, chained mono, and those again with higher bits set
+    # the sampler, never stereo on 1..8: mono, the two record modes, chained mono, and those again with higher bits
+    # set
     for seed, modes in ((3, [0, 2, 3, 4, 6, 7, 8, 0x7e, 0, 1, 1, 5]), (9, [3, 2, 0, 4, 0x80, 0xfb, 0xfc, 2, 1, 1, 1, 1])):
         block, level2 = make_block([44] * 12, modes, seed=seed)
         rig.run(block, level2)
@@ -262,13 +263,13 @@ def test_no_sampler_no_change(rig):
 
 
 def test_overlapping_pairs_restore_exactly(rig):
-    block, level2 = make_block([44] * 12, [1, 5, 1, 5, 9, 1, 0xfd, 1, 1, 1, 1, 1], seed=4)   # every digital track says stereo
+    block, level2 = make_block([44] * 12, [1, 5, 1, 5, 9, 1, 0xfd, 1, 1, 1, 1, 1], seed=4)  # every digital track says stereo
     ret, after, level2_after = rig.run(block, level2)
     assert after == block and level2_after == level2
     seen = rig.seen["params"]
     pans = [int.from_bytes(seen[STRIDE * t + P_PAN:][:2], "big") for t in range(8)]
-    assert pans == [0] * 7 + [127 << 8]            # a chain of "left" tracks; only the last is a pure right
-    assert seen[STRIDE * 8:] == block[STRIDE * 8:]                 # the analog tracks are never touched
+    assert pans == [0] * 7 + [127 << 8]  # a chain of "left" tracks; only the last is a pure right
+    assert seen[STRIDE * 8:] == block[STRIDE * 8:]  # the analog tracks are never touched
 
 
 # ---- audio mute -----------------------------------------------------------------------------
@@ -280,7 +281,7 @@ def vols(params):
 def muted_tracks(rig, block, level2, **state):
     """Run one mixer call; -> the tracks the mixer was shown at volume 0. Checks nothing else moved."""
     ret, after, level2_after = rig.run(block, level2, **state)
-    assert after == block and level2_after == level2               # everything is put back
+    assert after == block and level2_after == level2  # everything is put back
     seen, before = rig.seen["params"], vols(block)
     out = [t for t in range(12) if vols(seen)[t] == 0 and before[t] != 0]
     assert all(vols(seen)[t] == before[t] for t in range(12) if t not in out)
@@ -293,10 +294,10 @@ def muted_tracks(rig, block, level2, **state):
 
 def test_mixer_takes_all_twelve_levels_from_the_same_volume_word(stock):
     """Why the analog tracks can be muted the same way: one loop, 12 tracks, one read of params + 124."""
-    assert stock[mm.off(0x4008f2b6):mm.off(0x4008f2ba)] == bytes.fromhex(fw.sx("5a114ec6aad1a0a8"))     # mvs.w 124(a3),d7
+    assert stock[mm.off(0x4008f2b6):mm.off(0x4008f2ba)] == bytes.fromhex(fw.sx("5a114ec6aad1a0a8"))  # mvs.w 124(a3),d7
     assert stock[mm.off(0x4008f4e0):mm.off(0x4008f4ec)] == bytes.fromhex(fw.sx("4e1f632227f717988a92b5f9ac251e50"))
     back = 0x4008f4ee + int.from_bytes(stock[mm.off(0x4008f4ee):mm.off(0x4008f4f0)], "big", signed=True)
-    assert back == 0x4008f296 < 0x4008f2b6                       # the loop: 12 tracks, 142 bytes a track
+    assert back == 0x4008f296 < 0x4008f2b6  # the loop: 12 tracks, 142 bytes a track
 
 
 def test_a_muted_track_is_shown_volume_zero(rig):
@@ -306,9 +307,9 @@ def test_a_muted_track_is_shown_volume_zero(rig):
     assert muted_tracks(rig, block, level2, mutes=0b0000_0010_0010) == [1, 5]
     assert muted_tracks(rig, block, level2, pattern=0b1000_0001) == [0, 7]
     assert muted_tracks(rig, block, level2, mutes=0b10, pattern=0b100) == [1, 2]
-    assert muted_tracks(rig, block, level2, mutes=0b0110_0000_0000) == [9, 10]         # analog tracks 10 and 11
+    assert muted_tracks(rig, block, level2, mutes=0b0110_0000_0000) == [9, 10]  # analog tracks 10 and 11
     assert muted_tracks(rig, block, level2, pattern=0b1001_0000_0000) == [8, 11]
-    assert muted_tracks(rig, block, level2, mutes=0x1000, pattern=0x1000) == []        # the FX track: not ours
+    assert muted_tracks(rig, block, level2, mutes=0x1000, pattern=0x1000) == []  # the FX track: not ours
     assert muted_tracks(rig, block, level2, mutes=0xffffffff) == list(range(12))
 
 
@@ -316,24 +317,24 @@ def test_solo_mutes_every_other_track_the_way_the_trig_code_does(rig):
     block, level2 = make_block([0] * 12, [0] * 12, seed=7)
     others = [t for t in range(12) if t != 2]
     assert muted_tracks(rig, block, level2, solos=0b100) == others
-    assert muted_tracks(rig, block, level2, solos=0b100, mutes=0b100) == others                   # solo wins over mute
-    assert muted_tracks(rig, block, level2, solos=0b100, pattern=0b100) == list(range(12))        # pattern mute still counts
-    assert muted_tracks(rig, block, level2, solos=1 << 9) == [t for t in range(12) if t != 9]     # an analog track solo
-    assert muted_tracks(rig, block, level2, solos=1 << 12) == list(range(12))                     # an FX track solo
+    assert muted_tracks(rig, block, level2, solos=0b100, mutes=0b100) == others  # solo wins over mute
+    assert muted_tracks(rig, block, level2, solos=0b100, pattern=0b100) == list(range(12))  # pattern mute still counts
+    assert muted_tracks(rig, block, level2, solos=1 << 9) == [t for t in range(12) if t != 9]  # an analog track solo
+    assert muted_tracks(rig, block, level2, solos=1 << 12) == list(range(12))  # an FX track solo
 
 
 def test_a_stereo_pair_is_muted_by_its_left_track_only(rig):
-    machines, modes = [44, 0, 44, 0, 0, 0, 0, 0, 8, 9, 10, 11], [1, 0, 5, 0, 0, 0, 0, 0, 0, 0, 0, 0]     # pairs 0+1 and 2+3
+    machines, modes = [44, 0, 44, 0, 0, 0, 0, 0, 8, 9, 10, 11], [1, 0, 5, 0, 0, 0, 0, 0, 0, 0, 0, 0]  # pairs 0+1 and 2+3
     block, level2 = make_block(machines, modes, seed=8)
-    ret, after, level2_after = rig.run(block, level2, mutes=0b0001)        # left of the first pair
+    ret, after, level2_after = rig.run(block, level2, mutes=0b0001)  # left of the first pair
     assert after == block and level2_after == level2
     assert [t for t in range(8) if vols(rig.seen["params"])[t] == 0] == [0, 1]
-    rig.run(block, level2, mutes=0b1010)                                   # only the right-hand tracks
+    rig.run(block, level2, mutes=0b1010)  # only the right-hand tracks
     seen = vols(rig.seen["params"])
-    assert seen[1] == seen[0] != 0 and seen[3] == seen[2] != 0             # not muted: they follow their left
+    assert seen[1] == seen[0] != 0 and seen[3] == seen[2] != 0  # not muted: they follow their left
     rig.run(block, level2, pattern=0b0100, mutes=0b0010)
     assert [t for t in range(8) if vols(rig.seen["params"])[t] == 0] == [2, 3]
-    ret, after, level2_after = rig.run(block, level2, solos=0b0001)        # solo the left of a pair: both stay
+    ret, after, level2_after = rig.run(block, level2, solos=0b0001)  # solo the left of a pair: both stay
     assert [t for t in range(8) if vols(rig.seen["params"])[t] == 0] == [2, 3, 4, 5, 6, 7]
     assert after == block and level2_after == level2
 
@@ -346,16 +347,17 @@ def arig(patched):
 
 
 def shut_voices(arig, **state):
-    """One mixer call through the analog mute; -> the analog voices whose two level words were set to 0.
-    Checks that nothing else in the control block moved and that the mixer saw it already done."""
+    """One mixer call through the analog mute; -> the analog voices whose two level words were set to 0. Checks that
+    nothing else in the control block moved and that the mixer saw it already done.
+    """
     block, level2 = make_block([0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11], [0] * 12, seed=11)
     rng = np.random.default_rng(12)
-    before = rng.integers(1, 256, CONTROL_BYTES, dtype=np.uint8).tobytes()      # no zero bytes: every word is open
+    before = rng.integers(1, 256, CONTROL_BYTES, dtype=np.uint8).tobytes()  # no zero bytes: every word is open
     arig.mc.write(mm.CONTROL, before)
     ret, after, level2_after = arig.run(block, level2, **state)
     assert ret == 0x8000DBD0 and after == block and level2_after == level2
     got = arig.mc.read(mm.CONTROL, CONTROL_BYTES)
-    assert arig.seen["control"] == got                             # done before the mixer runs, sent after it
+    assert arig.seen["control"] == got  # done before the mixer runs, sent after it
     word = lambda b, k: b[2 * k:2 * k + 2]
     out = [v for v in range(4) if word(got, v) == b"\0\0"]
     want = bytearray(before)
@@ -371,16 +373,16 @@ def test_a_muted_analog_track_has_both_its_level_controls_shut(arig):
     assert shut_voices(arig, mutes=1 << 11) == [3]
     assert shut_voices(arig, pattern=0b0110 << 8) == [1, 2]
     assert shut_voices(arig, mutes=1 << 9, pattern=1 << 10) == [1, 2]
-    assert shut_voices(arig, mutes=0xffffffff) == [0, 1, 2, 3]     # the external input's two words stay as they are
-    assert shut_voices(arig, mutes=0x10ff, pattern=0x10ff) == []   # digital and FX track mutes: not here
+    assert shut_voices(arig, mutes=0xffffffff) == [0, 1, 2, 3]  # the external input's two words stay as they are
+    assert shut_voices(arig, mutes=0x10ff, pattern=0x10ff) == []  # digital and FX track mutes: not here
 
 
 def test_solo_shuts_the_other_analog_tracks(arig):
-    assert shut_voices(arig, solos=0b100) == [0, 1, 2, 3]          # a digital track solo
+    assert shut_voices(arig, solos=0b100) == [0, 1, 2, 3]  # a digital track solo
     assert shut_voices(arig, solos=1 << 9) == [0, 2, 3]
     assert shut_voices(arig, solos=(1 << 9) | (1 << 11)) == [0, 2]
-    assert shut_voices(arig, solos=1 << 9, pattern=1 << 9) == [0, 1, 2, 3]     # a pattern mute still counts
-    assert shut_voices(arig, solos=1 << 9, mutes=1 << 9) == [0, 2, 3]          # solo wins over mute
+    assert shut_voices(arig, solos=1 << 9, pattern=1 << 9) == [0, 1, 2, 3]  # a pattern mute still counts
+    assert shut_voices(arig, solos=1 << 9, mutes=1 << 9) == [0, 2, 3]  # solo wins over mute
 
 
 def test_analog_mute_hands_the_mixer_link_everything_unchanged(patched):
@@ -406,13 +408,13 @@ def test_where_the_dry_analog_levels_come_from(stock, patched):
     assert stock[mm.off(mm.CONTROL_SEND):mm.off(mm.CONTROL_SEND) + 6] == b"\x48\x79" + be(mm.CONTROL)
     assert stock[mm.off(mm.CONTROL_SEND) + 14:mm.off(mm.CONTROL_SEND) + 20] == b"\x4e\xb9" + be(0x401021b4)
     assert be(mm.CONTROL) not in stock[mm.off(mm.MIX_CALL):mm.off(mm.CONTROL_SEND)]
-    # the per-voice routine: volume is params + 106 + 18, right-hand words start at block + 10,
-    # both values are capped at 65535 and stored as words
+    # the per-voice routine: volume is params + 106 + 18, right-hand words start at block + 10, both values are capped
+    # at 65535 and stored as words
     o = mm.off(0x40090060)
     assert stock[o:o + 8] == bytes.fromhex(fw.sx("857da3fa8395f7c7ebe4ea7c"))
-    assert stock[mm.off(0x4008ffe6):mm.off(0x4008ffea)] == bytes.fromhex(fw.sx("b38047952cdbfb70"))     # lea 106(a0,d1),a3
-    assert stock[mm.off(0x4009018a):mm.off(0x4009018c)] == bytes.fromhex("3081")         # move.w d1,(a0): left
-    assert stock[mm.off(0x400901a0):mm.off(0x400901a2)] == bytes.fromhex("3280")         # move.w d0,(a1): right
+    assert stock[mm.off(0x4008ffe6):mm.off(0x4008ffea)] == bytes.fromhex(fw.sx("b38047952cdbfb70"))  # lea 106(a0,d1),a3
+    assert stock[mm.off(0x4009018a):mm.off(0x4009018c)] == bytes.fromhex("3081")  # move.w d1,(a0): left
+    assert stock[mm.off(0x400901a0):mm.off(0x400901a2)] == bytes.fromhex("3280")  # move.w d0,(a1): right
     assert list(stock[mm.off(mm.VOICE_TRACK):mm.off(mm.VOICE_TRACK) + 4]) == [8, 9, 10, 11]
     assert mm.CAVE_AMUTE[1] == mm.PAN_HELPER
 
@@ -420,7 +422,7 @@ def test_where_the_dry_analog_levels_come_from(stock, patched):
 def test_volume_zero_is_silence_in_the_real_gain_function(rig):
     """The mixer's own gain function, run as it is: volume 0 gives gain 0 whatever the other inputs."""
     def gain(level, level2, vol, curve):
-        rig.mc.emac.macsr = 0x20                       # signed fractional, as the mixer runs
+        rig.mc.emac.macsr = 0x20  # signed fractional, as the mixer runs
         return rig.mc.call(mm.MIX_GAIN, level, level2, vol, curve)
     assert gain(127 << 8, 127 << 8, 100 << 8, 0) != 0
     for level, level2, curve in ((127 << 8, 127 << 8, 0), (0x7fff, 0x7fff, 3), (64 << 8, 1 << 8, 1), (1, 0x7f00, 2)):
@@ -455,7 +457,7 @@ def test_mixer_call_site(stock, patched):
     assert stock[mm.off(mm.MIX_CALL):mm.off(mm.MIX_CALL) + 6] == b"\x4e\xb9" + build_main.be32(mm.MIX)
     # the chain: call site -> analog mute -> mixer link -> mixer
     assert image[mm.off(mm.MIX_CALL):mm.off(mm.MIX_CALL) + 6] == b"\x4e\xb9" + build_main.be32(syms["mix_amute"])
-    assert stock.count(b"\x4e\xb9" + build_main.be32(mm.MIX)) == 1       # the mixer has one caller
+    assert stock.count(b"\x4e\xb9" + build_main.be32(mm.MIX)) == 1  # the mixer has one caller
     lo, hi = mm.CAVE
     assert lo <= syms["mix_link"] < hi
     lo, hi = mm.CAVE_AMUTE
@@ -484,7 +486,7 @@ def test_full_image_changes_only_declared_regions_of_3_and_7(full, official, pat
         declared |= set(range(start, end))
     changed = {i for i in range(len(a)) if a[i] != b[i]}
     assert changed and changed <= declared
-    assert fw.Image(raw).section(3) == patched[0]          # survives the compressed round trip
+    assert fw.Image(raw).section(3) == patched[0]  # survives the compressed round trip
 
 
 def test_full_image_keeps_bootstrap_and_updater(full, official):

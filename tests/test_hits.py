@@ -1,26 +1,4 @@
-"""The hits image: the lap image with a long sample's hits starting the filter's envelope again, as a trig of its own.
-
-
-
-), and the hits kept a sample for the slices to come.
-
-The envelope is the main CPU's (docs/FINDINGS.md, "The filter's envelope is the main CPU's"). The audio CPU goes over
-every slot once and keeps its hits; a voice going forward says, in the window's long at 0x5b4, how loud a hit its
-playhead reaches two blocks on (engine/sampler.h, HITS). The main CPU's call of the envelope comes to ours, which hands
-it a trig for every hit DEL lets through on a sampler track, and DEL at 0 there (engine/hits.c).
-
-Held here. The audio CPU: what the scan keeps is a model's to the hit (a sum of drums, a bass line, a slot that
-changes); a voice says each hit once, in the block its playhead is two blocks short of it, at its pitch, and not the
-one its note starts on; a loop says its start again after each turn; nothing of the sound changes; the long holds the
-hits every block, the time image's C never; what it costs an interrupt of eight voices. The main CPU, stock's envelope
-run under ours: a hit DEL lets through is stock's own trig with DEL at 0, on that track alone; DEL 1 takes the loudest
-only and 127 every hit; another machine's track and its DEL are stock's; the block is as it was after the call. And
-the image differs from the lap image only where it says.
-
-Not held, and only the unit can show it: that the cutoff a hit makes is played on the hit (the two blocks are read
-from the order the two CPUs run in, not timed); how it sounds; that DEL's knob, a lock of it and an LFO on it reach
-the block the envelope is handed as they reach any knob's.
-"""
+"""The hits image: the lap image with a long sample's hits starting the filter's envelope again, as a trig of its own."""
 import hashlib
 import shutil
 
@@ -53,7 +31,7 @@ def hits(stock):
 
 @pytest.fixture(scope="module")
 def tail(stock):
-    return build_engine.patched_image(stock, tail=True)        # the lap image's section 7
+    return build_engine.patched_image(stock, tail=True)  # the lap image's section 7
 
 
 @pytest.fixture(autouse=True)
@@ -61,7 +39,8 @@ def folded(monkeypatch):
     monkeypatch.setattr(P, "HookEngine", Folded)
 
 
-# ---- the model ------------------------------------------------------------------------------------------------------
+# ---- the model
+# ------------------------------------------------------------------------------------------------------
 
 def loud(p):
     s, t = 0, 181
@@ -119,7 +98,8 @@ def drums(seconds=1.0, seed=1):
     return np.clip(x, -32768, 32767).astype(np.int16)
 
 
-# ---- the audio CPU --------------------------------------------------------------------------------------------------
+# ---- the audio CPU
+# --------------------------------------------------------------------------------------------------
 
 def kept(e, k):
     mc, at = e.mc, m.HITS_STORE + m.HITS_BYTES * k
@@ -151,15 +131,15 @@ def notes(built, x, blocks, knobs=None):
 def test_the_scan_keeps_the_models_hits(hits):
     x, bass = drums(), (16000 * np.sin(2 * np.pi * 30 * np.arange(SR) / SR)).astype(np.int16)
     e = P.engine(hits, pool={0: x, 1: x, 6: bass, 7: bass})
-    for _ in range(4 * (SR // 128 + 2) + 8):                    # no voice plays: the slots in turn, 0 to 7
+    for _ in range(4 * (SR // 128 + 2) + 8):  # no voice plays: the slots in turn, 0 to 7
         e.mc.call(hits[1]["hits_block"])
     assert kept(e, 6)[1] == SR
     got, done = kept(e, 0)
     assert done == len(x) and got == model(x)
-    assert [f for f, _, _ in got] == [0, 12000, 24000, 36000]   # every kick and hat, at its own window
-    assert [s for _, s, _ in got] == [14, 13, 14, 12]             # kicks at -6 dB, hats at -9 and -12
-    assert all(a < b <= c for (a, _, b), (c, _, _) in zip(got, got[1:] + [(SR, 0, 0)]))    # each ends before the next
-    assert kept(e, 6)[0] == model(bass) and len(model(bass)) == 1          # a bass line has its start and nothing else
+    assert [f for f, _, _ in got] == [0, 12000, 24000, 36000]  # every kick and hat, at its own window
+    assert [s for _, s, _ in got] == [14, 13, 14, 12]  # kicks at -6 dB, hats at -9 and -12
+    assert all(a < b <= c for (a, _, b), (c, _, _) in zip(got, got[1:] + [(SR, 0, 0)]))  # each ends before the next
+    assert kept(e, 6)[0] == model(bass) and len(model(bass)) == 1  # a bass line has its start and nothing else
     e = P.engine(hits, pool={0: bursts()})
     for _ in range(80):
         e.mc.call(hits[1]["hits_block"])
@@ -175,17 +155,12 @@ def test_a_slot_that_changes_is_gone_over_again(hits):
     call(SR // 128 + 2)
     assert kept(e, 0)[0] == model(x)
     ptr = e.mc.r32(m.SLOT_PTR)
-    e.mc.write(ptr, y.astype(">i2").tobytes())                 # the same place and length, other frames: a print tells
+    e.mc.write(ptr, y.astype(">i2").tobytes())  # the same place and length, other frames: a print tells
     call(64 + SR // 128 + 2)
     assert kept(e, 0)[0] == model(y) != model(x)
 
 
 def test_a_list_left_by_another_build_is_not_believed(hits):
-    """On the unit (2026-10-14): the first build found hits, the second, flashed over it, said none ("now the
-    transients trigs dont hit any more at all"). Memory under the takes outlives a flash: the first build's lists
-    were still there, place, length and print as the slots' (the same samples), and gone over to the end, so they
-    were believed, read in the second build's shape (every hit in the first 32nd of the sample) and never gone over
-    again. Here such a list is left, as the first build left it, before the note."""
     x = drums()
     image, syms = hits
     e = P.engine(hits, pool={0: x, 1: x})
@@ -193,7 +168,7 @@ def test_a_list_left_by_another_build_is_not_believed(hits):
         e.set_slot(0, slot, v)
     ptr, n = e.mc.r32(m.SLOT_PTR), len(x)
     old = [(f << 8 | s) for f, s, _ in model(x)]
-    for k in (0, 1):                                            # the first build's: place, frames, print, done, follower, gap, count, then frame << 8 | how loud
+    for k in (0, 1):
         print_ = (n + sum(int(np.uint16(x[(n >> 4) * j])) for j in range(16))) & 0xffffffff
         at = m.HITS_STORE + m.HITS_BYTES * k
         e.mc.write(at, b"".join(v.to_bytes(4, "big") for v in (e.mc.r32(m.SLOT_PTR + 8 * k), n, print_, n))
@@ -205,7 +180,7 @@ def test_a_list_left_by_another_build_is_not_believed(hits):
         e.mc.call(syms["hits_block"])
         rows.append(dict(word=e.mc.r32(m.HIT_BOX), now=s32(e.mc.r32(st + 8)) >> 12, inc=e.mc.r32(st + 24),
                          dir=s32(e.mc.r32(st + 28)) >> 24))
-    assert kept(e, 0)[0] == model(x)                            # gone over again
+    assert kept(e, 0)[0] == model(x)  # gone over again
     assert said(rows) and said(rows) == expected(rows, model(x))[:len(said(rows))]
 
 
@@ -215,12 +190,13 @@ def said(rows, start=0):
 
 
 def expected(rows, found):
-    """[(block, how loud)] a one-shot is to say: a hit's start reached going forward, its end going backward, two
-    blocks on, and not one its note starts on."""
+    """[(block, how loud)] a one-shot is to say: a hit's start reached going forward, its end going backward, two blocks
+    on, and not one its note starts on.
+    """
     want, reach = [], None
     for b, r in enumerate(rows):
         d = r["dir"]
-        if not d:                                               # the trig's block: the note starts in the next
+        if not d:  # the trig's block: the note starts in the next
             continue
         ahead = d * r["now"] + (r["inc"] >> 6)
         if reach is not None:
@@ -239,9 +215,9 @@ def test_a_voice_says_each_hit_once_two_blocks_before_it(hits, tune):
     e, rows = notes(hits, x, int(len(x) / 32 / rate) + 20, {P.TUNE: tune})
     found = model(x)
     want = expected(rows, found)
-    assert said(rows) == want and len(want) == len(found) - 1   # the note's own start is stock's trig's
-    assert all(r["word"] >> 4 == 0 for r in rows)               # nothing on a track that plays nothing
-    assert abs((rows[5]["inc"] >> 6) - 64 * rate) <= 1          # two blocks on, at the pitch it plays at
+    assert said(rows) == want and len(want) == len(found) - 1  # the note's own start is stock's trig's
+    assert all(r["word"] >> 4 == 0 for r in rows)  # nothing on a track that plays nothing
+    assert abs((rows[5]["inc"] >> 6) - 64 * rate) <= 1  # two blocks on, at the pitch it plays at
 
 
 @pytest.mark.parametrize("tune", [64, 76])
@@ -251,7 +227,7 @@ def test_backward_a_hit_is_said_where_its_sound_comes_up_out_of_the_quiet(hits, 
     assert rows[3]["dir"] < 0 and rows[3]["now"] > 9000
     found = model(x)
     want = expected(rows, found)
-    assert said(rows) == want and [s for _, s in want] == [found[1][1], found[0][1]]    # the second hit first
+    assert said(rows) == want and [s for _, s in want] == [found[1][1], found[0][1]]  # the second hit first
     for (b, _), (_, _, end) in zip(want, found[::-1]):
         assert rows[b - 1]["now"] - 64 * 2 ** ((tune - 64) / 12) > end - 2 and rows[b]["now"] - (rows[b]["inc"] >> 6) <= end
 
@@ -262,7 +238,7 @@ def test_a_loop_says_its_start_again_after_each_turn(hits):
     turns = [b for b in range(1, len(rows)) if rows[b]["now"] < rows[b - 1]["now"]]
     assert len(turns) == 4 and all(rows[b]["pa"] == 0 for b in turns)
     got = said(rows)
-    assert [b for b, s in got if s == model(x)[0][1]] == turns   # the loop's start, in the block it begins again in
+    assert [b for b, s in got if s == model(x)[0][1]] == turns  # the loop's start, in the block it begins again in
     middle = [b for b, s in got if s == model(x)[1][1]]
     assert len(middle) == 5 and all(rows[b]["now"] + 64 >= 4800 > rows[b - 1]["now"] + 64 for b in middle)
 
@@ -274,13 +250,14 @@ def test_a_track_on_sy_toy_or_sy_bits_plays_nothing(hits, tail, machine):
         e = P.engine(built)
         e.set_machine(0, machine)
         out.append(np.concatenate([e.block(1 if b == 0 else 0, 0)[0] for b in range(40)]))
-    assert not out[0].any() and np.abs(out[1]).max() > 1 << 16     # the lap image's still sounds
+    assert not out[0].any() and np.abs(out[1]).max() > 1 << 16  # the lap image's still sounds
 
 
 def whole(image, factory, blocks, note):
-    """Eight stereo samples on eight tracks looping, through the whole interrupt, a trig in the second block.
-    -> each block's cost, the window's two longs after it, and the sound: the left after the last stage, the right
-    channels as the main CPU reads them."""
+    """Eight stereo samples on eight tracks looping, through the whole interrupt, a trig in the second block. -> each
+    block's cost, the window's two longs after it, and the sound: the left after the last stage, the right channels as
+    the main CPU reads them.
+    """
     from stereo_rig import Rig
     from test_stereo import pool, samplers
     r = Rig(image)
@@ -308,12 +285,12 @@ def test_the_sound_is_the_lap_images_the_long_holds_the_hits_and_what_they_cost(
     from test_stereo import SWARM
     costs = {}
     for note in (60, 55.25):
-        n = 270 if note == 60 else 40                           # the time image's routine says P every 256 blocks
+        n = 270 if note == 60 else 40  # the time image's routine says P every 256 blocks
         costs["hits", note], box, sound = whole(hits[0], factory, n, note)
         costs["tail", note], _, was = whole(tail[0], factory, n, note)
         assert np.array_equal(sound, was) and np.abs(sound).max() > 1 << 20
-        assert all(w >> 24 != 0x43 for w, _ in box)             # never the time image's C
-        assert note != 60 or box[-1][1] >> 24 == 0x50           # and P where it was, said
+        assert all(w >> 24 != 0x43 for w, _ in box)  # never the time image's C
+        assert note != 60 or box[-1][1] >> 24 == 0x50  # and P where it was, said
     more = {note: [a - b for a, b in zip(costs["hits", note], costs["tail", note])] for note in (60, 55.25)}
     worst = max(max(v[2:]) for v in more.values())
     heaviest = max(costs["hits", 55.25][2:])
@@ -322,7 +299,8 @@ def test_the_sound_is_the_lap_images_the_long_holds_the_hits_and_what_they_cost(
     assert worst < 4000 and heaviest < SWARM
 
 
-# ---- the main CPU ---------------------------------------------------------------------------------------------------
+# ---- the main CPU
+# ---------------------------------------------------------------------------------------------------
 
 PARAMS, ENV = 0x80006348, 0x43bdd09c
 ATK, DEC, SUS, REL = 10, 64, 0, 64
@@ -352,7 +330,7 @@ def envelope(main, tracks, word=0, trig=0, ours=True):
         for at, v in ((62, machine), (90, dl), (92, ATK), (94, DEC), (96, SUS), (98, REL), (100, fenr)):
             mc.write(p + at, (v << 8).to_bytes(2, "big"))
         if not ours and machine == 44:
-            mc.write(p + 90, bytes(2))                          # stock's own, handed DEL at 0
+            mc.write(p + 90, bytes(2))  # stock's own, handed DEL at 0
         mc.w32(ENV + 12 * t, 1)
         mc.w32(ENV + 12 * t + 4, 0x90000000 + 0x1000000 * t)
     block = mc.read(PARAMS, 142 * 8)
@@ -381,13 +359,13 @@ def test_a_hit_del_lets_through_is_stocks_trig_with_del_at_0_on_that_track_alone
     theirs, stock = envelope(main, TRACKS, trig=want, ours=False)
     assert ours == theirs
     assert [s for s, _, _ in ours] == [2, 1, 2, 2, 1, 1, 1, 1]  # the attack again on 0, 2 and 3, and nothing else moved
-    assert ours[2][1] == 0 and ours[0][1] != 0                   # FENR on: from nothing. Off: from where it was
+    assert ours[2][1] == 0 and ours[0][1] != 0  # FENR on: from nothing. Off: from where it was
     print("hits: the main CPU's call %d instructions, stock's own %d" % (cost, stock))
-    assert cost - stock < 300                                    # 252 here: six sampler tracks with DEL, the feed was 4,000 to 5,000
+    assert cost - stock < 300  # 252 here: six sampler tracks with DEL, the feed was 4,000 to 5,000
 
 
 def test_del_1_takes_the_loudest_only_and_127_every_hit():
-    assert [threshold(d) for d in (1, 9, 10, 17, 64, 120, 127)] == [15, 15, 14, 14, 8, 2, 1]     # a step every 8 or 9
+    assert [threshold(d) for d in (1, 9, 10, 17, 64, 120, 127)] == [15, 15, 14, 14, 8, 2, 1]  # a step every 8 or 9
     assert all(threshold(a) >= threshold(b) for a, b in zip(range(1, 127), range(2, 128)))
 
 
@@ -395,16 +373,17 @@ def test_a_trig_of_stocks_on_a_sampler_track_never_waits_and_another_machines_do
     ours, _ = envelope(main, TRACKS, trig=0xff)
     assert [s for s, _, _ in ours] == [2, 2, 2, 2, 2, 2, 3, 3]  # the delay's state on the two that are no sampler
     both, _ = envelope(main, TRACKS, word=0xffffffff, trig=0xff)
-    assert both == ours                                          # a hit with stock's trig is stock's trig
+    assert both == ours  # a hit with stock's trig is stock's trig
 
 
-# ---- the image ------------------------------------------------------------------------------------------------------
+# ---- the image
+# ------------------------------------------------------------------------------------------------------
 
 def test_the_image(official_path, official, hits):
     quiet = lambda s: None
     raw, _, built, _, syms = build.build(official_path, log=quiet, xfade=16, prof=True)
     was_raw, _, was, _, _ = build.build(official_path, log=quiet, xfade=15, prof=True)
-    assert hashlib.sha256(was_raw).hexdigest().startswith("0d5e8cf6")      # the lap image, as it is
+    assert hashlib.sha256(was_raw).hexdigest().startswith("0d5e8cf6")  # the lap image, as it is
     new, old = built.section(3), was.section(3)
     spans = [mm.CAVE_HITS, (mm.FILTER_ENV_CALL + 2, mm.FILTER_ENV_CALL + 6)]
     assert not [k for k in range(len(new)) if new[k] != old[k] and not any(mm.off(a) <= k < mm.off(b) for a, b in spans)]
@@ -413,7 +392,7 @@ def test_the_image(official_path, official, hits):
     assert seven == hits[0] and len(seven) == len(last)
     runs = [r for caves in (m.CAVES, m.REC_CAVES, m.FADE_CAVES, m.LIVE_CAVES, m.PITCH_CAVES, m.ONE_CAVES, m.QUICK_CAVES, m.LEAN_CAVES,
                             m.TIMED_CAVES, m.CROSS_CAVES, m.SRR_CAVES, m.HITS_CAVES) for r in caves.values()]
-    runs += [(table + 4 * m.TOY_ENGINE, table + 4 * m.TWIN_ENGINE + 4) for table in (m.UPDATE_TABLE, m.RENDER_TABLE)]     # their pointers into the runs
+    runs += [(table + 4 * m.TOY_ENGINE, table + 4 * m.TWIN_ENGINE + 4) for table in (m.UPDATE_TABLE, m.RENDER_TABLE)]  # their pointers into the runs
     runs += [(m.ISR_VOICE_LOOP_CALL + 2, m.ISR_VOICE_LOOP_CALL + 6), (m.ISR_AMP_CALL + 2, m.ISR_AMP_CALL + 6)]
     assert not [k for k in range(len(seven)) if seven[k] != last[k] and not any(m.off(a) <= k < m.off(b) for a, b in runs)]
     for sid in official.ids:

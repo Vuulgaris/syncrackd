@@ -1,49 +1,40 @@
-/* Main CPU (section 3, OS 1.42 only): feeds the recorder. Replaces the one
- * call to the mixer, in front of the mixer link (engine/mixlink.c), which it
- * calls first.
+/* Main CPU (section 3, OS 1.42 only): feeds the recorder. Replaces the one call to the mixer, in front of the mixer
+ * link (engine/mixlink.c), which it calls first.
  *
- * When the mixer returns, the main CPU's 20-channel frame buffer holds this
- * block of every signal in the unit (tools/mainmap.py, FRAME). If a digital
- * track's knobs say "this sampler, MODE record", one stereo pair of it is
- * reduced from 32 to 16 bits (rounded, with triangular dither of one step
- * either way, so the error is noise and not distortion) and put into the next
- * block of the ring in the shared window, and the ring's counter goes up by one. The audio CPU does the rest
- * (engine/sampler.c, rec_step). The first such track picks the source.
+ * When the mixer returns, the main CPU's 20-channel frame buffer holds this block of every signal in the unit
+ * (tools/mainmap.py, FRAME). If a digital track's knobs say "this sampler, MODE record", one stereo pair of it is
+ * reduced from 32 to 16 bits (rounded, with triangular dither of one step either way, so the error is noise and not
+ * distortion) and put into the next block of the ring in the shared window, and the ring's counter goes up by one.
+ * The audio CPU does the rest (engine/sampler.c, rec_step). The first such track picks the source.
  *
- * The counter and the dither's random number live in the window itself, so
- * this needs no memory of its own.
- * Nothing else is written, and nothing at all when no track says record.
+ * The counter and the dither's random number live in the window itself, so this needs no memory of its own. Nothing
+ * else is written, and nothing at all when no track says record.
  *
- * That half of the window is the boot loader's while it pushes the sample pool
- * to the audio CPU. AUDIO_UP is the stock flag the per-block routine tests
- * before it exchanges anything with the audio CPU: cleared when the audio CPU
+ * That half of the window is the boot loader's while it pushes the sample pool to the audio CPU. AUDIO_UP is the
+ * stock flag the per-block routine tests before it exchanges anything with the audio CPU: cleared when the audio CPU
  * is restarted, set when the handshake is over. No feed until then.
  *
- * With -DPAGE (the page image) "from the external input" is a bit of MODE of its
- * own (engine/sampler.h, MODE_EXT): the sampling page sets it.
+ * With -DPAGE (the page image) "from the external input" is a bit of MODE of its own (engine/sampler.h, MODE_EXT):
+ * the sampling page sets it.
  *
- * With -DBANKS (the bank image) there is no feed either while slots are being
- * loaded: the ring's room carries samples to the audio CPU then (BANK_BUSY).
+ * With -DBANKS (the bank image) there is no feed either while slots are being loaded: the ring's room carries samples
+ * to the audio CPU then (BANK_BUSY).
  *
- * With -DRECLOCK (the reclock image) a step's REC is a lock on knob slot 24 and
- * not a lock of MODE (engine/sampler.h, REC_ON): the same rule as the audio CPU's.
+ * With -DRECLOCK (the reclock image) a step's REC is a lock on knob slot 24 and not a lock of MODE (engine/sampler.h,
+ * REC_ON): the same rule as the audio CPU's.
  *
- * With -DMETER (the meter image) the source is a number in MODE and not a switch:
- * the main mix, the external input, any of the twelve tracks, the FX track's return,
- * the delay and reverb. And the feed keeps a level for the sampling page's meter:
- * the largest sample of the source the page is showing, falling by itself, and
- * every METER_EVERY blocks it asks for the page to be drawn again. Only while the
- * page keeps being drawn: it stops METER_STOP blocks after the last drawing. The
- * routines are in a run of their own, behind four numbers (engine/sampler.h).
+ * With -DMETER (the meter image) the source is a number in MODE and not a switch: the main mix, the external input,
+ * any of the twelve tracks, the FX track's return, the delay and reverb. And the feed keeps a level for the sampling
+ * page's meter: the largest sample of the source the page is showing, falling by itself, and every METER_EVERY blocks
+ * it asks for the page to be drawn again. Only while the page keeps being drawn: it stops METER_STOP blocks after the
+ * last drawing. The routines are in a run of their own, behind four numbers (engine/sampler.h).
  *
- * With -DAUTO (the mode image) MODE's lowest bit says what a take is (engine/sampler.h). Without it
- * the take is mono: the source's two sides added and halved, written to both sides of the ring, of
- * which the audio CPU keeps one.
+ * With -DAUTO (the mode image) MODE's lowest bit says what a take is (engine/sampler.h). Without it the take is mono:
+ * the source's two sides added and halved, written to both sides of the ring, of which the audio CPU keeps one.
  *
- * With -DFEED (the feed image) the block itself is written by engine/feed.S: the same take to the bit, in
- * a third of the instructions or less. All of this runs in the per-block interrupt (0x400a38ce, level 5),
- * above the tasks the screen and the keys are served in.
- */
+ * With -DFEED (the feed image) the block itself is written by engine/feed.S: the same take to the bit, in a third of
+ * the instructions or less. All of this runs in the per-block interrupt (0x400a38ce, level 5), above the tasks the
+ * screen and the keys are served in. */
 #include "sampler.h"
 
 #define FRAME ((const s32 *)0x80004760)
@@ -52,21 +43,18 @@
 #define F_EXT 18                    /* external input left */
 #define AUDIO_UP (*(const volatile u32 *)0x43bdd824)
 #ifdef PRE
-/* The pre image. A track that was muted showed no level on the sampling page and recorded
- * nothing, and the FX track's mute did nothing. The mixer is shown a muted track at a
- * volume of 0 (engine/mixlink.c), and what a take was made from is the frame the mixer leaves. So: before the mixer
- * is called, the buffer of every digital track that is a take's source, or the meter's, is copied into a frame of
- * ours, a channel where the frame has it, and the FX track's return the same; and the feed and the meter read those
- * there. A take of a track is then the track before its LEVEL, its AMP VOL and its mute. And the FX track's mute,
- * global or the pattern's, is made one: its return is taken to nothing in its own buffers before the mixer, over a
- * block, after the copy. The frame of ours is in memory nothing names (tools/mainmap.py, PRE_FRAME); its first long,
- * the main mix's place, which is never copied, is whether the return was muted the block before. */
+/* The pre image. A track that was muted showed no level on the sampling page and recorded nothing, and the FX track's
+ * mute did nothing. The mixer is shown a muted track at a volume of 0 (engine/mixlink.c), and what a take was made
+ * from is the frame the mixer leaves. So: before the mixer is called, the buffer of every digital track that is a
+ * take's source, or the meter's, is copied into a frame of ours, a channel where the frame has it, and the FX track's
+ * return the same; and the feed and the meter read those there. A take of a track is then the track before its LEVEL,
+ * its AMP VOL and its mute. And the FX track's mute, global or the pattern's, is made one: its return is taken to
+ * nothing in its own buffers before the mixer, over a block, after the copy. The frame of ours is in memory nothing
+ * names (tools/mainmap.py, PRE_FRAME); its first long, the main mix's place, which is never copied, is whether the
+ * return was muted the block before. */
 #define PRE_FRAME ((s32 *)0x4556b000)
 #ifdef PREWAS
-/* The prewas image (2026-10-17, the lag with the unit's USB audio streaming): the flag on-chip, after the transfers'
- * eight longs (tools/mainmap.py, PRE_WAS_SRAM). The maintainer's unit lagged with 1 KB a block stored at 0x4556a000 (test D) and not
- * with the same stores on-chip (test F) nor the same reads and no stores (test G); this long was the one store a
- * block every image since the pre image made there on any page. The frame is still there: a take's or the meter's. */
+/* The frame is still there: a take's or the meter's. */
 #define PRE_WAS (*(u32 *)0x80007d20)
 #else
 #define PRE_WAS (*(u32 *)0x4556b000)
@@ -77,9 +65,7 @@
 #define PATTERN_MUTES ((const u16 *)0x43bdd828)
 #define FX_TRACK 12
 #ifdef NOFX
-/* The nofx image (2026-10-18, 
- * and move the frame off 0x4556b000, where stores tipped the lag with USB audio streaming: tests D, F, G).
- * Nothing changes the tracks' buffers or the return's before the feed now, so a take and the meter read them where
+/* Nothing changes the tracks' buffers or the return's before the feed now, so a take and the meter read them where
  * they are, on-chip, a long a frame: no frame of ours, no copies. A source's step from one frame to the next, in
  * bytes, is this long (on-chip, after the prewas image's): 80 in stock's frame, 4 in a buffer. chan() sets it,
  * engine/feed.S and meter() step by it. */
@@ -94,8 +80,8 @@ void *mix_amute(void *a, void *b, u8 *params);  /* engine/amute.c: the next in t
 #define CAVE_N __attribute__((section(".cave.n"), noinline))
 
 #ifdef GAIN
-/* The gain image: after the meter's four numbers, the gain the page shows and a gain a track (engine/sampler.h).
- * Then what a decibel is as a number to multiply by, in 256ths: 0 to 24 dB. */
+/* The gain image: after the meter's four numbers, the gain the page shows and a gain a track (engine/sampler.h). Then
+ * what a decibel is as a number to multiply by, in 256ths: 0 to 24 dB. */
 __asm__(".section .cave.n,\"ax\",@progbits\n"
         "meter_vars: .long 0, 0, 0, 0, 0, 0, 0\n"
         "gain_table: .word 256, 287, 322, 362, 406, 455, 511, 573, 643, 722, 810, 908, 1019, 1144, 1283, 1440, 1615, 1812, 2033, 2282, 2560, 2872, 3223, 3616, 4057\n"
@@ -145,9 +131,9 @@ static const s32 *chan(u32 src, u32 *right)
 }
 
 #ifdef FEED
-/* The feed image: a block of a take is written by a routine of its own (engine/feed.S), in a run of its own, with
- * no call a sample and the gain's limit worked out once a block. The words it writes and the random number it
- * leaves are the routines' below, to the bit; they are not built here. */
+/* The feed image: a block of a take is written by a routine of its own (engine/feed.S), in a run of its own, with no
+ * call a sample and the gain's limit worked out once a block. The words it writes and the random number it leaves are
+ * the routines' below, to the bit; they are not built here. */
 void feed_block(volatile s16 *d, const s32 *f, u32 right, u32 g);
 #else
 #ifdef GAIN
@@ -156,8 +142,8 @@ void feed_block(volatile s16 *d, const s32 *f, u32 right, u32 g);
 __attribute__((section(".cave.r"), noinline))
 #ifdef AUTO
 /* The mode image: the sample is fetched here, for room. It is f's own channel, or the one `right` on for a frame's
- * right side; and for a mono take, which the gain says with a bit above its number (take_gain), it is half of the
- * one and half of the other on either side. */
+ * right side; and for a mono take, which the gain says with a bit above its number (take_gain), it is half of the one
+ * and half of the other on either side. */
 static s32 gained(const s32 *f, u32 right, u32 side, s32 g)
 {
     s32 x = f[side ? right : 0];
@@ -285,8 +271,8 @@ extern volatile u32 prof_on;
 void prof_block(volatile s16 *d);
 
 #ifndef NOFX
-/* The sources a take or the meter asks for, a bit a channel of the frame: 2 to 9 the digital tracks, 14 and 15 the
- * FX track's return. */
+/* The sources a take or the meter asks for, a bit a channel of the frame: 2 to 9 the digital tracks, 14 and 15 the FX
+ * track's return. */
 __attribute__((section(".cave.y"), noinline)) static u32 pre_need(u32 need, u32 src)
 {
     if (src == SRC_FX)
@@ -372,8 +358,9 @@ __attribute__((section(".cave.y"), noinline)) void *mix_rec(void *a, void *b, u8
     return result;
 }
 #elif defined(PROF)
-/* The prof image, a tool: the srr image's feed, with the count read at three places (engine/prof.S, the record) and the
- * last source, SENDS, the record itself in place of sound: the same 32 words to both sides, no gain and no dither. */
+/* The prof image, a tool: the srr image's feed, with the count read at three places (engine/prof.S, the record) and
+ * the last source, SENDS, the record itself in place of sound: the same 32 words to both sides, no gain and no
+ * dither. */
 #define PROF_TIMER (*(volatile u32 *)0xfc07000cu)
 #define SRC_PROF SRC_SENDS
 extern volatile u32 prof_vars[];
@@ -484,10 +471,9 @@ CAVE_N void *mix_rec(void *a, void *b, u8 *params)
 #endif
 #else
 
-/* One block: 32 frames of one stereo pair of the frame buffer into a ring block,
- * left, right, left, ... Each sample goes from 32 bits to 16: add half a step
- * and the difference of two random 16-bit numbers, keep the top half, stop at
- * the ends of the range. Lives in the room left after the analog mute. */
+/* One block: 32 frames of one stereo pair of the frame buffer into a ring block, left, right, left, ... Each sample
+ * goes from 32 bits to 16: add half a step and the difference of two random 16-bit numbers, keep the top half, stop
+ * at the ends of the range. Lives in the room left after the analog mute. */
 __attribute__((section(".cave.a"), noinline))
 static void feed_block(volatile s16 *d, const s32 *f)
 {

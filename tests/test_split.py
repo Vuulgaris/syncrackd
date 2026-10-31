@@ -36,18 +36,18 @@ def sampler(official, pool, track, first, mode):
         e.set_note(t, 60)
         for slot, v in ((18, 64), (19, 127), (20, 0), (21, 127), (22, 0), (23, 0), (25, 127)):
             e.set_slot(t, slot, v)
-    e.set_slot(track, 19, 64 + (first // 2 if mode & 1 else first))     # stereo: the knob counts stereo samples
+    e.set_slot(track, 19, 64 + (first // 2 if mode & 1 else first))  # stereo: the knob counts stereo samples
     e.set_slot(track, 23, mode)
     return e
 
 
 def test_pieces_are_mono_16_bit_48k_and_rejoin_exactly(tmp_path):
     path, x = stereo_file(tmp_path)
-    pieces = split_sample.split(split_sample.load(path), chunk_seconds=0.02)       # 960 frames a piece
+    pieces = split_sample.split(split_sample.load(path), chunk_seconds=0.02)  # 960 frames a piece
     paths = split_sample.write(pieces, "pad", str(tmp_path / "out"))
     names = [os.path.basename(p) for p in paths]
     assert names == ["pad_01L.wav", "pad_01R.wav", "pad_02L.wav", "pad_02R.wav", "pad_03L.wav", "pad_03R.wav"]
-    assert names == sorted(names)                                 # alphabetical order is slot order
+    assert names == sorted(names)  # alphabetical order is slot order
     got = []
     for p in paths:
         with wave.open(p, "rb") as w:
@@ -90,7 +90,7 @@ def test_a_sample_of_5_seconds_or_less_is_one_slot_per_channel(tmp_path):
         (3, 2, "pad", 5.0, 1, 2), (5, 1, "hit", 900 / 48000, 0, 5), (7, 2, "over 1/2", 120001 / 48000, 1, 4),
         (9, 2, "over 2/2", 2.5, 1, 5)]
     assert [(slot, stem) for slot, stem, _, _ in split_sample.place(jobs, first=3)] == [(3, "pad"), (5, "hit"), (7, "over")]
-    assert [slot for slot, _, _, _ in split_sample.place(jobs[:1], first=4)] == [5]       # an even first slot too
+    assert [slot for slot, _, _, _ in split_sample.place(jobs[:1], first=4)] == [5]  # an even first slot too
     text = split_sample.sheet(split_sample.layout(jobs, first=3))
     assert "6 slots used, 3 to 10." not in text and "7 slots used, 3 to 10." in text and "1 left empty" in text
     numbered = [os.path.basename(p) for p in split_sample.write(jobs[2][2], "over", str(out), slot=7)]
@@ -102,7 +102,7 @@ def test_a_folder_is_a_batch_and_every_name_starts_with_its_slot(tmp_path, capsy
     (src / "sub").mkdir(parents=True)
     for k in range(2):
         wav_file(src, "s%d.wav" % k, 1000 + k, seed=k)
-    wav_file(src / "sub", "s0.wav", 700, channels=1, seed=5)             # the same name again, in a subfolder
+    wav_file(src / "sub", "s0.wav", 700, channels=1, seed=5)  # the same name again, in a subfolder
     (src / "notes.txt").write_text("not audio")
     files = split_sample.inputs([str(src)])
     assert [os.path.relpath(f, src) for f in files] == ["s0.wav", "s1.wav", os.path.join("sub", "s0.wav")]
@@ -117,9 +117,9 @@ def test_a_folder_is_a_batch_and_every_name_starts_with_its_slot(tmp_path, capsy
     assert text in capsys.readouterr().out
     assert " 9-10  s0" in text and "13     s0" in text and "5 slots used, 9 to 13." in text
 
-    split_sample.main([str(src / "sub"), "--out", str(out)])             # a second run replaces the first
+    split_sample.main([str(src / "sub"), "--out", str(out)])  # a second run replaces the first
     assert wavs() == ["01_s0.wav"]
-    mine = tmp_path / "mine"                                             # a folder it did not make is left alone
+    mine = tmp_path / "mine"  # a folder it did not make is left alone
     mine.mkdir()
     (mine / "keep.wav").write_bytes(b"x")
     with pytest.raises(SystemExit, match="not made by this tool"):
@@ -128,8 +128,6 @@ def test_a_folder_is_a_batch_and_every_name_starts_with_its_slot(tmp_path, capsy
 
 
 def test_for_the_pack_image_mono_samples_go_in_the_single_slots_from_64_down(tmp_path, capsys):
-    """
-    """
     src = tmp_path / "set"
     src.mkdir()
     wav_file(src, "a_pad.wav", 1000, seed=1)
@@ -142,7 +140,7 @@ def test_for_the_pack_image_mono_samples_go_in_the_single_slots_from_64_down(tmp
     # in slot order, with the number to turn SMPL to: a stereo sample's own, a single slot's
     assert [(slot, n, name, smpl) for slot, n, name, _, _, smpl in split_sample.layout(jobs, pack=True)] == [
         (1, 2, "a_pad", 1), (3, 2, "c_keys", 2), (63, 1, "d_snare", 63), (64, 1, "b_hit", 64)]
-    assert [slot for slot, _, _, _ in split_sample.place(jobs)] == [1, 3, 5, 7]            # (without it: as it was)
+    assert [slot for slot, _, _, _ in split_sample.place(jobs)] == [1, 3, 5, 7]  # (without it: as it was)
     out = tmp_path / "out"
     split_sample.main([str(src), "--out", str(out), "--pack"])
     assert sorted(f for f in os.listdir(out) if f.endswith(".wav")) == [
@@ -161,7 +159,8 @@ def frames_of(path):
 def test_with_pack_a_files_length_says_what_it_is(tmp_path, mono_frames, stereo_frames):
     """For the stops image, which tells a single slot's mono sample from a stereo place's by its length: a mono file
     comes out an odd number of frames and a stereo one an even number on both sides. Its last frame is left out where
-    it has to be, and nothing else of it changes. Without --pack a file is every frame it was."""
+    it has to be, and nothing else of it changes. Without --pack a file is every frame it was.
+    """
     src = tmp_path / "set"
     src.mkdir()
     _, two = wav_file(src, "a_pad.wav", stereo_frames, seed=1)
@@ -195,7 +194,7 @@ def test_with_pack_every_piece_of_a_long_file_is_its_kind(tmp_path):
 def test_a_pack_set_has_to_fit_too(tmp_path):
     mono = [wav_file(tmp_path, "m%02d.wav" % k, 300, channels=1, seed=k)[0] for k in range(33)]
     two = [wav_file(tmp_path, "s%02d.wav" % k, 300, seed=k)[0] for k in range(25)]
-    assert len(split_sample.convert(mono[:32], pack=True)) == 32             # 33 to 64
+    assert len(split_sample.convert(mono[:32], pack=True)) == 32  # 33 to 64
     with pytest.raises(ValueError, match="33 mono samples, and the pack image plays 32"):
         split_sample.convert(mono, pack=True)
     assert len(split_sample.convert(two[:24] + mono[:16], pack=True)) == 40  # 48 slots of stereo and 16 single ones: all 64
@@ -206,7 +205,7 @@ def test_a_pack_set_has_to_fit_too(tmp_path):
 
 def test_a_set_has_to_fit_the_slots_that_are_left(tmp_path):
     files = [wav_file(tmp_path, "n%d.wav" % k, 500, seed=k)[0] for k in range(33)]
-    assert len(split_sample.convert(files[:32])) == 32                   # 32 stereo samples: all 64 slots
+    assert len(split_sample.convert(files[:32])) == 32  # 32 stereo samples: all 64 slots
     with pytest.raises(ValueError, match="room for 32 stereo"):
         split_sample.convert(files)
     assert len(split_sample.convert(files[:2], first=61)) == 2
@@ -214,7 +213,7 @@ def test_a_set_has_to_fit_the_slots_that_are_left(tmp_path):
         split_sample.convert(files[:3], first=61)
     with pytest.raises(ValueError, match="first slot"):
         split_sample.convert(files[:1], first=0)
-    with pytest.raises(SystemExit, match="slots"):                       # a plain message, no traceback
+    with pytest.raises(SystemExit, match="slots"):  # a plain message, no traceback
         split_sample.main([wav_file(tmp_path, "long.wav", 48000 * 5 * 33, seed=1)[0], "--out", str(tmp_path / "x")])
     assert not (tmp_path / "x").exists()
 
@@ -235,15 +234,16 @@ def test_split_file_plays_back_as_the_original_in_stereo(tmp_path, official):
     mode, shown = split_sample.mode_hint(True, chain=True)
     e = sampler(official, {first + k: data for k, (_, data) in enumerate(pieces)}, 2, first, mode)
     out = e.render(2500 // BLOCK + 3, trig=1 << 2)[:, BLOCK:]
-    assert np.array_equal(out[2][:2500], x[:, 0].astype(np.int64) << 15)        # left, on the track itself
-    assert np.array_equal(out[3][:2500], x[:, 1].astype(np.int64) << 15)        # right, on the next track
+    assert np.array_equal(out[2][:2500], x[:, 0].astype(np.int64) << 15)  # left, on the track itself
+    assert np.array_equal(out[3][:2500], x[:, 1].astype(np.int64) << 15)  # right, on the next track
     assert not out[2][2500:].any() and not out[3][2500:].any()
 
 
 @pytest.mark.skipif(not shutil.which("m68k-elf-gcc"), reason="no ColdFire cross-compiler")
 def test_a_full_5_second_stereo_sample_at_its_real_size(tmp_path, official):
-    """240,000 frames a side, MODE 1, in the last two slots: every frame of both channels, then silence.
-    A second pair before it must not leak in (no chain)."""
+    """240,000 frames a side, MODE 1, in the last two slots: every frame of both channels, then silence. A second pair
+    before it must not leak in (no chain).
+    """
     five = int(split_sample.MAX_SECONDS * split_sample.RATE)
     path, x = wav_file(tmp_path, "pad.wav", five)
     other, _ = wav_file(tmp_path, "other.wav", five, seed=5)
@@ -256,8 +256,8 @@ def test_a_full_5_second_stereo_sample_at_its_real_size(tmp_path, official):
     assert np.array_equal(out[6][:five], x[:, 0].astype(np.int64) << 15)
     assert np.array_equal(out[7][:five], x[:, 1].astype(np.int64) << 15)
     assert not out[6][five:].any() and not out[7][five:].any()
-    e = sampler(official, {60 + k: d for k, d in enumerate(data)}, 0, 60, mode)     # the first pair stops at its end
-    e.set_slot(0, 20, 126)                                                          # start 126/128 of the way in
+    e = sampler(official, {60 + k: d for k, d in enumerate(data)}, 0, 60, mode)  # the first pair stops at its end
+    e.set_slot(0, 20, 126)  # start 126/128 of the way in
     out = e.render(130, trig=1)[:, BLOCK:]
     tail = five - five * 126 // 128
     assert np.array_equal(out[0][:tail], data[0][-tail:].astype(np.int64) << 15)
@@ -268,7 +268,7 @@ def test_a_full_5_second_stereo_sample_at_its_real_size(tmp_path, official):
 def test_big_image_takes_ten_seconds_a_slot_and_knows_what_the_unit_loads(tmp_path):
     ten = int(split_sample.BIG_SECONDS * split_sample.RATE)
     path, x = wav_file(tmp_path, "long.wav", ten)
-    assert [len(d) for _, d in split_sample.split(split_sample.load(path))] == [ten // 2] * 4          # stock: two pieces a side
+    assert [len(d) for _, d in split_sample.split(split_sample.load(path))] == [ten // 2] * 4  # stock: two pieces a side
     pieces = split_sample.split(split_sample.load(path), limit=split_sample.BIG_SECONDS)
     assert [s for s, _ in pieces] == ["L", "R"] and [len(d) for _, d in pieces] == [ten, ten]
     assert np.array_equal(pieces[0][1], x[:, 0]) and np.array_equal(pieces[1][1], x[:, 1])
@@ -290,7 +290,7 @@ def test_double_image_loads_twice_as_much(tmp_path):
     with pytest.raises(ValueError, match="the unit loads 5:49 at boot"):
         split_sample.convert(files, limit=split_sample.BIG_SECONDS)
     jobs = split_sample.convert(files, limit=split_sample.BIG_SECONDS, pool=split_sample.DOUBLE_POOL_FRAMES)
-    assert len(jobs) == 32                                  # 32 stereo samples of 10 s: every slot
+    assert len(jobs) == 32  # 32 stereo samples of 10 s: every slot
     text = split_sample.sheet(split_sample.layout(jobs), big=True, pool=split_sample.DOUBLE_POOL_FRAMES)
     assert "11:38 of mono" in text and "5:49 of stereo" in text
     # the number is what the main CPU's code allows: two halves of 16382 chunks, less a count for each slot

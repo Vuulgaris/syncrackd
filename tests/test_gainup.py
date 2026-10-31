@@ -1,12 +1,4 @@
-"""The gainup image (engine/recpage.c, GAINUP): the axf image with the sampling page's places moved.
-
-
-Here:
-  - by stock's page drawn in emulation (emu/screen.py): D is what F was (the gain), E what G was (the peak), G what E was
-    (STRC), F the empty box D was; A to C and H as they were;
-  - D turns the gain by stock's plain feel, E the profile's switch as G did (not geared), G the stretch, F nothing;
-  - the image: only the bytes of the place numbers differ from the axf image's, section 7 the axf image's.
-Emulation only."""
+"""The gainup image (engine/recpage.c, GAINUP): the axf image with the sampling page's places moved."""
 import shutil
 
 import numpy as np
@@ -21,8 +13,8 @@ from tools import mainmap as mm
 
 pytestmark = pytest.mark.skipif(not shutil.which("m68k-elf-gcc"), reason="no ColdFire cross-compiler")
 
-D, E, F, GK = 4, 5, 6, 7               # knob ids, a knob's place plus 1
-TOP, LOW = slice(10, 37), slice(37, 64)     # a row's box, value and name: the lower row 27 dots under the upper
+D, E, F, GK = 4, 5, 6, 7  # knob ids, a knob's place plus 1
+TOP, LOW = slice(10, 37), slice(37, 64)  # a row's box, value and name: the lower row 27 dots under the upper
 
 
 def at(dots, row, k):
@@ -47,10 +39,10 @@ def sampling(image):
 
 def test_the_places_moved(axf, gainup):
     was, now = sampling(axf), sampling(gainup)
-    assert np.array_equal(at(now, TOP, 3), at(was, LOW, 1))              # D: the gain, F's on the axf image
-    assert np.array_equal(at(now, LOW, 0), at(was, LOW, 2))              # E: the peak, G's
-    assert np.array_equal(at(now, LOW, 2), at(was, LOW, 0))              # G: STRC, E's
-    assert np.array_equal(at(now, LOW, 1), at(was, TOP, 3))              # F: an empty box, as D was
+    assert np.array_equal(at(now, TOP, 3), at(was, LOW, 1))  # D: the gain, F's on the axf image
+    assert np.array_equal(at(now, LOW, 0), at(was, LOW, 2))  # E: the peak, G's
+    assert np.array_equal(at(now, LOW, 2), at(was, LOW, 0))  # G: STRC, E's
+    assert np.array_equal(at(now, LOW, 1), at(was, TOP, 3))  # F: an empty box, as D was
     for row, k in [(TOP, 0), (TOP, 1), (TOP, 2), (LOW, 3)]:
         assert np.array_equal(at(now, row, k), at(was, row, k))
     assert at(was, LOW, 1).sum() > at(now, LOW, 1).sum() and at(now, TOP, 3).sum() > at(was, TOP, 3).sum()
@@ -59,19 +51,19 @@ def test_the_places_moved(axf, gainup):
 def test_d_turns_the_gain_e_the_profile_g_the_stretch_and_f_nothing(gainup):
     t = 3
     r = X.keyed(gainup, t)
-    calls = G.geared(r, [256, 256, 256, 256])                          # (a kit afresh: the word after it)
+    calls = G.geared(r, [256, 256, 256, 256])  # (a kit afresh: the word after it)
     r.mc.write(G.KIT + mm.KIT_TRACK * t + mm.KIT_WORDS + 2 * mm.REC_SLOT, R.signed(4, 0).to_bytes(2, "big"))
     prof = gainup[1]["prof_on"]
     gain = lambda: r.mc.read(mm.REC_GAINS + t, 1)[0]
     G.twist(r, D, 1)
-    assert gain() == 1 and calls[-1][1] == 3 and calls[-1][3] == mm.FEEL_PLAIN    # by the plain feel, as F was
+    assert gain() == 1 and calls[-1][1] == 3 and calls[-1][3] == mm.FEEL_PLAIN  # by the plain feel, as F was
     n = len(calls)
     G.twist(r, E, 1)
-    assert r.mc.r32(prof) == 1 and len(calls) == n                     # not geared, as G was
+    assert r.mc.r32(prof) == 1 and len(calls) == n  # not geared, as G was
     G.twist(r, E, -1)
     assert r.mc.r32(prof) == 0
     G.twist(r, GK, 1)
-    assert G.own(r, t) == R.signed(4, 0) | 8                            # stretched
+    assert G.own(r, t) == R.signed(4, 0) | 8  # stretched
     before = (gain(), G.own(r, t), r.mc.r32(prof))
     G.twist(r, F, 1)
     assert (gain(), G.own(r, t), r.mc.r32(prof)) == before
@@ -85,5 +77,5 @@ def test_the_image(official_path, axf, gainup):
     n, o = new.section(3), was.section(3)
     moved = [(hex(mm.BASE + k), o[k], n[k]) for k in range(len(n)) if n[k] != o[k]]
     print(moved)
-    assert len(moved) == 8                                              # the place numbers, and the turn's two branches' offsets swapped
+    assert len(moved) == 8  # the place numbers, and the turn's two branches' offsets swapped
     assert sorted((a, b) for _, a, b in moved if a < 8) == [(4, 6), (5, 3), (6, 4), (6, 4)]

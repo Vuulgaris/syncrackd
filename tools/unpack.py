@@ -1,6 +1,6 @@
 """Unpack a pinned official Syntakt OS file into sections/<version>/.
 
-    python -m tools.unpack firmware/path/to/Syntakt_OSx.yz.syx
+python -m tools.unpack firmware/path/to/Syntakt_OSx.yz.syx
 
 Output is Elektron code: sections/ is gitignored, keep it that way.
 """

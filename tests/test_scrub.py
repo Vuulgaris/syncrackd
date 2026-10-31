@@ -1,13 +1,4 @@
-"""The scrub image (engine/sampler.h, SCRUB): the lock image with STRT and LEN followed on a stretched note.
-
-
-A turn that put the region's far
-end behind the place set duck and waited for play()'s fade, which a stretched note never runs. Here:
-  - a stretched loop follows LEN and then STRT after such a turn; on the lock image it is stuck;
-  - a stretched one-shot so stopped goes down over a block;
-  - a note not stretched, and a stretched one with the knobs at rest, the lock image's to the bit;
-  - the main CPU the lock image's.
-Emulation only."""
+"""The scrub image (engine/sampler.h, SCRUB): the lock image with STRT and LEN followed on a stretched note."""
 
 import shutil
 
@@ -23,7 +14,7 @@ import test_hits as H
 
 pytestmark = pytest.mark.skipif(not shutil.which("m68k-elf-gcc"), reason="no ColdFire cross-compiler")
 
-POS, PLAYING, PC, DUCK = 8, 20, 44, 69          # struct st
+POS, PLAYING, PC, DUCK = 8, 20, 44, 69  # struct st
 
 
 @pytest.fixture(scope="module")
@@ -42,7 +33,8 @@ def folded(monkeypatch):
 
 
 def run(built, loop, moves, blocks, stretched=True, x=None):
-    """Track 0 on x, its knobs moved at the blocks `moves` says. -> its output, and (place, pc, duck, playing) a block."""
+    """Track 0 on x, its knobs moved at the blocks `moves` says. -> its output, and (place, pc, duck, playing) a block.
+    """
     x = X.tone() if x is None else x
     e = P.engine(built, pool={0: x, 1: x})
     for slot, v in {SAMPLE: H.PK.knob_of(0), P.MODE: 0, P.TUNE: 64, LENGTH: 127, START: 0, LOOP: loop,
@@ -59,7 +51,7 @@ def run(built, loop, moves, blocks, stretched=True, x=None):
     return np.concatenate(out).astype(np.int64), state
 
 
-SCRUB = {100: {LENGTH: 10}, 160: {START: 64}}     # place about 3,200 when LEN puts the end at about 1,900; then STRT half
+SCRUB = {100: {LENGTH: 10}, 160: {START: 64}}  # place about 3,200 when LEN puts the end at about 1,900; then STRT half
 
 
 def test_a_stretched_loop_follows_len_then_strt(lock, engine):
@@ -69,11 +61,11 @@ def test_a_stretched_loop_follows_len_then_strt(lock, engine):
         print("%s: after LEN place %d pc %d duck %d; after STRT place %d pc %d duck %d"
               % (("lock", "scrub")[fixed], *after_len[:3], *after_strt[:3]))
         if fixed:
-            assert after_len[2] == 0 and after_len[0] < 2000                    # back inside the short region
+            assert after_len[2] == 0 and after_len[0] < 2000  # back inside the short region
             assert after_strt[2] == 0 and after_strt[1] == 12000 and 12000 <= after_strt[0] < 12000 + 1100
-            assert np.abs(y[-32 * 20:]).max() > 0                               # still sounding
+            assert np.abs(y[-32 * 20:]).max() > 0  # still sounding
         else:
-            assert after_len[2] == 1 and after_strt[2] == 1 and after_strt[1] == 0   # the fault: stuck until a trig
+            assert after_len[2] == 1 and after_strt[2] == 1 and after_strt[1] == 0  # the fault: stuck until a trig
 
 
 def test_a_stretched_one_shot_so_stopped_goes_down(engine):

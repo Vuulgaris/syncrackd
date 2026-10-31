@@ -1,20 +1,4 @@
-"""The cut image: the prewas image with the always-on per-block costs that change nothing heard taken out.
-
-
-Three of ours run every block
-whatever the pattern:
-  - the allright image's audio CPU: both right-channel transfers every block and 1 KB more into the window. It did
-    not help, so section 7 is the nodiv image's again: the transfers for stereo samples only.
-  - the profile: a second frame, an rte and twenty stores a block with PROF off. engine/prof.S, CUT: the interrupt's
-    hook goes to prof_gate (in the copies' run), which goes on to the record only with prof_on set.
-  - the profile's laps (engine/rightdma.c, LAP) and the mixer split (engine/mixlink.c, MIXSPLIT), tools: left out,
-    stock's mixer called straight. A PROF take still gives the interrupt's whole and its stretches.
-
-Held here: section 7 is the nodiv image's; the gate with the profile off leaves the stack and every register as
-stock's first two instructions do and touches no record, and with it on goes to the profile; the mixer is shown what
-the prewas image shows it; nothing else changed.
-Not held: the lag.
-"""
+"""The cut image: the prewas image with the always-on per-block costs that change nothing heard taken out."""
 import hashlib
 import shutil
 
@@ -29,7 +13,7 @@ from tools import mainmap as mm
 
 pytestmark = pytest.mark.skipif(not shutil.which("m68k-elf-gcc"), reason="no ColdFire cross-compiler")
 
-STOCK = 0x400a38d6                  # the per-block routine's third instruction
+STOCK = 0x400a38d6  # the per-block routine's third instruction
 
 
 @pytest.fixture(scope="module")
@@ -75,7 +59,7 @@ def test_with_the_profile_off_the_gate_is_stocks_first_two_instructions(main, of
     want = entry(official.section(3), mm.BLOCK_IRQ, [STOCK])
     assert got[0] == want[0] == STOCK
     assert got[1:3] == want[1:3]
-    assert got[3] == image[mm.off(mm.CAVE_PROF[0]):mm.off(mm.CAVE_PROF[0]) + mm.PROF_RECORD]      # the record not touched
+    assert got[3] == image[mm.off(mm.CAVE_PROF[0]):mm.off(mm.CAVE_PROF[0]) + mm.PROF_RECORD]  # the record not touched
 
 
 def test_with_the_profile_on_the_gate_goes_to_the_profile_as_it_came(main):
@@ -104,12 +88,12 @@ def test_the_image(official_path, official, main, prewas):
     raw, _, built, _, _ = build.build(official_path, log=quiet, xfade=41, prof=True)
     was_raw, _, was, _, _ = build.build(official_path, log=quiet, xfade=40, prof=True)
     nodiv_raw, _, nodiv, _, _ = build.build(official_path, log=quiet, xfade=38, prof=True)
-    assert hashlib.sha256(was_raw).hexdigest().startswith("dafee1e7")      # the prewas image, as it is
-    assert hashlib.sha256(nodiv_raw).hexdigest().startswith("13474a00")    # the nodiv image, as it is
+    assert hashlib.sha256(was_raw).hexdigest().startswith("dafee1e7")  # the prewas image, as it is
+    assert hashlib.sha256(nodiv_raw).hexdigest().startswith("13474a00")  # the nodiv image, as it is
     assert built.section(7) == nodiv.section(7) != was.section(7)
     new, old = built.section(3), was.section(3)
     assert new == main[0] and old == prewas[0]
-    for lo, hi in (mm.CAVE_SPLIT, mm.CAVE_LAP):                            # the split's and the laps' runs are stock's again
+    for lo, hi in (mm.CAVE_SPLIT, mm.CAVE_LAP):  # the split's and the laps' runs are stock's again
         assert new[mm.off(lo):mm.off(hi)] == official.section(3)[mm.off(lo):mm.off(hi)]
     spans = [mm.CAVE_LINK2, mm.CAVE_SPLIT, mm.CAVE_LAP, mm.CAVE_DMA, mm.CAVE_DMA2, mm.CAVE_COPY, mm.CAVE_PRE, mm.CAVE_PROF,
              mm.CAVE_FAST, mm.CAVE_SRR, mm.CAVE_REC, mm.CAVE_METER, mm.CAVE_AMUTE, mm.CAVE_ALOCK]

@@ -1,16 +1,4 @@
-"""The soft image: the prof image with a note that starts on a loud frame faded in.
-
-worse with
-one source than with several. A take begins wherever its source was, and a note at STRT 0 began on its first frame at
-once. A note whose first frame is past SOFT_MIN, on either side, is faded in over FADE_IN frames, as a note that
-starts inside the sample always was (engine/sampler.c, soft).
-
-Held here: a sample that begins near nothing sounds as it does on the srr image's engine, to the bit; one that begins
-loud comes up from nothing over 64 frames and is the srr image's sound from there on; a loud right side alone is
-enough; the limit itself; and the image differs from the prof image only in SY SWARM's room and the sampler's runs.
-
-Not held, and only the unit can show it: that the click is gone by the maintainer's ear, and that a hit is not dulled.
-"""
+"""The soft image: the prof image with a note that starts on a loud frame faded in."""
 import hashlib
 import shutil
 
@@ -89,9 +77,9 @@ def test_a_sample_that_begins_loud_comes_up_from_nothing(soft, srr, left, right)
     assert np.array_equal(now[:, :at], plain[:, :at])
     assert np.array_equal(now[:, at + FADE_IN:], plain[:, at + FADE_IN:]) and now[:, at + FADE_IN:].any()
     ramp, full = now[:, at:at + FADE_IN], plain[:, at:at + FADE_IN]
-    assert not ramp[:, 0].any()                                 # from nothing
+    assert not ramp[:, 0].any()  # from nothing
     assert (np.abs(ramp) <= np.abs(full)).all() and (np.abs(ramp[:, 1:]) < np.abs(full[:, 1:]))[full[:, 1:] != 0].all()
-    big = np.abs(full) > 1 << 20                                # where there is enough to say how much: a line, a 64th a frame
+    big = np.abs(full) > 1 << 20  # where there is enough to say how much: a line, a 64th a frame
     gain = ramp[big] / full[big]
     line = np.broadcast_to(np.arange(FADE_IN) / FADE_IN, full.shape)[big]
     assert np.allclose(gain, line, atol=0.002)
@@ -102,8 +90,8 @@ def test_the_image(official_path, official, soft, srr):
     quiet = lambda s: None
     raw, _, built, _, syms = build.build(official_path, log=quiet, xfade=12)
     was_raw, _, was, _, _ = build.build(official_path, log=quiet, xfade=11)
-    assert hashlib.sha256(was_raw).hexdigest().startswith("f0a8d804")      # the prof image is still itself
-    assert built.section(3) == was.section(3)                               # the main CPU's program is the prof image's
+    assert hashlib.sha256(was_raw).hexdigest().startswith("f0a8d804")  # the prof image is still itself
+    assert built.section(3) == was.section(3)  # the main CPU's program is the prof image's
     seven, last = built.section(7), was.section(7)
     assert seven == soft[0] != last == srr[0] and len(seven) == len(last)
     runs = [r for caves in (m.CAVES, m.REC_CAVES, m.FADE_CAVES, m.LIVE_CAVES, m.PITCH_CAVES, m.ONE_CAVES, m.QUICK_CAVES, m.LEAN_CAVES,

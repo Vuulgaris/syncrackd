@@ -1,11 +1,4 @@
-"""The tlsolo image: the fltr image with a held step's SOLO always locked to what it is turned to.
-
-
-The fltr image locks a step only where
-it differs from the track's own solo, and drops the lock where it is the same: with the track's own off, turning a held
-step to off made no lock, so an earlier trigless step's ON held until the track's next trig. Here a held step always takes
-the lock it is turned to (engine/recpage.c, TLSOLO). Only the unit can show that a trigless OFF ends the solo.
-"""
+"""The tlsolo image: the fltr image with a held step's SOLO always locked to what it is turned to."""
 import shutil
 
 import pytest

@@ -1,17 +1,17 @@
-/* Main CPU (section 3, OS 1.42 only): the pbank image. 
- * one entry that moves to the next bank each time it is chosen, and the bank still
- * loads only with a project, as before (engine/banks.c). In a run of its own.
+/* Main CPU (section 3, OS 1.42 only): the pbank image. one entry that moves to the next bank each time it is chosen,
+ * and the bank still loads only with a project, as before (engine/banks.c). In a run of its own.
  *
  * The PROJECT menu is stock's list page, built once at the start by 0x401855d4(menu): three entries, each 0x54 bytes
- * from the heap, made by 0x400fa84c(item, name, action, icon, last, -1, 8) and added by 0x400fa082(menu, item). Each of
- * the four is stock's function object, 16 bytes: the data, a long, the manager (data, from, op), the call. The list asks
- * an entry's name each time it draws it (0x400fa5d2, a string returned through a0), runs its action when chosen
- * (0x400fa638), and leaves out an icon whose manager is 0 (0x400fa610). The menu redraws by its page at + 56
+ * from the heap, made by 0x400fa84c(item, name, action, icon, last, -1, 8) and added by 0x400fa082(menu, item). Each
+ * of the four is stock's function object, 16 bytes: the data, a long, the manager (data, from, op), the call. The
+ * list asks an entry's name each time it draws it (0x400fa5d2, a string returned through a0), runs its action when
+ * chosen (0x400fa638), and leaves out an icon whose manager is 0 (0x400fa610). The menu redraws by its page at + 56
  * (0x400ffe22, as the list's own scroll does at 0x400ff42a). docs/FINDINGS.md, "The bank in the PROJECT menu".
  *
- * The constructor's end (0x401858b2, its restore) comes here: a fourth entry, SAMPLE BANK and the loaded bank, A>B with
- * another chosen, as the sampling page's BANK read. Our two calls take nothing from their function objects, so they use
- * the manager of stock's LOAD PROJECT name (0x401852d4), which makes a byte for a copy and frees it, whatever it holds. */
+ * The constructor's end (0x401858b2, its restore) comes here: a fourth entry, SAMPLE BANK and the loaded bank, A>B
+ * with another chosen, as the sampling page's BANK read. Our two calls take nothing from their function objects, so
+ * they use the manager of stock's LOAD PROJECT name (0x401852d4), which makes a byte for a copy and frees it,
+ * whatever it holds. */
 #include "sampler.h"
 
 #define item_alloc ((void *(*)(u32))0x4010394c)
