@@ -141,7 +141,7 @@ result
     window.lastResult = { sha: e.data.sha, match, bytes: e.data.out.length };
     if (!match) { status("Failed. Don't flash.", "bad"); return; }
     $("save").href = URL.createObjectURL(new Blob([e.data.out], { type: "application/octet-stream" }));
-    $("save").download = "Syntakt_OS1.42_syncrackd_" + e.data.image + ".syx";
+    $("save").download = "syncrackd.syx";
     $("save").style.display = "inline-block";
     status("Done.", "ok");
   };
