@@ -203,7 +203,7 @@ def convert(files, chunk_seconds=None, mono=False, first=1, limit=MAX_SECONDS, p
 def place(jobs, first=1, pack=False):
     """-> [(slot, stem, stereo, pieces)]: the slot of each file's first piece, counted from 1.
     A stereo file starts on an odd slot; the slot before it is left empty if it has to be.
-    pack: for the pack image (on request
+    pack: for the pack image (
     ). The
     stereo files as before; the mono ones from slot 64 down, the first file given in the highest slots."""
     out, slot, top = [], first, MAX_SLOTS

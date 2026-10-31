@@ -1,7 +1,7 @@
 """The norm image: the eucl image with every take normalized to -1 dB once it ends.
 
-On request
-, and his choices: the take itself rewritten, always on, -1 dB. A take's loudest frame is followed while it runs;
+
+and the choices: the take itself rewritten, always on, -1 dB. A take's loudest frame is followed while it runs;
 at its end its slot (a stereo take's two) is scaled up, NORM_STEP frames a block, by at most 30 dB and never down; a
 request of the keep box for a part not yet scaled is not answered till it is (engine/sampler.c, norm_block, norm_keep).
 The hook's harness runs the voice loop's hook alone; norm_block is called after it, as the interrupt's end calls it.

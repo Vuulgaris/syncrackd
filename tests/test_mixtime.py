@@ -1,6 +1,6 @@
 """The mixtime image, a tool: the ring image with the profile splitting its mixer stretch into stock's mixer and our links.
 
-The maintainer, 2026-10-17, "yes", to a split of the mixer stretch (34.7 hundredths of a block on his heavy pattern, stock's
+to a split of the mixer stretch (34.7 hundredths of a block on a heavy pattern, stock's
 mixer and our links around it, not told apart). The mixer link (engine/mixlink.c, MIXSPLIT) calls stock's mixer through
 mix_timed, in a run of its own, which reads the profile's timer before and after it into the record's + 36 (the lap
 image's first reading) and + 56 (the last stack long). tools/prof_read.py knows the layout by where those two lie.

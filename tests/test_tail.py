@@ -1,7 +1,7 @@
 """The tail image: the pre image with a one-shot faded out before its far end wherever that is.
 
-On request
- A one-shot was faded out only when
+
+A one-shot was faded out only when
 its far end was inside the sample; at LEN full it stopped on the sample's last frame at once, and a take ends wherever
 its source was. Now a one-shot's far end is a cut wherever it is (engine/sampler.c, TAIL).
 
@@ -9,7 +9,7 @@ Held here: a one-shot at LEN full is the soft image's sound up to the 128 frames
 there and ends at nothing; with LEN short of all it is the soft image's to the bit; a loop is the soft image's to the
 bit; and the image differs from the pre image only in the sampler's runs.
 
-Not held, and only the unit can show it: that this was his click.
+Not held, and only the unit can show it: that this was the click heard.
 """
 import hashlib
 import shutil

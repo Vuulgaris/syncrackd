@@ -1,7 +1,7 @@
 """The public tree (tools/export_public.py) and its guard (tools/public_check.py). Needs no firmware.
 
 The export holds nothing the guard fails on, none of the private files, no Makefile target of the private
-workflow, the docs without the hardware log or "the maintainer"; the guard fails on what it is for.
+workflow, the bench's notes as stubs; the guard fails on what it is for.
 """
 import os
 
@@ -14,17 +14,16 @@ def test_the_export_passes_the_guard(tmp_path):
     fails, _ = public_check.check(dest)
     assert fails == []
     for p in ("tools/pick.py", "tools/claim.py", "tools/patch_transfer.py", "push.command", "docs/PUBLIC_RELEASE.md",
-              "pascalproject"):
+              "pascalproject", "tools/private_check.py"):
         assert not os.path.exists(os.path.join(dest, p))
-    assert os.path.exists(os.path.join(dest, "CLAUDE.md")) and os.path.exists(os.path.join(dest, "site/index.html"))
-    with open(os.path.join(dest, "CLAUDE.md")) as f:
-        assert "syntaktphone" not in f.read()
+    assert os.path.exists(os.path.join(dest, "site/index.html"))
     with open(os.path.join(dest, "Makefile")) as f:
         make = f.read()
     assert "tools.pick" not in make and "tools.claim" not in make and "push.command" not in make
-    with open(os.path.join(dest, "docs/FINDINGS.md")) as f:
-        findings = f.read()
-    assert "the maintainer" not in findings and findings.count("## Hardware log") == 1
+    for doc in ("docs/FINDINGS.md", "docs/SAMPLER.md"):        # the bench's notes: a stub each, the notes private
+        with open(os.path.join(dest, doc)) as f:
+            assert f.read() == export_public.STUBS[doc]
+    assert not os.path.exists(os.path.join(dest, "docs/REPORT.md"))
 
 
 def test_the_guard_fails_on_what_it_is_for(tmp_path):

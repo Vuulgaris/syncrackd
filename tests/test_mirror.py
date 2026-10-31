@@ -1,6 +1,6 @@
 """The mirror image (engine/mirror.c, MIRROR): the kind image with the screen sent to a viewer over USB as SysEx.
 
-On request. Here,
+Here,
 the main CPU only, run in emulation with stock's two routines and the sink played by the test:
   - the viewer's 0x67 (with a rate) and 0x68 through the SysEx entry (engine/phone.c);
   - a frame drawn is sent at the UI's next asking, at most at the rate, and only while the viewer's last 0x67 is under

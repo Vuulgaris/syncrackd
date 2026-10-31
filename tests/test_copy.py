@@ -1,6 +1,6 @@
 """The copy image: the rxcap image with every mono track's right buffer copied eight longs a move (movem).
 
-On request. Before the mixer,
+Before the mixer,
 every digital track with no right channel this block is given a copy of its left in the second set of buffers
 (engine/rightdma.c, right_end). take() moved it one long at a time in a loop; mono_copy (MOVEM, in a run of its own)
 moves eight longs each way four times a track. A hardware transfer for it was weighed and left: it would have to start

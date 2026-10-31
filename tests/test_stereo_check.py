@@ -1,7 +1,7 @@
 """tools/stereo_check.py: the check samples for one-track stereo on the unit, and what a recording of them says.
 
-On request, "the definitive test suit for making sure
-all the channels work", "give me samples to test it". Eight stereo samples, one a track: by ear each is a
+
+Eight stereo samples, one a track: by ear each is a
 low tone on the left and a high one on the right, then a blip of hiss in the middle. Measured, one recording
 of the unit playing them says for every sample which channel is on which side and whether its sides are in
 step to the frame, and for each side whether anything was added.

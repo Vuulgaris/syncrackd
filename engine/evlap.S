@@ -1,8 +1,8 @@
 /* Main CPU (section 3, OS 1.42 only), the evtime image: a tool, not one to keep. The per-block routine's stretch of
- * events and knobs (from its first call to its wait for the audio CPU, 28.5 hundredths of a block on his heavy pattern
+ * events and knobs (from its first call to its wait for the audio CPU, 28.5 hundredths of a block on a heavy pattern
  * with the unit's USB audio streaming, 25.1 without) cut in five by four more readings of the profile's timer
- * (engine/prof.S), each in front of one of stock's calls in it. On request
- * .
+ * (engine/prof.S), each in front of one of stock's calls in it. 
+ * 
  *
  * A call of stock's comes here in place of its routine: d0 is kept on the stack for three instructions and taken back
  * before the jump, so the routine finds every register and its arguments as the caller left them (the caller may count

@@ -1,6 +1,6 @@
 """The soft image: the prof image with a note that starts on a loud frame faded in.
 
-On request, worse with
+worse with
 one source than with several. A take begins wherever its source was, and a note at STRT 0 began on its first frame at
 once. A note whose first frame is past SOFT_MIN, on either side, is faded in over FADE_IN frames, as a note that
 starts inside the sample always was (engine/sampler.c, soft).

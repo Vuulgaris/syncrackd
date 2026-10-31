@@ -1,8 +1,8 @@
 """The trans image: the spread image with FLTR2's DEL drawn as a plain knob named TRANS on a sampler track.
 
-On request
-. The first build sent DEL the way the loop sends ATK (the + 180's last argument 1), which on the
-unit drew "no graphic at all" and still DEL: that argument means no picture, and the name is the descriptor's, drawn by
+
+
+and still DEL: that argument means no picture, and the name is the descriptor's, drawn by
 the + 180 itself (engine/hits.c, TRANS). This build keeps stock's way, marks a sampler track's DEL, draws the plain
 knob's graphic in the delay's place when marked, and names it TRANS at the + 180's call of the descriptor's name.
 TRANSIENT in the pop-up. Held here, stock's instructions run around each place. Only the unit can show: the knob drawn,

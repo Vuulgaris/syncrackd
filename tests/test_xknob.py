@@ -1,9 +1,9 @@
 """The xknob image: the box image with the crossfade on the first page's knob D, in DEC's place and on its slot.
 
-On request
 
 
-.
+
+
 
 On slot 25 the crossfade is kept with the pattern's kit, locks to a step and takes an LFO, as DEC did. It is stored
 upside down, 127 less the slot's value, so a track made before (DEC at 127, stock's default) has none. The analog mute
@@ -13,7 +13,7 @@ sampler tracks' crossfades and the analog tracks' away; D reads XF0 to XF127 and
 way up. The sampling page's knob G is empty.
 
 Held here by running the routines. Not held: that the kit is kept slot for slot with the pattern (the srr image's REC
-word, kept the same way, is his evidence), how D's picture looks, how the knob feels turned the other way round.
+word, kept the same way, is the evidence), how D's picture looks, how the knob feels turned the other way round.
 """
 import shutil
 

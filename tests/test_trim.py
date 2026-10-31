@@ -1,7 +1,7 @@
 """The trim image (engine/sampler.h, TRIM): a pitched note, a fade and a loop's blend for less of the audio CPU's block.
 
-The maintainer, 2026-10-14: P "up to 100 at times", "its when i pitch things", "and loops to actually just not as much", and
-of the ways to less, "Two fixes + 16-bit MAC". Here, against the hits image's engine (the hitui image's section 7):
+
+Here, against the hits image's engine (the hitui image's section 7):
   - the fade pass makes the hits image's frames and leaves its gain and step as it does, to the bit;
   - at a sample's own pitch, eight stereo loops trigged again and again, the sound is the hits image's to the bit;
     and with the slots' frames made new between notes, still (a blend kept is never one of other frames);

@@ -1,7 +1,7 @@
 """The stretch image (engine/sampler.h, STRETCH): the back image with a note's speed apart from its pitch.
 
-The maintainer, 2026-10-22: KEYS's four settings and a speed knob in PTIM's place, with WSOLA, "but i may not use if i dont
-like it after so make sure we can revert back to ths point easily": the way back is the back image (git tag
+
+the way back is the back image (git tag
 pre-stretch), and a note on CHRO or SLCE plays as on the back image, to the bit. Here:
   - KEYS off: the back image's sound and hits to the bit;
   - stretched at its own speed and pitch: the note as it plays unstretched, near enough;

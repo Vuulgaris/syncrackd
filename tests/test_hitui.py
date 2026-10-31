@@ -1,7 +1,7 @@
 """The hitui image: the hits image with the filter pages saying what DEL is on a sampler track.
 
-On request
-. On a sampler track DEL is the hits' threshold and the envelope does not
+
+On a sampler track DEL is the hits' threshold and the envelope does not
 wait (engine/hits.c), but stock's filter page still named it DEL and drew a delay into FLTR1's picture of the envelope.
 
 Three places of stock's are each a call of ours (engine/hits.c, HITUI): FLTR2's loop takes a knob's name, the base

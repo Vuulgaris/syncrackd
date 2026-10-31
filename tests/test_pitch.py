@@ -1,11 +1,11 @@
 """The "pitch" image: a sample stays clean when it is pitched (engine/sampler.c built with HQ).
 
-On request
-.
+
+
 
 Up to the reclock image a frame between two of the sample's is on the line between them. Played
 down, that line lets through copies of the sound folded around the sample's own rate, which is the
-sound he names. Here the frame is the sum of sixteen frames around it, each times a number from a
+sound heard. Here the frame is the sum of sixteen frames around it, each times a number from a
 table of a windowed sinc (tools/sinctable.py): 32 rows a frame, the row for the place and the next
 one blended.
 
@@ -113,7 +113,7 @@ def clean(y, ratio, hz):
 
 @pytest.mark.parametrize("hz, least, was", [(1000, 85, 65), (3000, 80, 45), (6000, 80, 33), (10000, 75, 23), (14000, 72, 16)])
 def test_a_tone_two_octaves_down_comes_out_clean(pitch, reclock, hz, least, was):
-    """The reclock image's engine on the same sample is the "sample rate reduction" he hears: at 6 kHz everything
+    """The reclock image's engine on the same sample is the "sample rate reduction" heard: at 6 kHz everything
     else the line lets through is 32 dB under the tone, at 14 kHz 15 dB. Here it is 76 to 88 dB under."""
     pool = tone_pool(hz)
     now = clean(*played(pitch, pool, 36, 620), hz=hz)

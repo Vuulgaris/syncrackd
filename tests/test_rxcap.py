@@ -1,8 +1,8 @@
 """The rxcap image: the rxoff image with the USB audio receive off only while the phone has said a capture is on.
 
-On request: a host that has the Syntakt as its
-output and input (Ableton) takes the unit's audio the whole time, so the unit is always sending and rxoff never ran the
-receive. The maintainer's choice, "do 1": the phone says when it captures. engine/phone.c, CAPTURE: 0x65 sets the word first in the
+
+
+the phone says when it captures. engine/phone.c, CAPTURE: 0x65 sets the word first in the
 gate's run, 0x66 clears it; neither is answered or handed on. engine/rxgate.S, CAPTURE: the receive is skipped only with
 the word set and the unit sending, and the word is cleared whenever the unit sends nothing.
 

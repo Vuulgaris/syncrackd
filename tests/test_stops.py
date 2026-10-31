@@ -1,10 +1,10 @@
 """The "stops" image: SMPL stops only on real samples and one free spot of each kind.
 
-The maintainer, 2026-10-12, told that on the pack image the knob has numbers that mean little where the two kinds
-of sample share slots: "yea i dont ant junk numbers like this, i just want it to auto assign samples and just
-leave them in place and thwn the track will just pick that sample aw the one its playing or maybe the thing
-about eating takes you mentioned ould fuck tht up-maybe placing them mysefl is better but dealing with the junk
-numbers somehow so the stereo to mono sample switching reads cleanly". Of three ways put to him he chose: the
+
+
+
+
+Of three ways, the one chosen: the
 knob skips, with one free spot of each kind.
 
 So (engine/sampler.h, STOPS). Slots are counted from 1 here, as Transfer counts them; stereo place n is slots

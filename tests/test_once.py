@@ -1,6 +1,6 @@
 """The once image: REC's third setting, ONCE (engine/once.S, engine/onceclean.c, engine/recpage.c under ONCE).
 
-On request
+
 
 
 What runs here, all from the built image:

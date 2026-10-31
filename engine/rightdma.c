@@ -216,8 +216,8 @@ __attribute__((section(".cave.p"))) u32 right_mid(void)
 #ifdef MOVEM
 /* The copy image: every track with no right channel is given a copy of its left by eight longs a move (movem), four
  * moves each way a track, where take() moved one long at a time in a loop (32 loads, 32 stores and the loop's own: about
- * 90 instructions a track, about 750 a block with eight mono tracks). The maintainer, 2026-10-17, of the lag while capturing:
- * "lets try this Right-channel copies". In a run of its own: (mask, left, to). */
+ * 90 instructions a track, about 750 a block with eight mono tracks). 
+ * In a run of its own: (mask, left, to). */
 void mono_copy(u32 mask, const u32 *left, u32 *to);
 __asm__(".section .cave.c,\"ax\",@progbits\n"
         "    .globl mono_copy\n"

@@ -1,7 +1,7 @@
 """The atrig image: the norm image with an analog track's SOLO on its TRIG page and LFO.T on its FLTR2.
 
-On request
-. An analog track's TRIG page is page 1 (NOTE VEL LEN PROB LFO.T FLT.T
+
+An analog track's TRIG page is page 1 (NOTE VEL LEN PROB LFO.T FLT.T
 PTIM PORT, list 0x401c826c) of the same TRIG class a sampler's is; its FLTR2 is page 8 (list 0x401c8260). So on page 1 E is the
 track's SOLO (the alock image's lock on slot 26 with a step held), F stays FLT.T; on page 8 G is LFO.T (record 28);
 the analog tracks' second SYN page keeps the crossfade alone.

@@ -1,7 +1,7 @@
 """The grain image (engine/sampler.h, GRAIN): the slscrub image with a stretch that holds together.
 
-On request, and "build
-both": a wide look for where a grain lines up, and heads locked onto the scan's hits and a loop's wall. Here:
+
+a wide look for where a grain lines up, and heads locked onto the scan's hits and a loop's wall. Here:
   - a low tone stretched half and twice: its level steady, where the slscrub image's goes up and down;
   - decaying bursts stretched half: nothing of a burst before its time, one attack each, where the slscrub image's
     come early and twice;

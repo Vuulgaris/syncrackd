@@ -1,6 +1,6 @@
 """The letgo image (engine/sampler.h, LETGO): the tune image with two things on the audio CPU.
 
-The maintainer, 2026-10-26, "do audio", of the loose ends read that day (docs/FINDINGS.md, "Loose ends and cheap wins"):
+):
   - a stereo note that is over lets go of its right channel once both sides are under LETGO_QUIET: its track leaves the
     mask, stock's stages are not run on its silence, the main CPU copies the left. Here: the left as the trap image's to
     the bit, the right as the main CPU takes it within -100 dB of full scale of the trap image's, a panned sample and filter tails among

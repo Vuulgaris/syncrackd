@@ -1,7 +1,7 @@
 """The fresh image (engine/phone.c, FRESH): the destnum image with a new project asking the phone as a load does.
 
-On request
-. Stock's Project Load
+
+Stock's Project Load
 job makes a project that is not there and saves it (0x4005bbfa, the save at 0x4005bc2c) and never calls the load, where
 the phone is asked. Here, with stock's routines around it played (test_phone's rig):
   - after the phone's hello, a new project is saved, then asked for as a load asks, the ask's bank byte + 128 (its bit

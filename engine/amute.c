@@ -94,9 +94,9 @@ __attribute__((section(".cave.y"), noinline)) static u32 heard(u32 top, u32 who)
 #ifdef XKNOB
 /* The xknob image: a sampler track's crossfade is its knob on slot 25, DEC's, stored upside down (127 is 0, so a track
  * made before, its DEC at 127 as stock leaves it, has none). Read every block from the block the mixer is given, a lock
- * and an LFO with it, into the eight numbers the mixer link and the analog mute go by. On request
+ * and an LFO with it, into the eight numbers the mixer link and the analog mute go by. 
  *
- * . In the recorder's run: the analog mute's has room for the call only. */
+ * In the recorder's run: the analog mute's has room for the call only. */
 __attribute__((section(".cave.r"), noinline)) static void xf_knobs(const u8 *params)
 {
     u32 t, x;
@@ -116,7 +116,7 @@ __attribute__((section(".cave.r"), noinline)) static void xf_knobs(const u8 *par
  * turned (slot 25 at 127 or past it), the analog tracks' crossfades 0. Then they would show stock's mixer the block as
  * it is and put back what they did not change: so the solos and the eight crossfades are left as solo_now and
  * xf_knobs would leave them (none), and the mixer is called straight away (stock's mixer writes nothing of the block:
- * tests/test_fast.py). One pass of the bytes that matter, a pointer a track. The maintainer, 2026-10-17, "yes", to giving
+ * tests/test_fast.py). One pass of the bytes that matter, a pointer a track. to giving
  * the UI back the links' time on the blocks where they do nothing: the maintainer's patterns all unmuted, solos only in fills. In
  * a run of its own. */
 __attribute__((section(".cave.k"), noinline)) static u32 quiet(const u8 *params)

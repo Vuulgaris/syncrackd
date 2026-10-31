@@ -1,7 +1,7 @@
 """The "gain" image: a record gain on the sampling page (engine/recfeed.c and engine/recpage.c built with GAIN).
 
-On request, and of where, two days before: "rec gain and
-threshold may as well just go on the two knobs you were using for the nunber read out on the sampling page".
+
+
 
 A track's record gain, 0 to 24 dB a decibel a step, on knob F of the sampling page. The feed multiplies the
 source by it before the 32 bits are made 16, so a quiet source is brought up out of the bits a take would have
@@ -14,7 +14,7 @@ What is held here, in emulation:
     on afterwards brings the take's own noise up with it;
   - the meter shows the level with the gain on;
   - the page: the value in the lower row's second place, a turn of knob F a decibel, a number a track;
-  - the sound engine is the stereo image's with the sum of twelve (tests/test_lean.py), which the maintainer ran on
+  - the sound engine is the stereo image's with the sum of twelve (tests/test_lean.py), which ran on
     the unit through two builds and marked passed.
 
 Not held: how it reads on the unit's screen, and that the place in main CPU memory it is kept in is as free as

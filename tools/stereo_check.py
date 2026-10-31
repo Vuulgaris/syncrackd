@@ -4,9 +4,9 @@
     make stereo-sample FIRST=1      # or from any odd slot up to 49
     make stereo-check               # reads a recording from samples/check/ and says what it shows
 
-On request, "the definitive test suit for making
-sure all the channels work", "give me samples to test it", and of the first flash: "a little
-disotrtion and artifacts".
+
+
+
 
 Eight samples, one for each track, 4 seconds each, made here with nothing of Elektron's in them:
     0.00 to 2.00 s   a low tone on the left only and a high tone on the right only. Sixteen
@@ -318,7 +318,7 @@ def check(left, right):
         lines.append("Not in the recording: sample%s %s." % ("s" if len(unheard) > 1 else "", ", ".join(map(str, unheard))))
     verdict = "stereo" if good and not mono and not bad and not faults else "mono" if mono and not good and not bad else "fault"
     said = {"stereo": "STEREO WORKS on %s: each side carries its own channel, in step, with nothing added.",
-            "mono": "NOT STEREO on %s: the right channel is not arriving. Nothing else is wrong with the unit: tell Claude.",
+            "mono": "NOT STEREO on %s: the right channel is not arriving. Nothing else is wrong with the unit: report it.",
             "fault": "SOMETHING IS OFF (heard: %s): read the lines above."}[verdict]
     heard = sorted(good + mono + bad)
     which = "all eight samples" if len(heard) == N else "sample%s %s" % ("s" if len(heard) > 1 else "", ", ".join(map(str, heard)))

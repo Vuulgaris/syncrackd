@@ -27,7 +27,7 @@ LIST_MAX = 192               # bytes of a patch put through objdump
 ABOUT = {
     "norm": {
         "line": "every recording gets turned up to just under full volume when it ends",
-        "asked": "could we also add normalize to the recorder? i notice i have to turn up db often on the sampling page",
+        "asked": "",
         "how": ["While a take records, the audio CPU watches each block and remembers the loudest moment.",
                 "When the take stops, it works out how much it can turn the whole take up so that peak sits at -1 dB, at most 30 dB.",
                 "It rewrites the take in place, 256 frames at the end of every audio block, about 1.25 s for a 10 s stereo take.",
@@ -36,7 +36,7 @@ ABOUT = {
     },
     "eucl": {
         "line": "SOLO and REC stop covering the euclidean page",
-        "asked": "the solo and rec switches come through on the second page of trig where the euclidean sequencer is",
+        "asked": "",
         "how": ["The TRIG page has a second page, page 3, which holds the euclidean sequencer's knobs.",
                 "Since the trig image, our code put SOLO and REC on knobs E and F of the TRIG page, asking only whether the track is a sampler, never which page was showing.",
                 "A new check, trig_sampler, looks at which page is up first. On page 3 everything is handed back to stock."],
@@ -77,7 +77,7 @@ def _listing(data, addr):
     return rows
 
 
-# the chain's last stretch, oldest first (CLAUDE.md, State)
+# the chain's last stretch, oldest first (the newest images)
 CHAIN = ["fast", "rxoff", "rxcap", "copy", "nodiv", "allright", "prewas", "cut", "nofx", "xfix", "xcont", "xcarry",
          "scan", "scratch", "soloend", "eucl", "norm", "atrig"]
 
@@ -159,7 +159,7 @@ def _wiring(t):
     caves = [(p["addr"], p["addr"] + p["len"]) for p in t["patches"]
              if any(p["addr"] <= a < p["addr"] + p["len"] for a, _ in syms)]
 
-    def maintainer(a):
+    def owner(a):
         if not any(lo <= a < hi for lo, hi in caves):
             return None
         best = None
@@ -179,7 +179,7 @@ def _wiring(t):
         words = "".join(r[1].replace(" ", "") for r in rows)
         if p["len"] == 4 and len(words) >= 8:
             found.add(int(words[:8], 16))
-        p["calls"] = sorted({o for o in map(maintainer, found) if o})
+        p["calls"] = sorted({o for o in map(owner, found) if o})
 
 
 def _key(p):

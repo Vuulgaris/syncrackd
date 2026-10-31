@@ -1,7 +1,7 @@
 """The long image: the tlsolo image with patterns 1..64 long and 65..128 their tails.
 
-On request, and "build the play side
-first: n then n+64 with n's kit, knobs fixed. pages later". Every cue of a pattern sets stock's play queue
+
+Every cue of a pattern sets stock's play queue
 (mm.QUEUE_SET, thirteen calls); engine/longpat.c sets it with stock's own routine and then puts each head's tail after
 it with the head's kit. The UI's kit object follows the playing pattern's number (mm.KIT_FOLLOW_CALL): ours gives the
 head's while a tail plays with the head's kit. Stock's queue routine runs here; the sequencer's hop and the main task's

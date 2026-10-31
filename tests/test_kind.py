@@ -1,6 +1,6 @@
 """The kind image (engine/recpage.c, SKIND): the pbank image with SMPL stopping only at samples of the track's KIND.
 
-The maintainer, 2026-10-26, of "SMPL follows KIND": "1 soinds like a nice fix", then "go". On a STER track SMPL stops at the
+On a STER track SMPL stops at the
 stereo places that hold a sample and the lowest free one; on a MONO track at the single slots that hold one and the
 highest free one. A value of the other kind (a pattern's, a lock's) turns to the nearest stop of the track's. Main CPU
 only; section 7 the spread image's. Emulation only."""

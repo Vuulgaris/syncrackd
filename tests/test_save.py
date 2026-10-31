@@ -252,22 +252,22 @@ def test_the_other_knobs_and_the_other_pages_are_as_they_were(main):
 
 
 def test_a_held_steps_rec_is_still_a_lock_of_its_own_on_this_main_program(main):
-    """The on request
+    """
+    Not seen here: the lock is made, MODE is left alone, and it is shown."""
+    r = PageRig(main, {0: SAMPLER}, index=1, mode=src(3))
+    r.hold(5)
+    assert r.twist(REC_KNOB, 1) == 1
+    assert r.rec_locks == {5: ON} and not r.others and not r.locks and r.mode == src(3)
+    assert r.edited and r.done and r.rec() == "ON"
+    r.hold()
+    assert r.rec() == "OFF"                                             # the track's own
+    r.hold(5)
+    r.twist(REC_KNOB, -1)
+    assert not r.rec_locks and r.mode == src(3)
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-    The probe image (hardware log, 2026-10-10): the save image's main program with two numbers on the lower
+def test_the_probe_image_shows_slot_24_of_the_track_in_both_blocks(stock3, main):
+    """The probe image (hardware log, 2026-10-10): the save image's main program with two numbers on the lower
     row of the sampling page, slot 24 of the track where a trig's locks are written and where the audio CPU is sent it."""
     built = build_main.patched_image(stock3, probe=True)
     words, sent, place = 0x800021b0, 0x80006348, 142 * 3 + 28 + 2 * m.K_REC

@@ -1,7 +1,7 @@
 """The destnum image (engine/recpage.c, DESTNUM): the onedest image with DEST's numbers back.
 
-On request
-. Here, on the sampling
+
+Here, on the sampling
 page:
   - a STER track's B goes SMPL, then the stereo places SMPL stops at (those with a sample and the lowest free one), and
     the box says each place; a MONO track's the single slots SMPL stops at (the highest free one and those with one);

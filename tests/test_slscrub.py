@@ -1,6 +1,6 @@
 """The slscrub image (engine/sampler.h, SLSCRUB): the scrub image with STRT and LEN followed on a slice.
 
-On request. The slice image left a slice's knobs
+The slice image left a slice's knobs
 alone while it played. Here:
   - a looping slice, stretched and not, follows LEN and then STRT to where a new trig with those knobs would start;
     on the scrub image it stays where its note began;

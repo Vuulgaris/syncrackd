@@ -1,8 +1,8 @@
 """The next image (engine/recpage.c, NEXT): the trans image with DEST SMPL or NEXT and knob C the track's KIND.
 
-On request
 
-.
+
+
 Here, the main CPU only:
   - B is DEST, SMPL or NEXT; C is KIND, STER or MONO, bit 6 of the track's word on slot 24, kept by a turn of SRC;
   - at a message the main task gives each NEXT track a free place of its KIND, none another holds, and the box sends its

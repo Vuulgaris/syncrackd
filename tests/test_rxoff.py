@@ -1,6 +1,7 @@
 """The rxoff image: the fast image with stock's receive of the host's USB audio not run while the unit sends its own.
 
-On request. Measured on the maintainer's unit
+
+Measured on the maintainer's unit
 (the evtime tool, samples/EVON3.wav and EVOFF3.wav): the per-block routine's call of stock's receive, 0x400041cc, is
 0.9 hundredths of a block with no USB audio and 3.9 with it. engine/rxgate.S: the call goes to rx_gate, which while
 0x405d40e4 (what stock's send tests first) is not 0 clears the 32 frames of USB audio in with stock's own clear and

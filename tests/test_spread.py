@@ -1,7 +1,7 @@
 """The spread image (engine/sampler.h, SPREAD): the stsw image with the stretch's look in slices, and smaller.
 
-The maintainer, 2026-10-23, of the grain image on on the unit,
-then "build the spread search and also shrink it to 256, i want the lowest peak". Here:
+
+Here:
   - the heaviest blocks with one and eight stretched tracks, against the grain image's and the slscrub image's;
   - a low tone still steadier than before the grain image; bursts still once and on time; at its own speed the note;
   - a note not stretched the grain image's to the bit; the main CPU the stsw image's.

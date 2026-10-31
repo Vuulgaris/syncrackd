@@ -1,8 +1,8 @@
 """The evtime tool: the fast image with the profile cutting the events and knobs stretch in five, the mixer not timed.
 
-On request (25.1
-hundredths of a block without the unit's USB audio streaming, 28.5 with; "it still lags when i try to do usb audio
-over able ton"). engine/evlap.S: four of stock's calls in the stretch go to stubs that read the profile's timer into
+
+
+). engine/evlap.S: four of stock's calls in the stretch go to stubs that read the profile's timer into
 the record's places for the stopped code's stack pointer, PC, last stack long and task, and jump on to the routine.
 tools/prof_read.py reads the five parts and how often each call was made.
 

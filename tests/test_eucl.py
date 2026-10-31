@@ -1,7 +1,7 @@
 """The eucl image: the soloend image with SOLO and REC only on the TRIG page's first page.
 
-On request
-. The TRIG object shows two
+
+The TRIG object shows two
 pages, 1 (or 2) and 3, the euclidean one (records 457 to 464, tools/uitable.pages); the trig image's three methods
 did not ask which was showing. On page 3 they are stock's now, on every track.
 """

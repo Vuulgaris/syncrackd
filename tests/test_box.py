@@ -1,7 +1,7 @@
 """The box image: the switch image with the dotted boxes around SOLO and REC on the TRIG page wiped, and REC only OFF
 or ONCE.
 
-On request
+
 
 
 The box is stock's picture for a place with no record (0x444e00b4, 17 x 17, its bits at 0x402e9eb8 and its mask at

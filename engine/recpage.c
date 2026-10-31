@@ -36,8 +36,8 @@
  * parameter (engine/sampler.h: 1 stereo, 2 in record, 4 from the external
  * input), read and changed through the stock methods, the ones the stock knob
  * routine uses. So they are saved with the pattern and can be locked to a step
- * like any knob: hold a trig and turn REC. (The maintainer, after a build that kept
- * REC in memory of ours: "we'll need to make it param lockable".) The MODE knob
+ * like any knob: hold a trig and turn REC. (
+ * ) The MODE knob
  * on the first page is taken over for the same reason: it now switches the
  * stereo bit and nothing else, and reads MONO or STEREO.
  *
@@ -59,13 +59,13 @@
  * leaned on + 96 and on that test, and on the unit a held trig locked nothing:
  * the first never reached the track's value, the second left held steps alone.)
  *
- * A plain turn also gets stock's own pop-up, "name=value" (the maintainer missed
- * MODE's when the knob became ours).
+ * A plain turn also gets stock's own pop-up, "name=value" (MODE's was missed
+ * when the knob became ours).
  *
  * Built with RECLOCK (the reclock image) a step's REC is no longer a lock of
  * MODE. That locked the whole parameter, the stereo switch and the source with
- * it as they stood: the maintainer, "moving rec on the sampling page to param lock it
- * also param locks mode, and also mode is just getting param lock'd strangely".
+ * it as they stood: 
+ * 
  * A lock is kept for a knob slot of a track, 71 of them, with or without a
  * record (the holder's + 64, + 68 and + 72 look the record's slot up and go on
  * to three routines of the steps object that take the slot). So REC with a step
@@ -101,7 +101,7 @@
  * where its value went after a save that did not get every take onto the drive, until one does.
  *
  * Built with FEED too (the feed image) FAIL is gone as well: the fifth place is empty whatever a save
- * did. On request. And a drawing asks which
+ * did. And a drawing asks which
  * step is held once where it asked three times.
  *
  * Built with AUTO (the mode image) MODE's lowest bit is no longer how a track plays: a sample is
@@ -112,8 +112,8 @@
  *
  * Built with PEAK (the same image, for now): the audio CPU's load in the lower row's last place,
  * P and the most of the last ten seconds or so in hundredths of a block, as the time image has it
- * (engine/sampler.h, TIMED). On request
- * .
+ * (engine/sampler.h, TIMED). 
+ * 
  *
  * Built with STOPS (the stops image) a turn of SMPL on the first page is ours too: it stops only at
  * the places that are a sample, or the one free spot of either kind, by what the audio CPU says each
@@ -211,8 +211,8 @@ typedef s32 (*step_arg_fn)(struct page *, u32);
 #endif
 
 #ifdef GAINUP
-/* The gainup image: the sampling page's places moved. On request
- * . The gain in D
+/* The gainup image: the sampling page's places moved. 
+ * The gain in D
  * (BANK's, empty since the pbank image), the peak and its PROF switch in E, STRC in G; F empty. The peak's knob is still
  * the one a turn of which is not geared. Older images name the places they had, so their bytes are as they were. */
 #define GAIN_AT 3
@@ -740,8 +740,8 @@ CAVE4 static void take_place(void *surface, u32 m)
  * under it, so the value says what it is. And, while PEAK is built in, the audio CPU's load in the fourth, as the
  * mode image has it. */
 #ifdef GFADE
-/* The gfade image. On request
- * .
+/* The gfade image. 
+ * 
  * The eight numbers hold the one crossfade in the place of the track that last turned it, the rest 0: the mixer's
  * rule (the largest of the other tracks' numbers) is as it was. Every sampling page shows it and turns it. */
 __attribute__((section(".cave.q"), noinline)) static u32 xfade_now(void)
@@ -802,9 +802,8 @@ __asm__(".section .cave.d,\"ax\",@progbits\n"
 extern const char w_keys[], w_chro[], w_slce[];
 
 #if defined(STSW)
-/* The stsw image: KEYS is CHRO or SLCE again, and the stretch is knob E's own switch (stsw_turn). The maintainer,
- * 2026-10-23: "instead of having the four key options, wouldn't it be nice if there were just the two and then
- * stretch on and off", and "yes, build it lockable". A word the lock image's fifth build left with bit 4 loses it. */
+/* The stsw image: KEYS is CHRO or SLCE again, and the stretch is knob E's own switch (stsw_turn),
+ * lockable. A word the lock image's fifth build left with bit 4 loses it. */
 #define CAVE_STSW __attribute__((section(".cave.e"), noinline))
 CAVE_STSW static void keys_turn(u32 t, s32 steps)
 {
@@ -841,7 +840,7 @@ CAVE_SLICE static void keys_turn(u32 t, s32 steps)
     if (!KIT || !steps || !SRR_SIGNED(w = OWN_WORDS(t)[K_REC]))
         return;
     k = (w & SRR_KEYS ? 1 : 0) + (w & SRR_STR ? 2 : 0) + (steps > 0 ? 1 : -1);
-    k = k < 0 ? 0 : k > 3 ? 3 : k;      /* the sixth build, on request: PORT is the snap, CHLK and SLLK
+    k = k < 0 ? 0 : k > 3 ? 3 : k;      /* the sixth build, four options: PORT is the snap, CHLK and SLLK
                                          * are gone, and a word that had the lock loses it here */
     OWN_WORDS(t)[K_REC] = (w & ~(SRR_KEYS | SRR_STR | SRR_LOCK)) | (k & 1 ? SRR_KEYS : 0) | (k >= 2 ? SRR_STR : 0);
     if (k >= 2 && !(w & SRR_STR))
@@ -1159,8 +1158,8 @@ CAVE2 static const char *rec_says(struct page *p, s32 step, u32 m)
 #endif
 
 #ifdef SLOCK
-/* The slock image: a sampler track's solo can be locked to a step. (The on request
- * .)
+/* The slock image: a sampler track's solo can be locked to a step. (The crossfade is not
+ * lockable; the digital tracks came first.)
  * A lock on knob slot 17 at one of two marks (engine/sampler.h, SLOCK), made and removed as REC's is on slot 24: a
  * step has one only where it is not to do as the track does. With a step held knob E turns the step's, and the place
  * says the first held step's. In an eighth run of code. */
@@ -1183,7 +1182,7 @@ __attribute__((section(".cave.s"), noinline)) static void solo_steps(struct page
 #ifdef TLSOLO
         /* the tlsolo image: a held step always takes the lock it is turned to, off too where the track's own is off.
          * A trigless step's lock holds until the track's next trig, so an earlier one's ON is undone only by an OFF.
-         * (The on request.) */
+         * */
         (void)own;
 #else
         if ((turn > 0) == own) {
@@ -1280,10 +1279,10 @@ CAVE_STSW static void stsw_place(struct page *p, void *surface, u32 t)
  * kept with the pattern's kit and takes a lock and an LFO; the sampler no longer reads DEC (engine/sampler.c). Its value
  * is stored upside down, the crossfade 127 less the slot's, so a track made before (its DEC at 127, as stock makes it)
  * has none: engine/amute.c, XKNOB, reads it so every block. Here: a turn of D goes to stock's routine the other way
- * round, and the other sampler tracks' crossfades and the analog tracks' are taken away (on request
- * ); stock draws D's place, and its picture is drawn again, the right way up, over an eraser of its size. Its
- * text is engine/knobtext.c's. The drawing in the tenth run; the turn and the clearing in two runs of their own. On request
- *  */
+ * round, and the other sampler tracks' crossfades and the analog tracks' are taken away (
+ *
+ *
+ * */
 #define XF_KNOB_D 3u                    /* knob D of the first page: record 504 */
 #define R_DEC 504u
 #define arc ((void (*)(void *, s32, void *, s32, s32))0x400701b4)     /* a plain knob's picture: (object, value 8.8, surface, x, y) */
@@ -1291,8 +1290,8 @@ CAVE_STSW static void stsw_place(struct page *p, void *surface, u32 t)
 #define CAVE10 __attribute__((section(".cave.v"), noinline))
 
 #ifdef XFIX
-/* The xfix image (2026-10-18, the maintainer's word: "if you move it on one track and then move it on another track will get stuck and
- * won't get below that number ... and can't be brought down after that"): a track's kit word was taken away and its live
+/* The xfix image (2026-10-18, 
+ * ): a track's kit word was taken away and its live
  * one left. What the analog mute reads every block is the live word (0x800021b0, slot 25 of the track's 142 bytes), and
  * stock puts the kit's into it only at the track's next trig (0x400a321a), so a track with no trig kept its old crossfade,
  * and the largest of the twelve, the pattern's, could not go below it. The live word goes with the kit's now; stock's
@@ -1327,11 +1326,11 @@ static u32 xfade_now(void);
 #define xf_shared xfade_now
 
 /* The xshare image: with no step held the knob is the pattern's: the track turning it takes the crossfade as it stands,
- * then turns it, and the others' go (on request
+ * then turns it, and the others' go (
  * ). With steps held it locks them and nothing else. */
 #ifdef XCONT
-/* The xcont image (2026-10-19, the maintainer's word on the xfix image: "it snaps back now on a diff channel but now it snaps all the
- * way back to 0, it should just be continuous from where it was"): the amount a turn takes was the analog mute's, made
+/* The xcont image (2026-10-19, 
+ * ): the amount a turn takes was the analog mute's, made
  * from the filtered block (about 60 ms behind), so with the old holder's word now cleared at once, the largest dipped
  * while the two crossed and each tick of the turn began again from the dip, down to 0. Taken here from the words the
  * block is filtered from (0x800021b0), which the clear and stock's store set at once: the first tick takes the holder's
@@ -1355,7 +1354,7 @@ __attribute__((section(".cave.d"), noinline)) static u32 xf_live(void)
 }
 
 #ifdef XCARRY
-/* The xcarry image (2026-10-19, the maintainer's word on the xcont image: "no it sitll anaps back"): the turn's own value is the page's
+/* The xcarry image (2026-10-19,): the turn's own value is the page's
  * (stock's turn, 0x4003b870, adds its change through the page's method at + 96 to what the page holds), not the kit's
  * word written here, so the turning track began from its own old number. The amount is given to the track through the
  * page's own method (PLAIN, as MODE's bits were before the srr image), so stock's turn goes on from it. */
@@ -1644,8 +1643,8 @@ CAVE2 static void once_turn(struct page *p, u32 track, s32 turn)
 
 #ifdef APAGE
 /* The apage image: the analog tracks have the second page too, for the two things on it that are every track's:
- * the solo on knob E and the crossfade on knob G. (The on request
- * .) The six other places are empty and their knobs turn nothing. In a seventh run of code: the
+ * the solo on knob E and the crossfade on knob G. (
+ * ) The six other places are empty and their knobs turn nothing. In a seventh run of code: the
  * class's three methods come here first and go on to the sampler's own for every other track.
  * The crossfade is twelve numbers now, three longs: a turn writes the track's own long first and clears the two
  * others after, so the per-block routine never finds all twelve at 0 on the way. */
@@ -1671,9 +1670,9 @@ CAVE7 static s32 analog(struct page *p)
 #endif
 
 #ifdef GEAR
-/* The gear image: the page's knobs turn as stock's own do. On request
+/* The gear image: the page's knobs turn as stock's own do. 
  *
- * . Until here a turn's every tick moved a knob of ours a whole step.
+ * Until here a turn's every tick moved a knob of ours a whole step.
  *
  * Stock's knob routine (0x4003b870) makes a turn's change in three calls, and a stock page whose knobs are whole
  * numbers and no records makes the same three (0x40049730): the event's steps, times a coarse number while the knob
@@ -1709,8 +1708,8 @@ CAVE u32 syn_turn(struct page *p, struct event *e)
 #ifdef GEAR
     if (p->index && k != PEAK_AT) {     /* the gear image: every knob of the page but the crossfade's, as a plain knob of stock's */
         /* (its second build: SRC and REC are picked from a list and have the picker's feel, six ticks a step, a pause
-         * after each and no speeding up, where a plain knob has three and speeds up. The maintainer, with the first on his
-         * unit: "its better now but src moves too fast ztill and rec too") */
+         * after each and no speeding up, where a plain knob has three and speeds up. 
+         * ) */
         geared.steps = gear(p, e, k, k == 0 || k == 2 ? FEEL_PICKER : FEEL_PLAIN, 4);
         e = &geared;
     }
@@ -1737,13 +1736,11 @@ CAVE u32 syn_turn(struct page *p, struct event *e)
     } else if (k == 1) {
         s = state(p);
 #if defined(DESTNUM)
-        /* the destnum image: SMPL, or a place's number again. On request
-         *  */
+        /* the destnum image: SMPL, or a place's number again */
         s->dest[t] = (u8)dest_moved(s->dest[t], e->steps, (u32)t);
 #elif defined(ONEDEST)
-        /* the onedest image: a take goes to SMPL's place, always. On request
-         *
-         * . A turn of B puts every track back on SMPL, NEXT left from before too */
+        /* the onedest image: a take goes to SMPL's place, always (NEXT used up
+         * slots). A turn of B puts every track back on SMPL, NEXT left from before too */
         for (u32 i = 0; i < 8; i++)
             s->dest[i] = 0;
 #elif defined(NEXT)
@@ -2013,8 +2010,8 @@ CAVE7 u32 apage_knob(struct page *p, u32 knob)
 
 #ifdef AXF
 /* The axf image: on the analog tracks' page the peak in H's place, which is empty there. load_place puts it in G's since
- * the slice image, and xfade_place drew it there with the crossfade over it: the maintainer, 2026-10-26, "crossfade's text is
- * garbled. It looks like there are two things getting printed over at once". */
+ * the slice image, and xfade_place drew it there with the crossfade over it: 
+ * */
 CAVE7 static void peak_h(void *surface)
 {
     u32 w[2];
@@ -2095,10 +2092,10 @@ CAVE7 u32 apage_turn_side(void *listener, struct event *e)
 
 #ifdef TRIGPAGE
 /* The trig image: on a sampler track the TRIG page's fifth and sixth places, LFO.T and FLT.T, are the track's SOLO and
- * REC, as they were on the sampling page (which keeps REC, and has no SOLO now). On request
+ * REC, as they were on the sampling page (which keeps REC, and has no SOLO now). 
  *
  *
- * . LFO.T and FLT.T keep what a trig holds (on, as stock makes one); they are not
+ * LFO.T and FLT.T keep what a trig holds (on, as stock makes one); they are not
  * shown or turned there. Every other track has stock's page. The TRIG class's three methods come here first, and its
  * second base's turn; the object's fields used are the base class's, as the SYN object's. In an eleventh run and a
  * twelfth. */
@@ -2111,15 +2108,15 @@ CAVE7 u32 apage_turn_side(void *listener, struct event *e)
 #define TRIG_REC 5u                     /* knob F, FLT.T's place */
 #ifdef EUCL
 /* The eucl image: SOLO and REC only on the TRIG page's first page (1 or 2), not on its third, the euclidean one (records
- * 457 to 464, E and F 460 and 461), which the same object shows on a second press. On request
- * . The page showing as FLTR2's
+ * 457 to 464, E and F 460 and 461), which the same object shows on a second press. 
+ * The page showing as FLTR2's
  * test reads it (+ 124, + 144). */
 #ifdef ATRIG
 /* The atrig image: and on an analog track's TRIG page (page 1: NOTE VEL LEN PROB LFO.T FLT.T PTIM PORT, list
  * 0x401c826c; a digital track's is page 2) the track, 8 to 11, for SOLO in LFO.T's place; its F stays FLT.T (TRIG_OURS).
- * The on request
- * . Its first build took page 26 (list 0x401c8214, the third set, not the
- * analog tracks'): on the unit stock's pages, "still showing LFO.T on the trig page". In the apage image's run (.cave.r). */
+ * 
+ *
+ * In the apage image's run (.cave.r). */
 __attribute__((section(".cave.r"), noinline)) static s32 trig_sampler(struct page *p)
 {
     s32 t;
@@ -2152,7 +2149,7 @@ CAVE11 u32 trig_knob(struct page *p, u32 knob)
 }
 
 #ifdef SWITCH
-/* The switch image: the two places drawn as LFO.T and FLT.T are, a ball in an oval (on request
+/* The switch image: the two places drawn as LFO.T and FLT.T are, a ball in an oval (
  *
  * ). Their picture is one routine of stock's, frame value >> 8 of the switch's strip, at the
  * place's x + 1 and y + 4; the place's x and y as stock's draw hands them on (0x4003a244: x 24 + 26 a column, y 7 on
@@ -2163,7 +2160,7 @@ CAVE11 u32 trig_knob(struct page *p, u32 knob)
 /* The box image: the dotted box stock draws in a place with no record (a 17 x 17 picture at 0x444e00b4, at the place's
  * x 25 + 26 a column and y 7 on the lower row) is wiped before the switch is drawn, by a picture of ours of the same
  * size whose bits are 0 under stock's own mask of that box (ERASER, put there by the build: tools/build_main.py, BOX).
- * The on request. And REC is OFF or ONCE: ONCE is the switch on. */
+ * And REC is OFF or ONCE: ONCE is the switch on. */
 #define blit ((void (*)(void *, const void *, s32, s32, u32))0x400f8f70)
 #endif
 
@@ -2249,7 +2246,7 @@ CAVE11 u32 trig_turn_side(void *listener, struct event *e)
 
 #ifdef FLTRPAGE
 /* The fltr image: on a sampler track LFO.T and FLT.T (records 28 and 27, the trig flags the TRIG page's E and F held
- * before the trig image) are FLTR2's empty G and H (on request
+ * before the trig image) are FLTR2's empty G and H (
  * ). Only the record is ours: the filter page's
  * draw and the base class's turn are stock's, and stock's TRIG page turns the two by that same base turn (its own turn
  * routine, 0x400415d0, goes there for every page but its third). FLTR2 is page 10 of the filter object's two (the page
@@ -2271,8 +2268,8 @@ __attribute__((section(".cave.d"), noinline)) u32 fltr_knob(struct page *p, u32 
  * argument of 1, a knob's picture, for every record but DEL, FENR and two of the analog page's, which get 0, the record's
  * own picture (FENR's switch); stock's TRIG page hands 0 for all (0x4003a244). Its test of FENR (0x400424c8, 12 bytes:
  * moveb #69,%d1 ; cmpl %d2,%d1 ; bnew 0x400423f0 ; bras 0x400424c2) jumps here, and FLT.T and LFO.T go the way FENR
- * goes. d1 is left 69, as stock leaves it. On request
- * . Only FLTR2 on a sampler track shows records 27 and 28 (fltr_knob). */
+ * goes. d1 is left 69, as stock leaves it. 
+ * Only FLTR2 on a sampler track shows records 27 and 28 (fltr_knob). */
 __asm__(".section .cave.d,\"ax\",@progbits\n"
         "        .globl fltr_flat\n"
         "fltr_flat:\n"
@@ -2290,10 +2287,8 @@ __asm__(".section .cave.d,\"ax\",@progbits\n"
 #endif
 
 #ifdef NEXT
-/* The next image, on request
- *
- *
- * .
+/* The next image: DEST SMPL or NEXT (the next free place of the track's kind, which the track then plays), and a mono
+ * or stereo switch in REC's place (REC is on the TRIG page), not lockable per step.
  * DEST is SMPL (a take goes where SMPL is, as before) or NEXT. Knob C is the track's KIND, STER or MONO: bit 6 of its own
  * word on slot 24 (engine/sampler.h, SRR_KIND), kept with the kit, no lock. A track on NEXT holds a free place of its
  * KIND, STER the lowest free stereo place, MONO the highest free single slot, as SMPL's stops find them (engine/sampler.h,
@@ -2487,7 +2482,7 @@ CAVE_NX void next_poll(void)
 #endif
 
 #ifdef SKIND
-/* The kind image (on the pbank image), the maintainer, 2026-10-26, of "SMPL follows KIND": "1 soinds like a nice fix", then "go". SMPL on the first
+/* The kind image (on the pbank image), SMPL on the first
  * page stops only at the places of the track's KIND (the next image, above): STER the stereo places that hold a sample and
  * the lowest free one, MONO the single slots that hold one and the highest free one. A number keeps its meaning: a pattern,
  * a lock or an LFO on the other kind still plays it, and the knob goes from there to the nearest stop of the track's kind.

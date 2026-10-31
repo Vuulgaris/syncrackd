@@ -1,9 +1,9 @@
 """The allright image: the nodiv image with the audio CPU sending every track's right half, so the main CPU copies none.
 
-The maintainer, 2026-10-17, of the lag with the unit's USB audio streaming, found by flashing one image after another and then
-test files made from two of them: it comes in with the stereo image, and with nothing of it but the main CPU's copy of
-each mono track's left into the right set (testD, 1 KB a block); the window's long read alone does not lag (testE).
-"what would you do to fix it", then "e doesnt really lag". engine/stub.S, send_all (ALLRIGHT): at the end of every
+
+
+
+engine/stub.S, send_all (ALLRIGHT): at the end of every
 interrupt every track's right half goes to the window, a stereo track's right channel as before and every other track's
 own buffer (at 0x80003840, where stock's last stage leaves it and its transfer takes it), and the long says all eight.
 The main CPU's code is the nodiv image's: with all eight said it starts both transfers and copies nothing.

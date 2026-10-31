@@ -1,5 +1,5 @@
 /* Main CPU (section 3, OS 1.42 only): the scratch image. A take is on the drive before the project is saved, so a
- * power off does not lose it, and it is still a take that has not been saved. On request
+ * power off does not lose it, and it is still a take that has not been saved. 
  * 
  *
  * The room. After our sector of the banks (BANK_MARK_SECTOR, 196 MB) the drive is free up to 244 MB (mainmap.DRIVE_FREE):

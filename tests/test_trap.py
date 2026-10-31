@@ -1,7 +1,7 @@
 """The trap image (engine/sampler.h, TRAP): the spread image with a stretched note for less.
 
-On request
-. Here:
+
+Here:
   - the heaviest blocks with one and eight stretched tracks, against the spread image's;
   - a low tone no less steady than on the spread image; bursts once and on time; at its own speed the note;
   - a note not stretched the spread image's to the bit;

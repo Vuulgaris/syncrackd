@@ -1,8 +1,8 @@
 """The scan image: the xcarry image with the hits found another way, in SD BASIC's room.
 
-On request
-, and of the hits DEL lets through:
-"they're not quite sensitive enough, so they don't have enough of a gradient". Then "SD BASIC" for the room.
+
+
+for the room.
 
 A window is looked at by its loudest frame and its loudest step from one frame to the next, each with its own follower;
 a hit is either past its follower by half again, by more than 42 dB under the slot's loudest; its step is its place

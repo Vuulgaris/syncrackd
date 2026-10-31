@@ -15,28 +15,28 @@ Syntakt OS 1.42. Section 7 facts hold for 1.41 too; section 3 addresses are 1.42
 ```
 audio CPU (section 7), once per 32 frames, interrupt 0x40000934
   copy 0x1b0 bytes of parameters in from the shared window (address 0)
-  0x40004324  voice loop          8 tracks -> 8 mono buffers at 0x80003840
-  0x4000112c  gain                in place, per track
-  0x40002320  drive               in place, per track
-  0x400019d6  filter              in place, called once per track
-  0x4000168e  amp envelope        in place, calls 0x40001476 once per track
-  eDMA ch 47  0x80003840 -> shared window + 0x1b0, 64 x 16 = 1024 bytes
+  0x40004324 voice loop 8 tracks -> 8 mono buffers at 0x80003840
+  0x4000112c gain in place, per track
+  0x40002320 drive in place, per track
+  0x400019d6 filter in place, called once per track
+  0x4000168e amp envelope in place, calls 0x40001476 once per track
+  eDMA ch 47 0x80003840 -> shared window + 0x1b0, 64 x 16 = 1024 bytes
 
 main CPU (section 3)
-  eDMA ch 47  window (0x100001b0) -> 0x80003d50, 1024 bytes      (set up at 0x400a47fa)
-  0x4008f242  mixer, per track:
+  eDMA ch 47 window (0x100001b0) -> 0x80003d50, 1024 bytes (set up at 0x400a47fa)
+  0x4008f242 mixer, per track:
                 volume from params+124 (VOL)
                 0x400a1792(params+122 = PAN) -> left gain, right gain
                 send gains from params+118, +120 (DEL, REV)
   14 kernel passes a block (corrected 2026-10-09, tests/test_mixer_whole.py), among them:
-  0x4008f0b6  8 inputs, twice:  8 tracks x pan gains x delay send -> 0x8000dbd0 / dbd4 (stride 8)
-  0x4008f024  9 inputs, twice:  the same for the reverb send, into the same two places
-  0x4008ef8c  10 inputs, twice: 8 tracks and the two returns x pan gains -> the dry mix 0x8000dad0 / dad4
+  0x4008f0b6 8 inputs, twice: 8 tracks x pan gains x delay send -> 0x8000dbd0 / dbd4 (stride 8)
+  0x4008f024 9 inputs, twice: the same for the reverb send, into the same two places
+  0x4008ef8c 10 inputs, twice: 8 tracks and the two returns x pan gains -> the dry mix 0x8000dad0 / dad4
               and twice more for tracks routed to the FX block -> 0x8000dfd0 / dfd4
   the dry mix goes to slots 7 and 2 of the output frame
 ```
 
-The shared window is `0x0` on the audio CPU and `0x10000000` on the main CPU: `0x000..0x1b0` parameters in, `0x1b0..0x5b0` audio out, `0x800..0x1000` the boot-time sample chunk. What sits behind it (FPGA block RAM is the likely candidate) is not identified.
+The shared window is `0x0` on the audio CPU and `0x10000000` on the main CPU: `0x000.0x1b0` parameters in, `0x1b0.0x5b0` audio out, `0x800.0x1000` the boot-time sample chunk. What sits behind it (FPGA block RAM is the likely candidate) is not identified.
 
 ## Evidence
 
@@ -44,17 +44,17 @@ Audio CPU, by running the real interrupt in the emulator (`tests/test_stereo_pat
 
 | Claim | How it was shown |
 |---|---|
-| The audio CPU receives no PAN, VOL or sends | The incoming block was filled with a marker byte; only type, slots 18..27, 29, 37, 38, 40..44, 50, 51 arrive in a track's parameters. Slots 45..48 stay untouched. |
+| The audio CPU receives no PAN, VOL or sends | The incoming block was filled with a marker byte; only type, slots 18.27, 29, 37, 38, 40.44, 50, 51 arrive in a track's parameters. Slots 45.48 stay untouched. |
 | What leaves is exactly the 8 mono buffers | The interrupt programs channel 47 with source `0x80003840`, destination window `+0x1b0`, 64 x 16 bytes. Init clears `0x5b0` bytes of window: `0x1b0` in plus `0x400` out, nothing more. |
-| The stages after the voice loop are per track | Track 0 is bit-identical after every stage, amp included, whether or not track 1 plays; tracks 2..7 stay silent. |
+| The stages after the voice loop are per track | Track 0 is bit-identical after every stage, amp included, whether or not track 1 plays; tracks 2.7 stay silent. |
 
 Main CPU, static plus running its real code in the emulator:
 
 | Claim | How it was shown |
 |---|---|
-| It copies the same 1024 bytes into its own SRAM | Operands at `0x400a47fa..0x400a482c`: source `0x100001b0`, destination `0x80003d50`, count word `0xDE40`, start channel 47. |
+| It copies the same 1024 bytes into its own SRAM | Operands at `0x400a47fa.0x400a482c`: source `0x100001b0`, destination `0x80003d50`, count word `0xDE40`, start channel 47. |
 | The mixer reads PAN and VOL from its own track parameters | `mvs.w 122(a3)` then `jsr 0x400a1792` at `0x4008f2f8`; `mvs.w 124(a3)` at `0x4008f2b6`. Offsets 122 and 124 are slots 47 and 48, which the descriptors name PAN and VOL. |
-| Every sum is a left pass and a right pass of a kernel over the copied buffers | `0x4008f7ea..0x4008f818`: `(bus L, tracks, left gains)` then `(bus R, tracks, right gains)`. The kernel was run in the emulator and matches `-sum(gain * track)` exactly. **Corrected 2026-10-09:** these two passes are the delay send's sum, not the main mix. The dry mix is another pair, of a 10-input kernel into `0x8000dad0`, with the same pan gains: "One-track stereo" below. |
+| Every sum is a left pass and a right pass of a kernel over the copied buffers | `0x4008f7ea.0x4008f818`: `(bus L, tracks, left gains)` then `(bus R, tracks, right gains)`. The kernel was run in the emulator and matches `-sum(gain * track)` exactly. **Corrected 2026-10-09:** these two passes are the delay send's sum, not the main mix. The dry mix is another pair, of a 10-input kernel into `0x8000dad0`, with the same pan gains: "One-track stereo" below. |
 | Hard pans isolate | The real pan law run for all 128 values: pan 0 gives left 1.0, right exactly 0. Pan 127 gives right 1.0, left 4 lsb of 32 bits (about -174 dB). Centre is 0.75 each side (a parabolic sine, not 0.707). |
 | Two hard-panned tracks are a clean stereo pair | Pan-law gains fed to the real kernel: track 0 on the left bus and track 1 on the right bus, each within 1 lsb of its input, no trace of the other. |
 
@@ -75,7 +75,7 @@ Cost: a stereo voice uses two of the 8 digital tracks. Mono samples stay one tra
 
 Risk: low. No section 3 change, no DMA change, nothing new crosses between the CPUs. Everything except the user's pan setting is testable in the emulator.
 
-The stock fallback from CLAUDE.md is the same idea with no mod at all: L and R as two mono slots on two Twinshot tracks, panned hard, given the same trigs (Track Relations or copied trigs). It works today; it just costs two slots and manual upkeep.
+The stock fallback is the same idea with no mod at all: L and R as two mono slots on two Twinshot tracks, panned hard, given the same trigs (Track Relations or copied trigs). It works today; it just costs two slots and manual upkeep.
 
 ### B. Stereo inside one track (mid/side, as Model-TG does)
 
@@ -102,9 +102,9 @@ Pan, volume and sends are linked by a small main CPU patch (Phase 7, full image 
 
 ## One-track stereo (built 2026-10-10: the stereo image. Works on the unit, 2026-10-11, second build)
 
-**The maintainer made it the next build on 2026-10-10** ("stereo.md/one travck stereo is noumber one"). It is built: `make image-stereo`. What was weighed on 2026-10-09 is kept below as it was written; "How it is built" and what follows are new.
+**Made the next build on 2026-10-10.** It is built: `make image-stereo`. What was weighed on 2026-10-09 is kept below as it was written; "How it is built" and what follows are new.
 
-**What is wanted.** A stereo sample on one track, so 8 stereo samples at once where option A gives 4. The maintainer asked whether it can be had "with no compromise on quality" (2026-10-09), and had already ruled out lossy packing (2026-10-05). Two-track stereo (A) is what every image up to the save image does.
+**What is wanted.** A stereo sample on one track, so 8 stereo samples at once where option A gives 4. With no compromise on quality (2026-10-09); lossy packing was ruled out (2026-10-05). Two-track stereo (A) is what every image up to the save image does.
 
 **Corrections found on the way** (`tests/test_mixer_whole.py`, the real mixer run whole with its five effect helpers and its scale routine made returns):
 - The mixer makes 14 kernel passes a block, not 2: 8 of the 8-input kernel `0x4008f0b6`, 2 of a 9-input one `0x4008f024`, 4 of a 10-input one `0x4008ef8c`.
@@ -134,7 +134,7 @@ Audio CPU (`engine/sampler.c` with `ONETRACK`; `engine/sampler.h` has the whole 
 - A track has a right channel when its machine is the sampler, MODE says stereo and the note that is playing has one. A note that started mono, or a stereo sample whose right slot is the shorter, has none, and plays on both sides.
 
 Across:
-- Sixteen halves of 16 longs in the two stretches of the window nothing uses (`0x5c0..0x800`, `0xe40..0x1000`), written by the audio CPU at the end of its interrupt, just before it sends the left buffers, and one long (`0x5b0`) that says which tracks have a right channel this block. The long's low two bytes have to agree with each other and its high two are a mark.
+- Sixteen halves of 16 longs in the two stretches of the window nothing uses (`0x5c0.0x800`, `0xe40.0x1000`), written by the audio CPU at the end of its interrupt, just before it sends the left buffers, and one long (`0x5b0`) that says which tracks have a right channel this block. The long's low two bytes have to agree with each other and its high two are a mark.
 - The main CPU reads them where stock waits for the left buffers to arrive (`0x400a4e30`), a long at a time. While the audio CPU is down it reads nothing and sets the long to 0, so that a restart of the audio CPU (which clears stock's part of the window and none of ours) does not leave it the long of the block before.
 
 Main CPU (`engine/rightfill.c`, and seven operands of the mixer):

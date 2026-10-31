@@ -1,7 +1,7 @@
 """The scrub image (engine/sampler.h, SCRUB): the lock image with STRT and LEN followed on a stretched note.
 
-On request
-. A turn that put the region's far
+
+A turn that put the region's far
 end behind the place set duck and waited for play()'s fade, which a stretched note never runs. Here:
   - a stretched loop follows LEN and then STRT after such a turn; on the lock image it is stuck;
   - a stretched one-shot so stopped goes down over a block;

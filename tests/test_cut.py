@@ -1,7 +1,7 @@
 """The cut image: the prewas image with the always-on per-block costs that change nothing heard taken out.
 
-The maintainer, 2026-10-17, after the bisect (dma fine, apage on, and the latest image much worse than any of them, on a
-pattern with no mutes, no solos and the crossfade at 0): "Yes, build the lean image". Three of ours run every block
+
+Three of ours run every block
 whatever the pattern:
   - the allright image's audio CPU: both right-channel transfers every block and 1 KB more into the window. It did
     not help, so section 7 is the nodiv image's again: the transfers for stereo samples only.

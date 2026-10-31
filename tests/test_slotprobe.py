@@ -1,7 +1,7 @@
 """The slotprobe image, a tool: the spread image with locks on knob slots 0, 55 and 70 made and shown.
 
-On request. No record names the
-three (docs/FINDINGS.md, "Substep hits"). With a step held, knob G of the sampling page makes a lock on each (1080,
+
+). With a step held, knob G of the sampling page makes a lock on each (1080,
 1180, 1280) and takes them off; D, F and G show the held step's three, or with none held the block's words at their
 places (0x800021b0). Only the unit can show that a lock there is kept, saved, copied and cleared, and heard as nothing.
 """

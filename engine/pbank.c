@@ -1,5 +1,5 @@
-/* Main CPU (section 3, OS 1.42 only): the pbank image. The maintainer, 2026-10-26: BANK off the sampling page and into the
- * PROJECT menu, by the maintainer's pick "a and x": one entry that moves to the next bank each time it is chosen, and the bank still
+/* Main CPU (section 3, OS 1.42 only): the pbank image. 
+ * one entry that moves to the next bank each time it is chosen, and the bank still
  * loads only with a project, as before (engine/banks.c). In a run of its own.
  *
  * The PROJECT menu is stock's list page, built once at the start by 0x401855d4(menu): three entries, each 0x54 bytes

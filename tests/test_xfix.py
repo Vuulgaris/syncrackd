@@ -1,8 +1,8 @@
 """The xfix image: the nofx image with the crossfade's hand-over taking the others' live crossfade away too.
 
-On request
 
-. Read: a turn of D with no step held clears the other sampler tracks' slot 25 in the kit (engine/recpage.c,
+
+Read: a turn of D with no step held clears the other sampler tracks' slot 25 in the kit (engine/recpage.c,
 xf_clear) and not in the block a trig's locks go into (0x800021b0), which is what the analog mute reads every block
 (engine/amute.c, xf_knobs, through stock's filter); stock puts the kit's word there only at the track's next trig
 (0x400a321a). So a track with no trig kept its crossfade, and the pattern's (the largest) could not go below it. XFIX:

@@ -1,6 +1,6 @@
 """The soloend image: the scratch image with a sampler step's solo lock over once its note is.
 
-On request.
+
 
 A step's solo lock (slot 17, the slock image) stays where a trig's locks are written till the track's next trig. The
 filter envelope's call (engine/hits.c) is handed the block's trigs and releases: a track's bit of solo_gone is set at

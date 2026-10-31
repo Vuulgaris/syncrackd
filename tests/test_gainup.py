@@ -1,7 +1,7 @@
 """The gainup image (engine/recpage.c, GAINUP): the axf image with the sampling page's places moved.
 
-On request
-. Here:
+
+Here:
   - by stock's page drawn in emulation (emu/screen.py): D is what F was (the gain), E what G was (the peak), G what E was
     (STRC), F the empty box D was; A to C and H as they were;
   - D turns the gain by stock's plain feel, E the profile's switch as G did (not geared), G the stretch, F nothing;

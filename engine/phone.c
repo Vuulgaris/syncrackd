@@ -199,8 +199,8 @@ QAVE void phone_sysex(const u8 *data, u32 len, u32 iface)
 }
 
 #ifdef KNOWS
-/* The fltr image: the phone may ask which project the unit last loaded (the phone app's session, 2026-10-16, the maintainer's word
- * "yes"), so that a take is filed back into the right project's bank with no doubt about a load it did not see.
+/* The fltr image: the phone may ask which project the unit last loaded (asked for by the phone app, 2026-10-16),
+ * so that a take is filed back into the right project's bank with no doubt about a load it did not see.
  *
  *   phone to unit  0x63  no arguments
  *   unit to phone  0x64  project (2 x 7 bits; 0x3fff: none since the start), its bank (0 to 2), the loads since the
@@ -208,7 +208,7 @@ QAVE void phone_sysex(const u8 *data, u32 len, u32 iface)
  *
  * Before any load since the start (the count 0) the project is the one the unit started with, as SAVE PROJECT would
  * save to (`0x40018c2c`; `7f 7f` for one never saved), and the bank the drive's now: the start-up is not a load through
- * the Project Load job (the phone app's session, 2026-10-17, on request).
+ * the Project Load job (2026-10-17: so the phone is told of the start-up too).
  *
  * Every load counts, a phone there or not: the load call and the SysEx entry's jump come here first, and go on to
  * the phone image's routines as they are. The start's id is the first timer's low 21 bits the first time one is
@@ -320,8 +320,8 @@ RAVE void knows_sysex(const u8 *data, u32 len, u32 iface)
 #ifdef FRESH
 /* The fresh image (on the destnum image): stock's Project Load job makes a project that is not there and saves it, and
  * never calls the load (0x4005bbfa: 0x4001d16a, then the save at 0x4005bc2c), so a new project never asked the phone and
- * A kept the project before's samples. On request
- * .
+ * A kept the project before's samples. 
+ * 
  * Here the save goes as before; then the new project is a load: counted, and with a phone there asked as a load asks,
  * the ask's bank byte + 128 to say it is new (its bit in the high-bits byte before it), then loaded as LOAD PROJECT loads
  * it, with the slots the phone names. With no phone it is counted only, and nothing is loaded. */
@@ -369,8 +369,8 @@ FAVE u32 fresh_save(void *manager, void *project, void *progress)
 
 #ifdef NEWPROJ
 /* The newproj image (on the fresh image): NEW PROJECT is stock's Project Init job, which makes a project of no number
- * (0x40059fd6: 0x4001d16a with -1) and neither saves nor loads, so it never asked the phone. On request
- * . Both calls of the maker come
+ * (0x40059fd6: 0x4001d16a with -1) and neither saves nor loads, so it never asked the phone. 
+ * Both calls of the maker come
  * here: the project left read first (for the ask, fresh_save's too), then the maker; an empty slot's new project asks
  * after its save (fresh_save); NEW PROJECT is counted as a load of no project and, with the phone's hello, asks as a load
  * does (project 0x3fff, marked new), waits, and loads the slots the phone names (keeptakes.c, new_slots). */
@@ -431,8 +431,8 @@ GAVE void fresh_make(void *manager, s32 project)
 #ifdef WIPE
 /* The wipe image (on the newproj image): on the unit the phone's writes and clears went unanswered while a project job
  * waited on it (the phone app's log, 2026-10-27: "no answer to dataClear", then "no answer to writeOpen" for every slot),
- * its reads served. On request
- * . So the phone, having read A into its banks, answers 0x6A with the slots to empty (the done frame's ten
+ * its reads served. 
+ * So the phone, having read A into its banks, answers 0x6A with the slots to empty (the done frame's ten
  * bytes); the unit, in its job after the wait, writes each one's first sector over with zeros (its header: the loader,
  * the scan and the boot then take the slot as empty), only on the bank the phone was asked about, reads the slot
  * headers again, and loads those slots as LOAD PROJECT loads the phone's. */

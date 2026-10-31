@@ -128,38 +128,38 @@ def test_a_folder_is_a_batch_and_every_name_starts_with_its_slot(tmp_path, capsy
 
 
 def test_for_the_pack_image_mono_samples_go_in_the_single_slots_from_64_down(tmp_path, capsys):
-    """The on request
+    """
+    """
+    src = tmp_path / "set"
+    src.mkdir()
+    wav_file(src, "a_pad.wav", 1000, seed=1)
+    wav_file(src, "b_hit.wav", 700, channels=1, seed=2)
+    wav_file(src, "c_keys.wav", 900, seed=3)
+    wav_file(src, "d_snare.wav", 600, channels=1, seed=4)
+    files = split_sample.inputs([str(src)])
+    jobs = split_sample.convert(files, pack=True)
+    assert [(slot, stem) for slot, stem, _, _ in split_sample.place(jobs, pack=True)] == [(1, "a_pad"), (64, "b_hit"), (3, "c_keys"), (63, "d_snare")]
+    # in slot order, with the number to turn SMPL to: a stereo sample's own, a single slot's
+    assert [(slot, n, name, smpl) for slot, n, name, _, _, smpl in split_sample.layout(jobs, pack=True)] == [
+        (1, 2, "a_pad", 1), (3, 2, "c_keys", 2), (63, 1, "d_snare", 63), (64, 1, "b_hit", 64)]
+    assert [slot for slot, _, _, _ in split_sample.place(jobs)] == [1, 3, 5, 7]            # (without it: as it was)
+    out = tmp_path / "out"
+    split_sample.main([str(src), "--out", str(out), "--pack"])
+    assert sorted(f for f in os.listdir(out) if f.endswith(".wav")) == [
+        "01_a_pad_L.wav", "02_a_pad_R.wav", "03_c_keys_L.wav", "04_c_keys_R.wav", "63_d_snare.wav", "64_b_hit.wav"]
+    text = (tmp_path / "out_slots.txt").read_text()
+    assert text in capsys.readouterr().out and "6 slots used, 1 to 64." in text and "58 left between" in text
+    assert "63     d_snare" in text and " mono\n" in text and "MODE  SMPL" not in text and "33 to 64" in text
 
 
+def frames_of(path):
+    with wave.open(str(path), "rb") as w:
+        return np.frombuffer(w.readframes(w.getnframes()), dtype="<i2")
 
 
-
-
-
-
-
-
-    #
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-    For the stops image, which tells a single slot's mono sample from a stereo place's by its length: a mono file
+@pytest.mark.parametrize("mono_frames, stereo_frames", [(700, 1000), (701, 1001), (2, 3), (3, 2), (240000, 239999)])
+def test_with_pack_a_files_length_says_what_it_is(tmp_path, mono_frames, stereo_frames):
+    """For the stops image, which tells a single slot's mono sample from a stereo place's by its length: a mono file
     comes out an odd number of frames and a stereo one an even number on both sides. Its last frame is left out where
     it has to be, and nothing else of it changes. Without --pack a file is every frame it was."""
     src = tmp_path / "set"

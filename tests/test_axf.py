@@ -1,7 +1,7 @@
 """The axf image (engine/recpage.c, AXF): the ask image with the analog tracks' second SYN page drawn clean.
 
-On request
-.
+
+
 Since the slice image `load_place` puts the peak in G's place, and `xfade_place`, which only the analog tracks' page still
 calls, drew it there and the crossfade over it. Here, by stock's own page drawn in emulation (emu/screen.py):
   - on the ask image G is the crossfade and the peak at once, exactly what this image puts in G and in H;

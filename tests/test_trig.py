@@ -1,21 +1,21 @@
 """The trig image: the phone image with four of the maintainer's fixes in one flash.
 
-The maintainer, 2026-10-15, his tracker's items, by on request:
-  - "on sample first page start sshould swap plac ein ui and knobs with loop, and len and srr should swap places":
-    the sampler's own page reads TUNE SMPL LOOP DEC / STRT LEN SRR OVER. Four stores of the start-up routine change
-    places; the records and their knob slots are stock's, so a project's locks stay with their knobs.
-  - "if a track is global muted it should still be audible crossfade when you apply crossfade to that channel": with
-    no solo on, the track holding the crossfade is heard through a global mute (not the pattern's) at its crossfade's
-    share, a digital track's volume word by x / 127, an analog voice's level words by x * x / 16384.
-  - "transient needs to be more sensitive ... needs more of a gradient": a hit's loudness in fifteen steps of 2 dB from
-    -31 dB to -3 dB, where they were 3 dB from -45. The hits' run has no byte left, so the same loop, new numbers.
-  - "reopkace lfo trrigger and filter trigger on off knobs on the tirg patch wit the solo and rec", "i just eant to leace
-    lfo and filt trig on and not have access to them", "remove solo from the sampling page but keep rec": on a sampler
+
+
+
+
+
+
+
+
+
+
+    on a sampler
     track the TRIG page's E and F are SOLO and REC, turning and locking as the sampling page's did; the sampling page's
     E is empty.
 
 Held here by running the routines; not held: that the TRIG object's base fields are where the SYN object's are (read
-from its methods' use of + 108, not run), how the knobs feel, how the hits' steps feel on his material.
+from its methods' use of + 108, not run), how the knobs feel, how the hits' steps feel on real material.
 """
 import shutil
 

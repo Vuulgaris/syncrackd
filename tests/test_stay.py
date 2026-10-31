@@ -1,6 +1,6 @@
 """The stay image: the gear image with a ONCE, a step's or the track's, used up only where the sequencer plays a step.
 
-On request
+
 
 
 The routine of stock's that plays a step has two callers. The sequencer's hands it 0 for the event's place. The other

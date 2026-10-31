@@ -52,8 +52,8 @@
 #define F_EXT 18                    /* external input left */
 #define AUDIO_UP (*(const volatile u32 *)0x43bdd824)
 #ifdef PRE
-/* The pre image. The maintainer, 2026-10-13: a track that is muted shows no level on the sampling page and records
- * nothing, and the FX track's mute does nothing ("I still hear the effects"). The mixer is shown a muted track at a
+/* The pre image. A track that was muted showed no level on the sampling page and recorded
+ * nothing, and the FX track's mute did nothing. The mixer is shown a muted track at a
  * volume of 0 (engine/mixlink.c), and what a take was made from is the frame the mixer leaves. So: before the mixer
  * is called, the buffer of every digital track that is a take's source, or the meter's, is copied into a frame of
  * ours, a channel where the frame has it, and the FX track's return the same; and the feed and the meter read those
@@ -77,8 +77,8 @@
 #define PATTERN_MUTES ((const u16 *)0x43bdd828)
 #define FX_TRACK 12
 #ifdef NOFX
-/* The nofx image (2026-10-18, the maintainer's word: pull out the FX track's mute, "I don't know that the effects mute is necessary
- * anymore", and move the frame off 0x4556b000, where stores tipped the lag with USB audio streaming: tests D, F, G).
+/* The nofx image (2026-10-18, 
+ * and move the frame off 0x4556b000, where stores tipped the lag with USB audio streaming: tests D, F, G).
  * Nothing changes the tracks' buffers or the return's before the feed now, so a take and the meter read them where
  * they are, on-chip, a long a frame: no frame of ours, no copies. A source's step from one frame to the next, in
  * bytes, is this long (on-chip, after the prewas image's): 80 in stock's frame, 4 in a buffer. chan() sets it,

@@ -1,5 +1,5 @@
-/* The mirror image (-DMIRROR): the screen to a viewer over USB, as SysEx, for video. The maintainer, 2026-10-26, of a
- * video with the unit's screen drawn clean in a window above the footage: "Can we try option one?" (the screen's
+/* The mirror image (-DMIRROR): the screen to a viewer over USB, as SysEx, for video. 
+ * (the screen's
  * frames streamed off the unit, drawn big by a viewer, the viewer's window put over the camera).
  *
  * The panel (READ, docs/FINDINGS.md, "The mirror image"): the UI draws onto a surface over a 1,024-byte buffer, a

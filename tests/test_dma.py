@@ -1,7 +1,7 @@
 """The dma image: the gfade image with the right channels brought out of the window by the transfer controller.
 
-The maintainer, 2026-10-12, with the gfade image on the maintainer's unit: the screen and knobs lag when stereo samples play and not
-when mono ones do; "i def need all 8 move it the way stock does. we sould do the full fix like ewlektorn would do".
+
+
 
 Emulation has no transfer controller. What is shown here: our two channels are written what stock writes its own
 channel 47, word for word and in its order (stock's own code is run for that); the routine around them, with a

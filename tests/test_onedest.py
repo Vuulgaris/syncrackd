@@ -1,7 +1,7 @@
 """The onedest image (engine/recpage.c, ONEDEST): the gainup image with DEST only SMPL.
 
-On request
-. Here, on the sampling page:
+
+Here, on the sampling page:
   - B reads DEST SMPL whatever it is turned to, and every track's take goes to its SMPL place (the box says DEST_SMPL);
   - a NEXT left from before (the page's own numbers are not cleared by a start) is dropped by a turn of B, and the poll
     holds no place for it;

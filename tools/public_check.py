@@ -3,10 +3,10 @@
     python -m tools.public_check              # the files git tracks here
     python -m tools.public_check DIR          # every file under DIR (an export, tools/export_public.py)
 
-Fails on: firmware, audio, projects and listings by name; the folders that hold them; a home folder's path; an
-address of the maintainer's; an em dash; a hex run of 32 characters or more that is not a SHA-256 or a sealed run
-(fw.sx, fw.sb). Warns, with a count a file, on what reads as one person's notes ("on requestthe maintainer"): those
-are for a person to read and reword.
+Fails on: firmware, audio, projects and listings by name; the folders that hold them; a home folder's path; an em
+dash; a hex run of 32 characters or more that is not a SHA-256 or a sealed run (fw.sx, fw.sb). A maintainer may keep
+more patterns of their own in tools/private_check.py (FAIL, a list like the one here, and WARN, a pattern to count):
+that file is never published.
 """
 import os
 import re
@@ -17,12 +17,17 @@ BAD_EXT = (".syx", ".bin", ".wav", ".aif", ".aiff", ".stprj", ".lst", ".elf", ".
 BAD_DIRS = ("firmware/", "sections/", "build/", "ref/", "pascalproject/", "profiler/", "samples/")
 FAIL = [
     ("a home folder's path", re.compile(r"/Users/[A-Za-z]|~/(?:Library|Documents)/|Mobile Docu[m]ents")),
-    ("an address of the maintainer's", re.compile(r"dhack9[4]|dylanhackett2[8]")),  # [ ]: not a hit on this line
     ("an em dash", re.compile("\u2014")),
 ]
 HEXRUN = re.compile(r"(?<![0-9A-Fa-f])[0-9A-Fa-f]{32,}(?![0-9A-Fa-f])")
 SEALED = re.compile(r'fw\.s[xb]\("[0-9a-f]+"\)')
-WARN = re.compile(r"\bhis words?\b|\bthe maintainer\b|\bowner's\b|\bDylan\b|maintainer(?:,[^:\"\n]{0,160})?:\s*\"", re.I)
+WARN = IGNORE = None
+try:
+    from . import private_check
+    FAIL = FAIL + private_check.FAIL
+    WARN, IGNORE = private_check.WARN, getattr(private_check, "IGNORE", None)
+except ImportError:
+    pass
 TEXT = (".py", ".md", ".c", ".h", ".S", ".s", ".txt", ".html", ".json", ".yml", ".yaml", ".toml", ".cfg", "Makefile",
         ".gitignore", ".gitmodules", ".sh")
 
@@ -58,7 +63,7 @@ def check(root=None):
             for m in HEXRUN.finditer(SEALED.sub("", line)):
                 if len(m.group(0)) != 64:
                     fails.append((rel, i, "a hex run of %d characters" % len(m.group(0))))
-            n_warn += len(WARN.findall(line))
+            n_warn += len(WARN.findall(line)) if WARN and not (IGNORE and IGNORE.search(line)) else 0
         if n_warn:
             warns.append((rel, n_warn))
     return fails, warns
@@ -67,7 +72,7 @@ def check(root=None):
 def main(argv):
     fails, warns = check(argv[0] if argv else None)
     for rel, n in warns:
-        print("warn  %4d  %s: one person's notes, to reword" % (n, rel))
+        print("warn  %4d  %s: to reword" % (n, rel))
     for rel, i, what in fails:
         print("FAIL  %s:%d: %s" % (rel, i, what))
     print("%d failures, %d files to reword" % (len(fails), len(warns)))

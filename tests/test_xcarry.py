@@ -1,6 +1,6 @@
 """The xcarry image: the xcont image with the crossfade's amount handed over through the page's own method.
 
-On request. Read (stock's turn, 0x4003b870): the change of a
+Read (stock's turn, 0x4003b870): the change of a
 turn is added through the page's method at + 96 to the page's own value for the record, not to the kit's word that
 xf_take wrote, so the turning track began from its own old number. XCARRY, xf_carry: before the turn, the track's
 value is brought to the pattern's crossfade (the unfiltered largest, xf_live) through the page's + 88, which stock's

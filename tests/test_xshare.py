@@ -1,6 +1,6 @@
 """The xshare image: the xknob image with knob D the pattern's one crossfade on every track.
 
-On request
+
 
 
 The crossfade the pattern has is the largest of the twelve numbers the analog mute makes every block (the sampler
