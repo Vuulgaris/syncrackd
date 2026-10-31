@@ -16,6 +16,7 @@ The mod replaces the Twinshot machine with a sample player and adds a sampling p
 - **A sampling page**: record from 16 sources into any slot, REC OFF or ONCE (lockable), mono or stereo, input gain, takes normalized to -1 dB.
 - **Takes survive**: written with the pattern's save, and kept across a power-off even unsaved.
 - **Per-project sample banks**, loaded with the project, while the unit runs.
+- **Samples from a computer**: stock Transfer sends up to 5 s; record on the unit for the full 10 s. A companion phone app for 10 s transfers is coming.
 - **Solo and crossfade**: a solo per track (lockable), and one crossfade across the whole unit, on the analog tracks too.
 
 The full list, knob by knob: [docs/SAMPLER.md](docs/SAMPLER.md).
