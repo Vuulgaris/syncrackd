@@ -7,12 +7,12 @@
 <meta name="description" content="Make the SynCrackd OS for the Elektron Syntakt from Elektron's own 1.42 file, in your browser.">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=VT323&display=swap" rel="stylesheet">
 <style>
   :root { --bg: #000a04; --fg: #39ff7a; --dim: #1b8c45; --hot: #c6ffd9; --line: #0f4a24; --glow: rgba(57, 255, 122, .45); }
   * { box-sizing: border-box; }
   body { margin: 0; background: var(--bg); color: var(--fg); overflow-x: hidden;
-         font: 17px/1.6 "Share Tech Mono", ui-monospace, "Courier New", monospace; text-transform: uppercase;
+         font: 22px/1.3 "VT323", ui-monospace, "Courier New", monospace; text-transform: uppercase;
          text-shadow: 0 0 2px var(--glow), 0 0 8px rgba(57, 255, 122, .18); }
   body::before { content: ""; position: fixed; inset: 0; pointer-events: none; z-index: 3;
                  background: repeating-linear-gradient(to bottom, transparent 0 2px, rgba(0,0,0,.32) 3px, transparent 4px); }
@@ -20,7 +20,7 @@
                 background: radial-gradient(ellipse at center, transparent 60%, rgba(0,0,0,.7) 100%); }
   main { position: relative; z-index: 2; max-width: 720px; margin: 0 auto; padding: 40px 16px 64px; }
   header { text-align: center; }
-  h1 { font: inherit; font-size: 76px; line-height: 1; letter-spacing: .12em; color: var(--hot); margin: 0 0 8px;
+  h1 { font: inherit; font-size: 96px; line-height: .9; letter-spacing: .08em; color: var(--hot); margin: 0 0 8px;
        text-shadow: 0 0 3px var(--glow), 0 0 18px rgba(57, 255, 122, .35); }
   p { margin: 0; }
   a { color: var(--fg); }
@@ -44,7 +44,7 @@
   a.button { display: none; margin-top: 12px; color: var(--bg); background: var(--fg); padding: 2px 12px;
              text-decoration: none; text-shadow: none; }
   a.button:hover, a.button:focus { background: var(--hot); outline: none; }
-  @media (max-width: 560px) { body { font-size: 15px; } h1 { font-size: 46px; } }
+  @media (max-width: 560px) { body { font-size: 19px; } h1 { font-size: 64px; } }
   @media (prefers-reduced-motion: reduce) { #status::after { animation: none; } }
 </style>
 </head>
