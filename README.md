@@ -34,7 +34,7 @@ You never download a modded OS from here. You make one from Elektron's own file,
 
 1. **Back up your +Drive** with Elektron Transfer: projects and samples. The mod writes to the drive.
 2. **Get Syntakt OS 1.42** from Elektron's website.
-3. **Patch it**, in your browser at the project's page (your file never leaves it), or with Python: download the release's one file (`syncrackd_firstrec.py` for v0.1), put it next to Elektron's, and run it. Python 3.9 or later, which a Mac already has; nothing to install.
+3. **Patch it**, in your browser at the project's page (your file never leaves it), or with Python: download the release's one file (`syncrackd_firstrec.py` in the latest release), put it next to Elektron's, and run it. Python 3.9 or later, which a Mac already has; nothing to install.
    ```bash
    python3 syncrackd_firstrec.py Syntakt_OS1.42.syx
    ```
