@@ -19,7 +19,9 @@
   body::after { content: ""; position: fixed; inset: 0; pointer-events: none; z-index: 4;
                 background: radial-gradient(ellipse at center, transparent 60%, rgba(0,0,0,.7) 100%); }
   main { position: relative; z-index: 2; max-width: 720px; margin: 0 auto; padding: 40px 16px 64px; }
-  h1 { font: inherit; color: var(--hot); margin: 0 0 4px; }
+  header { text-align: center; }
+  h1 { font: inherit; font-size: 96px; line-height: .9; letter-spacing: .08em; color: var(--hot); margin: 0 0 8px;
+       text-shadow: 0 0 3px var(--glow), 0 0 18px rgba(57, 255, 122, .35); }
   p { margin: 0; }
   a { color: var(--fg); }
   .dim { color: var(--dim); }
@@ -44,14 +46,17 @@
   a.button { display: inline-block; margin-top: 12px; color: var(--bg); background: var(--fg); padding: 2px 12px;
              text-decoration: none; text-shadow: none; }
   a.button:hover, a.button:focus { background: var(--hot); outline: none; }
-  @media (max-width: 560px) { body { font-size: 19px; } }
+  @media (max-width: 560px) { body { font-size: 19px; } h1 { font-size: 64px; } }
   @media (prefers-reduced-motion: reduce) { #status::after { animation: none; } }
 </style>
 </head>
 <body>
 <main>
-  <h1>SynCrackd // OS 1.42 patcher</h1>
-  <p class="dim">Unofficial. Not Elektron's. At your own risk. <a href="https://github.com/Vuulgaris/syncrackd/blob/main/DISCLAIMER.md">Disclaimer</a></p>
+  <header>
+    <h1>SynCrackd</h1>
+    <p>OS 1.42 patcher</p>
+    <p class="dim">Unofficial. Not Elektron's. At your own risk. <a href="https://github.com/Vuulgaris/syncrackd/blob/main/DISCLAIMER.md">Disclaimer</a></p>
+  </header>
   <hr>
   <ol>
     <li>Back up your +Drive with Transfer.</li>
