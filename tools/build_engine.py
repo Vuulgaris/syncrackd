@@ -190,8 +190,8 @@ def patches(image, rec=False, keep=False, page=False, load=False, bank=False, fa
     pack = pack or stops                    # the stops image is the pack image's engine, saying what every slot holds
     cross = cross or pack                   # the pack image is the cross image's engine with single slots at the back
     auto = auto or cross                    # the cross image is the mode image's engine with the crossfade
-    timed = timed or auto                   # and both carry the time image's routine: the maintainer, 2026-10-12, "keep cpu Peak
-    twelve = twelve or auto                 # in the last box of smapling page for now whiel we're building"
+    timed = timed or auto                   # and both carry the time image's routine: the audio CPU's peak
+    twelve = twelve or auto                 # in the sampling page's last box while the mod is being built
     if twelve and not (stereo or timed):
         raise ValueError("the sum of twelve is the stereo image's engine with another table")
     stereo = stereo or timed

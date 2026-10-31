@@ -1,9 +1,9 @@
 """The "stereo" image: a stereo sample on one track (engine/sampler.c and engine/rightfill.c built with ONETRACK).
 
-On request. Up to the save image a stereo
-sample takes two tracks: its right channel is put in the next track's buffer, which goes through
-that track's own copy of the audio CPU's four stages and is panned hard right by the main CPU. Here
-the right channel stays with its track. docs/STEREO.md, "One-track stereo", has the design.
+
+
+
+has the design.
 
 What is held here, all of it in emulation:
   - Audio CPU. The right channel comes out of stock's four stages exactly as a stock track would
@@ -1008,7 +1008,7 @@ def never_run(image, runs, descs, factory):
 
 
 def test_stock_twinshot_is_reached_by_nothing_and_is_room(official, stock, stereo, pitch, descs, factory):
-    """The on request, and to keep what it leaves. Its update, render,
+    """ and to keep what it leaves. Its update, render,
     sample player and filter, 1,344 bytes, 830 in one run. In an image of ours that leaves them alone (the pitch
     image, whose engine 11 is the sampler as in every one) they are stock's bytes, nothing names them, nothing
     branches into them, and they are neither run nor read while every machine plays.

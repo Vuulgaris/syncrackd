@@ -1,8 +1,8 @@
 """The scratch image: every take held on the drive once recording stops, so a power off before a save keeps it.
 
-On request, after being
-told that RAM does not outlive a power off and that the drive after the three banks is free to 244 MB, and "But what if
-I didn't want to save to project yet?": a held take is not in the bank until a save.
+
+
+a held take is not in the bank until a save.
 
 engine/scratch.c: a table sector after the banks' one, then 47 places of a slot's size. hold_body writes each take the
 drive does not have into a place and marks it kept; back_body sends the places to their slots at a start;

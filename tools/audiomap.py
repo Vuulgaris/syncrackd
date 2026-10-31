@@ -108,7 +108,7 @@ LIVE_CAVES = {
 }
 ISR_VOICE_LOOP_CALL = 0x40000a34         # jsr VOICE_LOOP in the audio interrupt
 # Stock Twinshot's own routines. Engine 11's two table entries are the sampler's in every image of ours, so nothing
-# reaches these: the maintainer, 2026-10-10, "we dont need teinshot anymore do we", and to keep the room for later.
+# reaches these: and to keep the room for later.
 # 1,344 bytes (tests/test_stereo.py holds them unreached in an image that leaves them alone). The stereo image's
 # second build is the first to use any: the update and render, QUICK_CAVES below. The player and filter are free.
 # Not in this: the stock routines the sampler calls, which Twinshot called too (SAMPLE_PITCH, ENVELOPE, the amp

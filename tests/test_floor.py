@@ -1,9 +1,9 @@
 """The "floor" image: LEN stops at 3.
 
-On request
 
 
-. So 3.
+
+So 3.
 
 Two places. The knob: LEN's descriptor on the main CPU gets a least value of 3, so the knob stops
 there. The engine (engine/sampler.c built with FLOOR): LEN is taken as no less than 3 where a note

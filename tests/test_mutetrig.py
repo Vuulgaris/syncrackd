@@ -78,7 +78,7 @@ class Loop:
         mc.set_stack(STACK, 0x40000100)
         mc.set_exits([mm.TRIG_KEPT, mm.TRIG_NEXT, 0x40000100])
 
-    def event(self, track, kind=NOTE_ON, source=SEQUENCER, flags=HAS_NOTE, mutes=0, pattern=0, midi=0, held=0, kit=KIT, maintainer=None):
+    def event(self, track, kind=NOTE_ON, source=SEQUENCER, flags=HAS_NOTE, mutes=0, pattern=0, midi=0, held=0, kit=KIT, owner=None):
         """One event through the loop. -> (kept, the UI's muted trigs by the global mutes, by the pattern's)."""
         mc = self.mc
         mc.write(EVENT, bytes(0x60))
@@ -90,9 +90,9 @@ class Loop:
         mc.write(mm.PATTERN_MUTES, pattern.to_bytes(2, "big"))
         mc.write(HELD, held.to_bytes(2, "big"))
         mc.write(OWNERS, bytes(28 * 13))
-        if maintainer is not None:
-            mc.w32(OWNERS + 28 * track, maintainer[0])
-            mc.w32(OWNERS + 28 * track + 4, maintainer[1])
+        if owner is not None:
+            mc.w32(OWNERS + 28 * track, owner[0])
+            mc.w32(OWNERS + 28 * track + 4, owner[1])
         mc.write(FRAME - 0x100, bytes(0x100))
         mc.w32(FRAME + MASK, mutes)
         for n, v in ((0, kind), (1, source), (2, track), (3, 0x33333333), (4, 0x44444444), (5, 0x55555555), (6, 0x66666666),
@@ -159,12 +159,12 @@ def test_every_kind_of_event_is_let_through_not_only_a_note_on(loops):
 
 # ---- against the image before, case by case --------------------------------------------------------
 
-CASES = [dict(kind=kind, source=source, flags=flags, held=held, maintainer=maintainer)
+CASES = [dict(kind=kind, source=source, flags=flags, held=held, owner=owner)
          for kind in (1, 0, 2)
          for source in (1, 0, 2, 0xFFFFFFFF)
          for flags in (0, 0x80, 0x40080)
          for held in (0, 0x1fff)
-         for maintainer in (None, (0x1234, 1), (0x9999, 1))]
+         for owner in (None, (0x1234, 1), (0x9999, 1))]
 MUTES = [(0, 0), (0x1fff, 0), (0, 0x1fff), (0x1fff, 0x1fff), (0x0aaa, 0x0555), (0xFFFFFFFF, 0xFFFF)]
 
 

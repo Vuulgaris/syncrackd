@@ -56,7 +56,7 @@ make check IMAGE=firstrec
 
 Each feature is an image in a chain, each built on the one before, each with its own test file in `tests/`. The emulator (`emu/`) runs the patched code against stock's own routines before anything reaches a unit.
 
-How the machine works inside, what is verified and how: [docs/FINDINGS.md](docs/FINDINGS.md), [docs/MEMORY_MAP.md](docs/MEMORY_MAP.md).
+How the machine works inside: [docs/MEMORY_MAP.md](docs/MEMORY_MAP.md), [docs/STEREO.md](docs/STEREO.md), and what each image does, [docs/SAMPLER.md](docs/SAMPLER.md).
 
 ## Contributing
 

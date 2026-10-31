@@ -1,11 +1,11 @@
 /* Main CPU (section 3, OS 1.42 only): a muted track's trigs still fire. The
  * "mute" image only.
  *
- * The on request
+ * 
  *
  *
  *
- * .
+ * 
  *
  * Mute has two halves on our images. Stock's: in the per-block routine's event
  * loop, an event the sequencer made for a muted track is dropped (0x400a421a:

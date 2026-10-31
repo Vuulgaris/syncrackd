@@ -1,8 +1,8 @@
 """The slice image: the tlsolo image with a sampler track's keys playing its sample's slices.
 
-On request,
-and of the profile's switch, which knob H was: "We still have two free boxes on the sampling page. Just put Peak in
-one of those".
+
+
+
 
 KEYS is the sampling page's knob H, CHRO or SLCE, bit 1 of the track's own word on slot 24; the main CPU sends it as
 bit 7 of slot 24's low byte (engine/recword.S). On a note's start with it on, the note less 60 picks a slice, round

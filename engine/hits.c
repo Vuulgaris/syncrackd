@@ -1,8 +1,8 @@
 /* Main CPU (section 3, OS 1.42 only): the hits image. A long sample's hits start the filter's envelope again.
  *
- * The on request
- * , and the control in the envelope
- * delay's place: "could replace env delay if it needs to i dont like tht contorl".
+ * 
+ *
+ * 
  *
  * The filter's envelope is this CPU's (docs/FINDINGS.md, "The filter's envelope is the main CPU's"): stock's
  * 0x400965a4 (the block's params, the trigs, the releases, the tracks it skips), once a block, eight tracks, called at
@@ -27,8 +27,8 @@ typedef unsigned int u32;
 #define SAMPLER (44 << 8)
 
 #ifdef SOLOEND
-/* The soloend image. On request
- * . A step's solo lock stays in the lock block till the track's next trig; here the track's bit of solo_gone is
+/* The soloend image. A solo lock ends with its trig's length.
+ * A step's solo lock stays in the lock block till the track's next trig; here the track's bit of solo_gone is
  * set at its note's release (the trig's LEN, or the key let go) and cleared at its next trig, and the solos
  * (engine/amute.c, solo_now) pass over a lock whose bit is set. Twelve bytes, first in the run: the long, then the
  * mark each sampler track had the block before. */
@@ -77,8 +77,8 @@ __attribute__((section(".cave.o"))) void hits_env(u8 *params, u32 trig, u32 rele
 }
 
 #ifdef HITUI
-/* The hitui image: on a sampler track the filter pages say what DEL is now. The maintainer, 2026-10-14, of the envelope's
- * picture: "the ui for the amp env just still shows the delyed env", and "build the draein and del name fix".
+/* The hitui image: on a sampler track the filter pages say what DEL is now. 
+ * 
  *
  * Stock's filter page (class 0x401c9da0) draws FLTR1 (pages 7, 9, 11) and FLTR2 (page 10) with loops of their own,
  * not the base page's. Three places, each a call of ours:
@@ -159,8 +159,8 @@ __asm__(
 );
 #ifdef TRANS
 /* The trans image: on a sampler track FLTR2 draws DEL's record as a plain knob named TRANS, TRANSIENT in the pop-up. The
- * on request
- * . A knob's picture and name are drawn by the page's + 180 (0x4003842c): with its last argument 0
+ * owner, 2026-10-24: "the env delay setting which is now transient trigs needs to ahve its grpahic redone to be a knob
+ * that soays transient". A knob's picture and name are drawn by the page's + 180 (0x4003842c): with its last argument 0
  * it calls the record's graphic from the display table (DEL's and the analog page's 0x89: the delay's, 0x400706ac; a
  * plain knob's 0x400701b4, same arguments), with 1 none at all (the first build of this image: "no graphic at all");
  * the name under it is the descriptor's, by 0x40012b24 at 0x400385c6 (FLTR2's own name place, 0x4004232e, is for a knob

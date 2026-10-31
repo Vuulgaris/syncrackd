@@ -1,7 +1,7 @@
 """The alock image: the slock image with an analog track's solo lockable to a step too.
 
-On request,
-and on 2026-10-13: "Start on the aog solo work".
+
+
 
 An analog track's lock is on knob slot 26, the last of the ten words that are a track's machine (17 to 26): no analog
 machine has a knob on it (theirs are 17 to 24, and 25 on one). The same two marks as a sampler track's on slot 17,

@@ -1,7 +1,7 @@
 """The "cross" image: a loop's end blended into its start, where the fade image dipped.
 
-On request
- The dip was the fade image's answer to a click: a forward loop faded out over the 128 frames before its
+
+The dip was the fade image's answer to a click: a forward loop faded out over the 128 frames before its
 seam and in over the 64 after, about 4 ms of nothing once a pass.
 
 A blend needs something that leads to the place the next pass begins, and a loop that keeps its length has only

@@ -1,8 +1,6 @@
 """The firstrec image: the handrec image with PLAY recording a ONCE on the first step on the first pass, and only then.
 
-On request
-
-.
+PLAY with a ONCE on the first step records the first pass, and only that pass.
 
 Read before (docs/FINDINGS.md, the recprobe tool and the playrec image): a start queues for each track the record the
 step routine's other caller built last (at STOP or a listener's pass), with the step's locks; the step routine itself
@@ -18,7 +16,7 @@ of that step on the next pass has the main task take the spent lock off (first_l
 Held here, stock's step routine run as it is: each of those; the stay image as it was for the other caller; the main
 program differing from the handrec image's only in the once run, the long image's run and the calls into them.
 
-Not held: that the queued record's ONCE records the first pass (it did on the playrec image's second build, on request), and one take in all. For the unit.
+Not held: that the queued record's ONCE records the first pass (it did on the playrec image's second build), and one take in all. For the unit.
 """
 import shutil
 

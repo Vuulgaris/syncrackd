@@ -1,6 +1,6 @@
 """The fast image: the mixtime image with a block that has nothing to change going straight to stock's mixer.
 
-The maintainer, 2026-10-17, "yes", to giving the UI back the time our links in front of the mixer take on the blocks where
+to giving the UI back the time our links in front of the mixer take on the blocks where
 they change nothing: the maintainer's patterns all unmuted, solos only in fills, and with the phone capturing the unit's USB audio
 the UI has 5.7 hundredths of a block left where stock would have about 3 more (docs/FINDINGS.md, the hardware log's
 profiles of 2026-10-17). engine/amute.c, FAST: with no solo (the knobs' or a step's), no track muted by the global or

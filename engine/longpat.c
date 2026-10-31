@@ -155,7 +155,7 @@ LONG __attribute__((noinline)) s32 long_num(void *any)
     return long_target >= 0 ? long_target : playing_number(any);
 }
 
-/* The long image's third build: clear, copy and paste of a head carry its tail (on request
+/* The long image's third build: clear, copy and paste of a head carry its tail (
  * ).
  *
  * Stock's clear (0x4001f7c0) and paste (0x4001fa0e) take a list of pattern numbers, a vector (begin, end). Ours

@@ -1,7 +1,7 @@
 """The pbank image (engine/pbank.c, PBANK): the next image with BANK off the sampling page and in the PROJECT menu.
 
-The maintainer, 2026-10-26, asked how hard it would be to move the bank "into the proper settings menu, like where project,
-song, and pattern go", then picked "a and x": one entry that moves to the next bank each time it is chosen, and the bank
+
+one entry that moves to the next bank each time it is chosen, and the bank
 still loads only with a project. Here, the main CPU only:
   - the PROJECT menu, built by stock's own constructors at the start, has a fourth entry under MANAGE PROJECTS, drawn
     by stock's own list: SAMPLE BANK and the loaded bank, A>B with another chosen;

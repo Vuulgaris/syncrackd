@@ -1,8 +1,8 @@
 """The xfade image: a crossfade on the sampling page's knob G, where MODE was.
 
-On request
-. And
-where: "the cordsaffe and solos hould be on the second page".
+
+
+
 
 What runs here, from the built image: the page's drawing and its knobs (tests/test_soloknob.py's rig), our mixer link
 and analog mute around a stand-in for the mixer (tests/test_mainpatch.py's rig) next to the soloknob image's, the

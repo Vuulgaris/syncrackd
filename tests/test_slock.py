@@ -1,7 +1,7 @@
 """The slock image: the apage image with a sampler track's solo lockable to a step.
 
-On request (then of the crossfade: "doesnt need
-to be lockable"), and of which tracks: "Yes digitalt tracks first".
+
+
 
 A step's solo is a lock on knob slot 17 of its track, which no record of a machine the audio CPU runs names, at one
 of two marks, made and removed as REC's is on slot 24. The analog mute works out each block's solos from the knobs'

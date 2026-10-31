@@ -1,9 +1,9 @@
 """The switch image: the trig image with the hits' steps from each sample's own loudest frame, and SOLO and REC on the
 TRIG page drawn as stock's switch.
 
-On request
 
-.
+
+
 
 The trig image counted a hit's fifteen steps from full scale, 2 dB each from -31 dB: a take that sits low reached few
 steps or none, and a hit under -31 dB was none. Here a first pass over a slot finds its loudest frame and the steps go

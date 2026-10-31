@@ -205,7 +205,7 @@ def test_at_0_the_sound_is_the_multi_images_and_what_the_hold_costs(srr, multi):
     assert [a - b for a, b in zip(idle, base)][3:] == [OFF_COST] * 5
     assert [a - b for a, b in zip(low, base)][3:] == [MOST_COST] * 5
     assert all(OFF_COST < a - b < MOST_COST for a, b in zip(high[3:], base[3:]))
-    # for scale: stock's heaviest machine on eight tracks is 117,348 (CLAUDE.md, traps), so the most is 2.2 hundredths of it
+    # for scale: stock's heaviest machine on eight tracks is 117,348 (the audio CPU's budget), so the most is 2.2 hundredths of it
 
 
 def test_a_take_is_made_by_the_mark_alone(srr, multi):

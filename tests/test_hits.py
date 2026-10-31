@@ -1,8 +1,8 @@
 """The hits image: the lap image with a long sample's hits starting the filter's envelope again, as a trig of its own.
 
-On request
-, the control in DEL's place
-("could replace env delay if it needs to i dont like tht contorl"), and the hits kept a sample for the slices to come.
+
+
+), and the hits kept a sample for the slices to come.
 
 The envelope is the main CPU's (docs/FINDINGS.md, "The filter's envelope is the main CPU's"). The audio CPU goes over
 every slot once and keeps its hits; a voice going forward says, in the window's long at 0x5b4, how loud a hit its

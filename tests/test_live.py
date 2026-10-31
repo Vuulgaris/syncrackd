@@ -1,15 +1,15 @@
 """The "len" and "live" images: LEN, and STRT, act while a note plays (engine/sampler.c built with
 LIVE, and LIVE_STRT).
 
-On request
 
-, for a loop, and the same played backwards.
+
+for a loop, and the same played backwards.
 
 Two builds ran on the unit before this one. LEN was right in both. STRT was not: the first moved
 the place played from with the knob ("a tape fluttery noise that moves as fast as i move the
 knob"); the second moved the region's two ends under the note ("a more abrupt ripping on smaller
 values/loops"), which left a short loop either behind its region, playing straight on, or caught
-by it and cut, a step of the knob at a time. Then he offered to leave the start alone.
+by it and cut, a step of the knob at a time. Then the start was left alone.
 
 So here a note is a row of passes. A pass begins at a place and is as long as the knobs have the
 region. LEN moves the far end of the pass that is playing, at once. A loop's next pass begins
@@ -409,7 +409,7 @@ def test_len_pulled_in_behind_a_one_shot_ends_it_without_a_click(either):
 
 
 def test_len_down_to_a_buzz_and_back_never_stops_the_loop(either):
-    """What he does with it. The loop goes on through every length, and comes back up as long as the knob says."""
+    """What is done with it. The loop goes on through every length, and comes back up as long as the knob says."""
     knobs, script = SCRIPTS["LEN down to a buzz and back"]
     e, a, _ = play(either, script, **knobs)
     got = state(e)

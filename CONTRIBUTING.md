@@ -6,7 +6,7 @@ Contributions are welcome. The project is run the way the Linux kernel is: one m
 
 1. **No Elektron firmware, ever.** No `.syx`, no extracted sections, no disassembly listings, no byte runs copied from the OS, no screenshots of renders made by Elektron's code, in code, docs, tests, issues or PRs. Addresses, sizes and hashes are fine; the bytes are not. A PR that carries any is closed and its branch deleted.
 2. **Only sections 3 and 7 are patched.** The bootloader and updater are never touched; `tools/fw.py` enforces it and a build must fail hard otherwise.
-3. **Exact OS builds only.** Every patch site checks the stock bytes it expects, and the image may differ from the official one only inside declared regions. Stock bytes in source are sealed: write the hex, then run `python -m tools.seal FILE`, which turns it into `fw.sx("...")`, opened at build time with a key only the official file gives. `--check` must list nothing before a PR.
+3. **Exact OS builds only.** Every patch site checks the stock bytes it expects, and the image may differ from the official one only inside declared regions. Stock bytes in source are sealed: write the hex, then run `python -m tools.seal FILE`, which turns it into `fw.sx(".")`, opened at build time with a key only the official file gives. `--check` must list nothing before a PR.
 4. **Licenses.** Code may be copied only from MIT sources (`third_party/`). Modded-Cycles has no license: read it, never copy it. digikit is GPL-2.0: an outside tool only, never vendored.
 5. **Verify, don't trust.** An address or behavior is confirmed in our own tooling before anything relies on it, and how it was confirmed goes in `docs/FINDINGS.md`. If it cannot be confirmed, say so there and do not build on it.
 6. **Nothing talks to a unit.** No script in this repo sends anything to a Syntakt. Flashing is the user's own step.
@@ -25,7 +25,6 @@ Contributions are welcome. The project is run the way the Linux kernel is: one m
 - Subject line in the imperative, under 72 characters, prefixed with the area: `engine: fade a one-shot's end at full LEN`, `tools: hash the stock bytes in _expect`.
 - A body that says why, and what was checked.
 - **Signed off**: `git commit -s`. By signing off you certify the [Developer Certificate of Origin](https://developercertificate.org/): you wrote it, or have the right to send it under the project's license. Every commit, checked by CI.
-- AI-assisted code is fine. You sign off for it, so you understand it and stand behind it.
 
 ## Pull requests
 

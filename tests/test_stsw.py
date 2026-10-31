@@ -1,8 +1,8 @@
 """The stsw image (engine/sampler.h, STSW): the grain image with KEYS back to two and the stretch a switch of its own.
 
-On request
 
- (with the main CPU's few instructions a block). Here, the main CPU only:
+
+(with the main CPU's few instructions a block). Here, the main CPU only:
   - KEYS (H) turns between CHRO and SLCE and leaves the stretch;
   - E is the track's stretch, STRC ON or OFF, SPD at 64 going into it;
   - with a step held E locks the step's, in slot 17's low byte; the TRIG page's SOLO keeps it, and it keeps the solo's;

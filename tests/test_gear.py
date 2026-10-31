@@ -1,7 +1,7 @@
 """The gear image: the srr image with the sampling page's knobs, and SMPL, turning as stock's own knobs do.
 
-On request
-. Until here every tick of a turn moved a knob of ours
+
+Until here every tick of a turn moved a knob of ours
 a whole step. Now a turn goes through stock's three knob routines, as a stock page of whole numbers sends one
 (0x40049730): the steps (times a coarse number while the knob is pushed in), whether it is pushed in, and the change
 by a feel, counted in the page object's + 148; and the knob moves by the change's whole part, towards nought.

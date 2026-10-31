@@ -1,7 +1,7 @@
 """The "reclock" image: a step's REC is a lock of its own, not a lock of MODE.
 
-On request
-. REC, SRC and the
+
+REC, SRC and the
 stereo switch are three bits of the one MODE parameter, and a lock holds a parameter's whole
 value: locking REC on a step froze that step's stereo switch and source as they stood.
 

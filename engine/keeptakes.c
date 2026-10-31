@@ -468,7 +468,7 @@ LCAVE void new_slots(void)
 
 #ifdef STREAM
 /* The stream image: on the unit the phone's writes go unanswered while a load waits on it, so a project's own samples
- * could not come back at its load (the maintainer, 2026-10-27: a new project's take "carried over" into the project loaded
+ * could not come back at its load (into the project loaded
  * after it). Now the phone empties at the load every slot that is not the project's (0x6A), and once the load is done
  * writes the project's samples, saying each slot written with 0x6B (engine/phone.c). Each is loaded here as the load
  * loads the phone's (the phone's mask: no load waits on it while this job runs, the one worker), by a job on stock's
@@ -500,7 +500,7 @@ AAVE static u32 stream_body(const u32 *storage)
 #else
             for (slot = 0; slot < N_SLOTS && AUDIO_UP; slot++)
                 if ((PHONE_MASK[slot >> 5] & (1u << (slot & 31))) && put(slot, 0) && b->frames)
-                    PHONE_MASK[slot >> 5] &= ~(1u << (slot & 31));      /* a take of his not saved: kept */
+                    PHONE_MASK[slot >> 5] &= ~(1u << (slot & 31));      /* a take not saved: kept */
 #endif
             stream_now = 1;
             load_slots(0, 0);

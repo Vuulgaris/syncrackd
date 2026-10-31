@@ -1,6 +1,6 @@
 """The tune image (engine/tunepush.S): the sink image with a pushed turn of every machine's TUNE as an unpushed one.
 
-On request. A pushed turn's steps are multiplied by the second
+A pushed turn's steps are multiplied by the second
 long of the sixteen bytes the start-up copies into a record's entry of the display table (0x400f6866); the sampler's
 TUNE (record 431, TUN1 of machine 44) is given the plain knob's {1, 4, 0, its feel}. Here, the main CPU only, with stock's
 start-up run as it is (the screen rig: the 136 constructors and the UI's getter):

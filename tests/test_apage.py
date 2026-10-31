@@ -1,7 +1,7 @@
 """The apage image: the dma image with the sampling page's solo and crossfade on the analog tracks.
 
-On request
-. Built here: the page. Not built: the lock (an analog machine uses both knob slots a digital track
+
+Built here: the page. Not built: the lock (an analog machine uses both knob slots a digital track
 leaves free, so a lock on an analog track has no known place yet).
 
 SYN again on tracks 9 to 12 opens a second page: SOLO on knob E, the unit's one crossfade on knob G, the other six

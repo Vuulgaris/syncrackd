@@ -10,7 +10,7 @@
 
 ## Checked
 
-- [ ] `make check IMAGE=...` passes (paste the last lines)
+- [ ] `make check IMAGE=.` passes (paste the last lines)
 - [ ] Older images still build to the same hashes (if shared source was touched)
 - [ ] A page that looks different: described, or `make screen` attached if the render is ours
 

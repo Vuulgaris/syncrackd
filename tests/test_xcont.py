@@ -1,7 +1,7 @@
 """The xcont image: the xfix image with the crossfade's hand-over taking its amount from the unfiltered words.
 
-On request
-. A turn of D with no step held gives the turning track the pattern's
+
+A turn of D with no step held gives the turning track the pattern's
 crossfade before each tick (engine/recpage.c, xf_take); that amount was the analog mute's largest, made from the
 filtered block (about 60 ms behind). With the old holder's word cleared at once (xfix), the two crossed in the filter
 and the largest dipped, each tick began again from the dip, down to 0. XCONT, xf_live: the largest of the sampler tracks'

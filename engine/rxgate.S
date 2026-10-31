@@ -1,6 +1,6 @@
 /* Main CPU (section 3, OS 1.42 only), the rxoff image: stock's receive of the host's USB audio is not run while the
- * unit is sending its own USB audio to the host (a capture), and the block of USB audio in is silence then. The maintainer,
- * 2026-10-17: "I do use the USB audio in sometimes. but imf ine with it being off while the coature is running".
+ * unit is sending its own USB audio to the host (a capture), and the block of USB audio in is silence then. 
+ * 
  *
  * What it costs, measured on the maintainer's unit (the evtime tool, samples/EVON3.wav and EVOFF3.wav): the per-block routine's call
  * of 0x400041cc(0x45512000, 32) is 0.9 hundredths of a block with no USB audio and 3.9 with it, Ableton capturing input
@@ -16,9 +16,9 @@
 
         .section .cave.x,"ax"
 #ifdef CAPTURE
-/* The rxcap image: the receive is not run only while the phone has said a capture is on, as well. The maintainer,
- * 2026-10-17, of the rxoff image: "no usb audio in currently doesn work" (Ableton with the Syntakt as its output takes
- * the unit's audio too, so the unit sends whenever a host has it open both ways), then "do 1": the phone says when it
+/* The rxcap image: the receive is not run only while the phone has said a capture is on, as well. 
+ *
+ * the phone says when it
  * captures. Its frames (engine/phone.c, CAPTURE): 0x65 on, 0x66 off. The word is first in the run, where the phone's
  * code finds it by the run's address. When the unit sends nothing (the host's stream stopped: a phone unplugged in a
  * capture) the word is cleared, so it cannot keep USB audio in off after. */

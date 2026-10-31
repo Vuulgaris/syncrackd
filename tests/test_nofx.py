@@ -1,7 +1,7 @@
 """The nofx image: the cut image with the FX track's mute taken out and no frame of ours in SDRAM.
 
-On request (the maintainer's word on the pre image, "I don't
-know that the effects mute is necessary anymore") and "Move the pre frame off that SDRAM spot" (stores from 0x4556a000
+
+(stores from 0x4556a000
 up tipped the lag with USB audio streaming: tests D, F, G). With no mute nothing changes the tracks' buffers or the
 return's before the feed, so engine/recfeed.c, NOFX: a take and the meter read a digital track (0x80003d50 + 128 t) or
 the FX return (inputs 6 and 7, 0x80003950) where they are, a long a frame; chan() says the step in an on-chip long

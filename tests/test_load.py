@@ -482,7 +482,7 @@ def take(e, track, n, seed):
 
 
 def test_record_save_record_again_load_and_the_saved_take_is_back(audio, rig):
-    """What the maintainer did on the unit on 2026-10-09, where the second take stayed."""
+    """What was done on the unit on 2026-10-09, where the second take stayed."""
     e = engine(audio)
     first = take(e, 5, 20, seed=1)                          # stereo sample 6: slots 10 and 11
     blocks = joined(e, rig)

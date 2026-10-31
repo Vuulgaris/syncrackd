@@ -1,7 +1,6 @@
 """The pre image: the soft image with a take's sources read before the mixer.
 
-The maintainer, 2026-10-13: a muted track shows no level on the sampling page and records nothing, and the FX track's
-mute does nothing. The mixer is shown a muted track at a volume of 0, and a take was made from the frame the mixer
+A muted track showed no level on the sampling page and recorded nothing, and the FX track's mute did nothing. The mixer is shown a muted track at a volume of 0, and a take was made from the frame the mixer
 leaves. Here the buffer of every digital track that is a take's source, or the meter's, and the FX track's return,
 are copied into a frame of ours before the mixer is called, and the feed and the meter read them there
 (engine/recfeed.c, PRE). And the FX track's mute, global or the pattern's, takes its return to nothing in its own
@@ -14,7 +13,7 @@ up over a block, and its take is whole all the while; the meter reads the copy; 
 for the feed's runs.
 
 Not held, and only the unit can show it: that the track buffers before the mixer are the track's sound before its
-level (read from his meter going dark under a mute, not from the mixer); that the return reaches the outputs through
+level (read from the meter going dark under a mute, not from the mixer); that the return reaches the outputs through
 the mixer alone, so that its mute is heard; how loud a take of a track now is.
 """
 import hashlib

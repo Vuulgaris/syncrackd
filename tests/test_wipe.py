@@ -1,8 +1,8 @@
 """The wipe image (engine/phone.c, WIPE): the newproj image with the unit emptying the slots the phone names.
 
 On the unit (2026-10-27, the phone app's log) the phone's clear and every write after it went unanswered while NEW
-PROJECT's job waited on the phone, its reads served; then the unit stayed on INITIALIZING PROJECT. On request
-. Here, with stock's routines
+PROJECT's job waited on the phone, its reads served; then the unit stayed on INITIALIZING PROJECT. 
+Here, with stock's routines
 around it played (test_phone's rig):
   - 0x6A while a job waits: the slots to empty, given to the wait as the done frame's are; not while none waits;
   - NEW PROJECT: after the wait each named slot's first sector is written with zeros, the headers read again, then the

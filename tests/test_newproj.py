@@ -1,8 +1,8 @@
 """The newproj image (engine/phone.c, NEWPROJ): the fresh image with NEW PROJECT asking the phone, and every ask saying the
 project it leaves.
 
-On request
-. NEW PROJECT is stock's Project Init job (0x40059f9e), which calls the project maker (0x4001d16a) with -1 and
+
+NEW PROJECT is stock's Project Init job (0x40059f9e), which calls the project maker (0x4001d16a) with -1 and
 neither saves nor loads; the fresh image hooked only an empty slot's load. Here, with stock's routines around it played
 (test_phone's rig):
   - NEW PROJECT after the phone's hello: the maker, then an ask of project 0x3fff marked new (the bank byte + 128),

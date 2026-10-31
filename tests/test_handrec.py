@@ -1,10 +1,10 @@
 """The handrec image: with the sequencer stopped, a track whose own REC is at ONCE records a note played by hand, for
 the TRIG page's LEN, and REC reads OFF after.
 
-The maintainer, 2026-10-30, after three builds that tried to make PLAY record a ONCE on the first step on the first pass
-(the playrec image, level 80, dropped): "couldnt we just make it so if i trig the trig when the seq is stopped but
-rec is armed it starts rec". On the first build: it recorded "a short blip" (a take ends at its note's release, and a
-pressed key lets go when let go) and REC stayed at ONCE; "should run the length of the trig length", the TRIG page's.
+
+
+
+the TRIG page's.
 
 Main CPU. recword.S makes slot 24 of the block the audio CPU is sent every block: a step's lock's mark, or what
 hand_rec (engine/once.S, in the long image's run) says. Stopped, a track at ONCE gets REC's mark, so the note it is

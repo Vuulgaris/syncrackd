@@ -1,6 +1,6 @@
-| The tune image (level 68): a pushed turn of every machine's TUNE moves it 1 a click. On request
-| , then, of the second
-| build on the unit: "still only increments by 4 instead of by 1". How far a turn moves is the record's feel's (READ and
+| The tune image (level 68): a pushed turn of every machine's TUNE moves it 1 a click. 
+|
+| How far a turn moves is the record's feel's (READ and
 | run in emulation: 0x400f6a96 gives back, for every so many ticks, a step of the feel's third long, the pushed one's for a
 | pushed turn: 4 in the plain feel 0x443db178 and the picker's 0x443db140); the record's second long (0x400f6866) only
 | multiplies the ticks. So the second build, which made that long the first, changed nothing heard.

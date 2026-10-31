@@ -89,7 +89,7 @@ class Feed(GainFeed):
 
     def marks(self):
         """Everything the feed keeps or leaves outside the window: the meter's numbers and the gain's, the page object
-        and its maintainer as stock's redraw request left them."""
+        and its owner as stock's redraw request left them."""
         mc = self.mc
         return (bytes(mc.read(mm.METER_PAGE, mm.GAIN_VARS)), bytes(mc.read(FEED_PAGE, 0x200)), bytes(mc.read(OWNER, 0x100)))
 
@@ -333,7 +333,7 @@ def test_the_meter_goes_as_it_did_with_a_take_running_and_without(pair, shown):
         window = both(pair, block, frame, window, [shown] * 8 if k == 0 else None)
         if pair[0].asked:
             asked += 1
-            for r in pair:                                      # the page is drawn: its mark and its maintainer's are taken down
+            for r in pair:                                      # the page is drawn: its mark and its owner's are taken down
                 r.mc.write(FEED_PAGE + 20, bytes(1)), r.mc.write(OWNER + 32, bytes(1))
             if k < 300:
                 for r in pair:

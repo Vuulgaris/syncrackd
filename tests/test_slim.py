@@ -1,7 +1,7 @@
 """The slim image (engine/sampler.h, SLIM): the trim image for less again, the sound the same to the bit.
 
-The maintainer, 2026-10-14, after the trim image on the maintainer's unit ("def tell it sbetter ... but still cant trend to max at the
-wrong times"): "do hits off when unused, and tightening the pitched sum" (the second: DEL does not reach the audio CPU, see
+
+(the second: DEL does not reach the audio CPU, see
 engine/sampler.h, SLIM). Here, against the trim image's engine:
   - the sound to the bit: eight tracks, stereo and mono, pitched up and down and at their own pitch, forward and
     backward, one-shot, loop and ping-pong, cut out of their samples and not;

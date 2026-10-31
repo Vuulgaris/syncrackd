@@ -1,6 +1,6 @@
 """The prewas image: the allright image with the pre frame's flag on-chip.
 
-The maintainer, 2026-10-17, of the lag with the unit's USB audio streaming, after the allright image ("yea sitll lgs alot"):
+):
 test D (the meter image with 1 KB a block stored at 0x4556a000) lags, test G (the same reads, nothing stored) and test F
 (the same stores on-chip) do not. What every image since the pre image stores in that memory on any page is one long a
 block: the pre frame's first, whether the FX track's return was muted the block before (engine/recfeed.c, PRE_WAS).

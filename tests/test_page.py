@@ -542,7 +542,7 @@ def test_what_stock_does_with_a_turn_while_a_step_is_held(page):
 
 @pytest.mark.parametrize("knob, bit", [(1, EXT_BIT), (3, REC)])
 def test_with_a_step_held_the_switch_goes_to_that_steps_lock_and_not_to_the_track(page, knob, bit):
-    """What the maintainer asked for: hold a trig, turn REC, and that step records while the others play."""
+    """What was asked for: hold a trig, turn REC, and that step records while the others play."""
     r = Rig(page, {0: SAMPLER}, index=1, mode=STEREO)
     r.trigs = {4, 9}
     r.hold(4)
@@ -618,7 +618,7 @@ def test_while_a_step_is_held_the_page_shows_that_steps_settings(page):
 
 
 def test_a_plain_turn_gets_stocks_pop_up(page):
-    """The maintainer, on the build before: MODE "no longer shows pop up which shows mono stereo"."""
+    """"""
     r = Rig(page, {0: SAMPLER}, index=0, mode=REC)
     r.twist(6, 1)                                                   # MODE on the first page
     assert r.popped == [("MODE", "mode %d" % (REC | STEREO))]       # the record's own name, and the text its knob shows

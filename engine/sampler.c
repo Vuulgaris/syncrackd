@@ -839,7 +839,7 @@ CAVE(e) static int slice_cut(const struct st *s, u32 k, s32 total, u32 len16, co
     *pa = o;
 #ifdef RING
     /* The ring image: LEN is the share of what is left from the slice's start to the sample's end, as on a whole
-     * sample, so a slice can ring on past the next one (on request
+     * sample, so a slice can ring on past the next one (
      * ). STRT stays inside the slice. */
     *pb = len16 >= 127 << 8 ? total : o + (s32)scale(total - o, len16);
 #else
@@ -2154,7 +2154,7 @@ CAVE(h) static void right_pass(u8 *params, u32 trig, u32 release, u32 flags, u32
 #ifdef HITPEAK
 /* The switch image: how loud a window's loudest p is, from the slot's own loudest frame: 1 past 31 dB under it, each
  * step 2 dB, 15 past 3 dB under it. The trig image's steps were the same but from full scale, and a take that sits
- * low triggered next to nothing (on request
+ * low triggered next to nothing (
  * ). Under -45 dB of full scale nothing is a hit. */
 #define LOUD(p) loud(p, h->peak)
 CAVE(e) static u32 loud(u32 p, u32 peak)
@@ -2173,8 +2173,8 @@ CAVE(e) static u32 loud(u32 p, u32 peak)
 #elif defined(HITCURVE)
 /* The trig image: the steps finer. 1 is past 925 (-31 dB) and each after it 1.258 times the one before (2 dB), the last
  * at 22,889 (-3 dB, as before). DEL goes over the fifteen as it did, so a knob's step is 2 dB of a hit where it was 3;
- * a hit under -31 dB is no hit (it was -45). The run has no room for steps of two sizes. On request
- * . */
+ * a hit under -31 dB is no hit (it was -45). The run has no room for steps of two sizes. 
+ * */
 CAVE(e) static u32 loud(u32 p)
 {
     u32 s = 0, t = 925;

@@ -1,7 +1,7 @@
 """The stereo image's second build: the same frames for less work (engine/sampler.c and engine/stub.S built with QUICK).
 
-On request
-. Pitched, a stereo voice summed sixteen
+
+Pitched, a stereo voice summed sixteen
 frames twice a frame, 32 multiplies and 121 instructions a sum, in a loop that asked after the walls and the
 fades at every frame: eight of them made the interrupt 1.37 of stock's heaviest.
 

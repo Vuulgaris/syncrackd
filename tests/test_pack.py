@@ -1,12 +1,12 @@
 """The "pack" image: mono samples in single slots at the back.
 
-On request
 
 
 
 
 
-.
+
+
 
 So (engine/sampler.h, PACK):
   - SMPL's 64 numbers are 64 places. 1 to 32 are the stereo samples as they were, number n in Transfer's slots

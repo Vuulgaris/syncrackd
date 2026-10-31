@@ -1,6 +1,6 @@
 | Main CPU (section 3, OS 1.42 only): REC's third setting, ONCE. The once image.
 |
-| The on request
+| 
 | 
 |
 | A step's REC at ONCE is a lock on slot 24 at ONCE_WORD (engine/sampler.h; LOCK_ONCE here, and ONCE_SPENT is LOCK_SPENT). Its high byte is the mark
@@ -30,9 +30,9 @@ once_vars:
 #ifdef HANDREC
     .pushsection .cave.b,"ax"
 | The handrec image, its second build: first in the long image's run (nothing of this chain uses it), at places
-| recword.S and recfeed.c are built to (mm.HAND_HOLD, mm.HAND_LEFT, mm.HAND_REC), before they are built. The maintainer on its first: a note played by hand recorded "a short blip" (a take
-| ends at its note's release, and a pressed key lets go when it is let go) and REC stayed at ONCE; "should run the
-| length of the trig length", the TRIG page's LEN. hand_hold: a bit a track whose take runs past its note's release
+| recword.S and recfeed.c are built to (mm.HAND_HOLD, mm.HAND_LEFT, mm.HAND_REC), before they are built. 
+|
+| the TRIG page's LEN. hand_hold: a bit a track whose take runs past its note's release
 | (the feed puts it in the window's word at 0x802, high byte, and rec_all ignores that track's release). hand_left:
 | a long a track, what is left of the take in the tempo's units (BPM x 120 a block, mm.TEMPO).
     .globl  hand_rec, hand_hold, hand_left
@@ -185,8 +185,8 @@ once_seq:
 | event's place. The other (0x4008c288, in 0x4008c128) hands it a place: it plays the step the sequencer is on, for
 | one track or all, and stock runs it whenever a track of the pattern is changed (two listeners jump to it,
 | 0x400179f2 and 0x40018ff6) and at a few keys. With the sequencer stopped the step it is on is the first. So a lock
-| made at ONCE on the first step was spent by the change that made it, and the main task took it off: the maintainer,
-| "I can't get 1x to come up easily ... this only happens on the first step of the 16". And a track's own ONCE was
+| made at ONCE on the first step was spent by the change that made it, and the main task took it off: 
+| And a track's own ONCE was
 | used up by any change to the track. That caller is no play here: nothing of ours is done for it.
 | The place is the step routine's fifth argument: 56 bytes of its frame, its return and four arguments above the
 | return and the five longs stock has pushed here.
@@ -302,9 +302,9 @@ once_loop:
     rts
 
 #ifdef HANDREC
-| The handrec image. The maintainer, 2026-10-30, after three builds that tried to make PLAY record a ONCE on the first step
-| on the first pass (the playrec image, never kept): "couldnt we just make it so if i trig the trig when the seq is
-| stopped but rec is armed it starts rec". While the sequencer is stopped, a track whose own REC is at ONCE (its byte
+| The handrec image. 
+|
+| While the sequencer is stopped, a track whose own REC is at ONCE (its byte
 | of once_vars) sends REC's mark (engine/recword.S HANDREC), so a note played by hand records. A start takes every
 | track's ONCE back: armed while stopped is for that, not for the first step the sequencer plays.
 |

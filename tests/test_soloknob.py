@@ -1,9 +1,9 @@
 """The soloknob image: the purple keys are stock's pattern mutes again, and a solo is on the sampling page's knob E.
 
-On request
 
-, and asked
-which: "B. solo on a knob. purple goes back to stock pattern mutes, and solo moves to a free knob on the sampling page."
+
+
+
 
 What runs here, from the built image: the page's drawing and its knobs (tests/test_once.py's rig), and our mixer link
 and analog mute around a stand-in for the mixer (tests/test_mainpatch.py's rig), next to the once image's.

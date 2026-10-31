@@ -1,10 +1,10 @@
 """The "mode" image: a sample is mono or stereo by what its slots hold, and MODE says what a take is.
 
-On request
 
 
 
-.
+
+
 
 So (engine/sampler.h, AUTO):
   - SMPL always counts the 32 samples, number n in slots 2n and 2n + 1. A sample is stereo when its second slot

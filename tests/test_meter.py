@@ -280,10 +280,10 @@ class FeedRig(MainRig):
 
     @property
     def asked(self):
-        """Stock's redraw request has run on the page object since reset(): its flag and its maintainer's."""
-        page, maintainer = bytes(self.mc.read(FEED_PAGE, 0x100)), bytes(self.mc.read(OWNER, 0x100))
-        marks = (page[20], maintainer[32])
-        assert marks in ((0, 0), (1, 1)) and not any(page[:20] + page[21:44] + page[48:]) and not any(maintainer[:32] + maintainer[33:])
+        """Stock's redraw request has run on the page object since reset(): its flag and its owner's."""
+        page, owner = bytes(self.mc.read(FEED_PAGE, 0x100)), bytes(self.mc.read(OWNER, 0x100))
+        marks = (page[20], owner[32])
+        assert marks in ((0, 0), (1, 1)) and not any(page[:20] + page[21:44] + page[48:]) and not any(owner[:32] + owner[33:])
         return marks == (1, 1)
 
 
@@ -431,8 +431,8 @@ def test_stocks_request_is_not_made_of_a_page_that_says_no(rig):
     rig.reset(page=FEED_PAGE, quiet=m.METER_EVERY - 1)
     rig.mc.write(FEED_PAGE + 23, b"\x01")
     rig.run(block, frame)
-    page, maintainer = bytes(rig.mc.read(FEED_PAGE, 0x30)), bytes(rig.mc.read(OWNER, 0x30))
-    assert page[20] == 0 and maintainer[32] == 0 and rig.vars[2] == m.METER_EVERY
+    page, owner = bytes(rig.mc.read(FEED_PAGE, 0x30)), bytes(rig.mc.read(OWNER, 0x30))
+    assert page[20] == 0 and owner[32] == 0 and rig.vars[2] == m.METER_EVERY
 
 
 def test_the_meter_runs_while_the_audio_cpu_is_not_up_and_the_window_is_left(rig):

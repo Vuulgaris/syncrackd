@@ -1,7 +1,7 @@
 """The lock image (engine/sampler.h, LOCK): the stretch image with a stretched note locked to the tempo.
 
-On request
- to auto-snap. KEYS's CHLK and SLLK stretch a note's region to the power of two of steps nearest its
+
+to auto-snap. KEYS's CHLK and SLLK stretch a note's region to the power of two of steps nearest its
 length at the tempo (stock's 0x402d7360, BPM times 120), SPD a ratio on that. Here, through what crosses:
   - the per-block routine sends SPD, a step's frames in two halves and the lock in turn, a track's own count each;
   - the note's place stops where the snapped length says, at 120 and 100 BPM, and SPD halves it;

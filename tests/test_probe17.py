@@ -1,7 +1,7 @@
 """The probe17 image, a tool: the fltr image with slot 17 and this block's solos on the sampling page.
 
-The maintainer, 2026-10-16: a trigless step's SOLO lock "doesnt work currentlty", and "build a probe image that shows slot 17
-on screen". The fifth place reads S17 and the track's slot 17 in the block a trig's locks are written into (0x800021b0),
+
+The fifth place reads S17 and the track's slot 17 in the block a trig's locks are written into (0x800021b0),
 the sixth NOW and the solos the mixer goes by (0x400a2938). Only the unit can show what a trigless step leaves there.
 """
 import shutil

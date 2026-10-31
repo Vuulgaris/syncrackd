@@ -1,6 +1,6 @@
 /* Main CPU (section 3, OS 1.42 only), the prof image: a tool, not one to keep. Where the main CPU's time goes, asked
- * of the unit, which is the only thing that can say. On request
- * .
+ * of the unit, which is the only thing that can say. 
+ * 
  *
  * A record of 32 words is kept here and made afresh every block. A sampler track whose SRC is the last source
  * (SENDS on the page: it is the profile on this image) is fed the record in place of sound, the same words to both
@@ -49,8 +49,8 @@ prof_vars:
         .fill   15, 4, 0
 prof_keep:
         .long   0, 0
-/* Kept in every image from here on, by the maintainer's word ("Can't you just build the profiler into the latest image so
- * it's there moving forward?"), so the last source is the sends again unless this long is set: the sampling page's
+/* Kept in every image from here on, so the profile is always at hand;
+ * the last source is the sends again unless this long is set: the sampling page's
  * last knob sets it, and its box reads PROF while it is (engine/recpage.c). 0 at every start. */
         .globl  prof_on
 prof_on:
@@ -90,7 +90,7 @@ prof_irq:
         jmp     STOCK
 
 #ifdef CUT
-/* The cut image (2026-10-17, the lag with the unit's USB audio streaming, on request): the
+/* The cut image (2026-10-17, the lag with the unit's USB audio streaming): the
  * interrupt's hook comes here, and only with the profile on does it go on to the record and the second frame; else
  * stock's two instructions and on, as stock. In the copies' run (the profile's has 12 bytes). */
         .section .cave.p,"ax"

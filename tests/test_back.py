@@ -1,7 +1,7 @@
 """The back image (engine/stub.S, BACK): the atrig image with SY SWARM, SY TOY, SY BITS and SD BASIC back as stock's.
 
-On request
-. Our code that was in their runs (caves d, e, g) is linked at m.FAR and carried past section 7's end;
+
+Our code that was in their runs (caves d, e, g) is linked at m.FAR and carried past section 7's end;
 far_load, in place of the start's two calls, copies it there between stock's SRAM copy and its BSS clear. Here:
   - their runs, their table entries and the start's bytes outside the call are stock's;
   - the copy, run: what lands at m.FAR is what the section carries;

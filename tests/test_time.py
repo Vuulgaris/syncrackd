@@ -1,8 +1,8 @@
 """The "time" image, a tool: the stereo image with the audio CPU's load on the sampling page (TIMED).
 
-On request. The bench counts instructions and has
-no clock: the stereo image's first build was 1.37 of stock's heaviest interrupt in emulation, clean there, and
-"major distortion" on the unit. So the unit is asked. Stock starts the second of the chip's timers counting at
+
+
+on the unit. So the unit is asked. Stock starts the second of the chip's timers counting at
 its start and never reads it; this image reads it where the interrupt calls the voice loop and where its last
 stage comes back, and every 256 blocks says the longest such stretch as hundredths of a block, and the most that
 has been lately, as a letter and three figures the sampling page writes in its lower row.
@@ -406,7 +406,7 @@ def test_the_image(official_path, official, timed, main):
 
 
 def test_the_time12_image_is_this_one_with_the_sum_of_twelve(official_path, official, stock, timed, main):
-    """For the maintainer to hear and to read beside the other: the same main program, and the sound engine built with the
+    """For a person to hear and to read beside the other: the same main program, and the sound engine built with the
     table of twelve (tests/test_lean.py holds that engine to its model)."""
     quiet = lambda s: None
     raw, _, built, regions, syms = build.build(official_path, log=quiet, timed=True, twelve=True)

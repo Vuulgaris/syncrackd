@@ -1,7 +1,7 @@
 """The ring image: the slice image with LEN on a slice reaching to the sample's end, so a slice rings on past the next.
 
-On request
-. On the slice image a slice ends at the next hit and LEN is a share of that. Here (engine/sampler.c, RING,
+
+On the slice image a slice ends at the next hit and LEN is a share of that. Here (engine/sampler.c, RING,
 in slice_cut) LEN is the share of what is left from the slice's start to the sample's end, the rule a whole sample has
 (LEN 127 to the end); STRT stays inside the slice. Audio CPU only: the main CPU is the slice image's.
 

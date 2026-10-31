@@ -1,8 +1,7 @@
 """The nodiv image: the copy image with the mixer link's crossfade shares made without the CPU's divide, exactly.
 
-The maintainer, 2026-10-17, with the unit's profile while the phone captures (samples/COPYON.wav: the UI has 9.6 hundredths
-of a block, our links before the mixer 2.2, the maintainer's pattern with mutes, solos and a crossfade up, so the fast path is not
-taken): make the busy path cheaper. With a crossfade up the link divides each track's volume by 127 (about 35 cycles a
+With the unit's profile while the phone captures (the UI has 9.6 hundredths of a block, our links before the mixer
+2.2, a pattern with mutes, solos and a crossfade up, so the fast path is not taken): the busy path made cheaper. With a crossfade up the link divides each track's volume by 127 (about 35 cycles a
 divide, twelve a block). engine/sampler.h, NODIV: div127, three shifts and an add for a first quotient never above the
 true one, then up while 127 or more is left; the link in a run of its own (it outgrew CAVE). The analog mute keeps its
 eight divides by 127^2: done the same way it would not fit its run.

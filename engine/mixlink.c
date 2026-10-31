@@ -27,7 +27,7 @@
 /* The mixtime image, a tool: stock's mixer is called through mix_timed, which reads the profile's timer before and after
  * it into two places of the profile's record (engine/prof.S): + 36, which the lap image read at the per-block routine's
  * first call, and + 56, the last of the stopped code's six stack longs. So the mixer stretch's 34.7 hundredths are
- * split into stock's mixer and our links around it (on request, to a split of the mixer). In a run
+ * split into stock's mixer and our links around it (to a split of the mixer). In a run
  * of its own: this one has 2 bytes. */
 void *mix_timed(void *, void *, u8 *);
 #define MIXER mix_timed
@@ -158,8 +158,8 @@ void *mix_link(void *a, void *b, u8 *params)
 #endif
 #ifdef XMUTE
     /* The trig image: with no solo on, the track that holds the crossfade comes in as it goes up even when it is muted
-     * by the global mutes (not the pattern's), at its crossfade's share of its volume. On request
-     * . */
+     * by the global mutes (not the pattern's), at its crossfade's share of its volume. 
+     * */
     if (top && !SOLO_NOW && (MUTES[0] & ~(u32)*PATTERN_MUTES) >> who & 1) {
         heard = 1u << who;
         mute &= ~heard;

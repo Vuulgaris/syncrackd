@@ -2,7 +2,7 @@
 
 On the unit the shadow image's frames still had strokes at the dials, in the same places on every page: the 56-byte
 pieces whose 64 packed bytes cross the stream's byte 144, 288 and so on, from that byte to the piece's end (the
-viewer's session, from the frames as received). Stock's put (0x40105f24) sends the sink's 144 bytes when they are full
+viewer, from the frames as received). Stock's put (0x40105f24) sends the sink's 144 bytes when they are full
 and copies the rest of the write from the write's start again. Here, the main CPU only, with stock's sink run as it is
 (its vtable 0x40242594, put, its send when full, the flush) and only the send to USB (0x40106976) played:
   - the shadow image's frame comes out with those pieces damaged, as on the unit;

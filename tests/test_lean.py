@@ -13,7 +13,7 @@ and to stock's stages by tests/test_stereo.py: all of that runs on this build.
 
 TWELVE is another sound, a little: a frame between two is summed from twelve frames, not sixteen. It is held to
 the same model with the table of twelve, and what it gives up is measured. It is built as its own file beside
-the other (the time12 image) for the maintainer to hear and to read: nothing is decided here.
+the other (the time12 image) for a person to hear and to read: nothing is decided here.
 """
 import shutil
 
@@ -252,8 +252,8 @@ def test_send_puts_the_masks_tracks_in_their_halves_of_the_window_and_touches_no
 
 # ---- a fade, and a note's start: the blocks that stood out ----------------------------------------------------
 #
-# The on request
-# . The bench has it: a block is not always what a steady one is. The block a note starts in wrote
+# 
+# The bench has it: a block is not always what a steady one is. The block a note starts in wrote
 # out the frames around its slot's ends a word at a time with a question for each, and every frame of a fade
 # was made alone, at more than twice the work of a frame in a run. Eight tracks trigged on one step do both
 # together, and the meter's P holds the most of ten seconds.

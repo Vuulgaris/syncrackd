@@ -1,7 +1,7 @@
 """The phone image: the six image's main CPU with the unit asking the phone at LOAD PROJECT.
 
-The maintainer, 2026-10-15: piece 7 of the phone app, "go", and for what the phone's answer carries "only the changed
-slots". engine/phone.c: before stock's load the unit points the drive routines at the project's bank, asks the phone
+
+engine/phone.c: before stock's load the unit points the drive routines at the project's bank, asks the phone
 (a frame of ours through the unit's own SysEx sink), waits on the kernel's wait with a timer's callback as the timeout,
 puts the bank back, and calls the load; a frame of the phone's through the SysEx entry's one jump gives the wait and
 carries the slots it wrote, which the loader (engine/keeptakes.c, PHONE) loads whether or not the audio CPU holds a take.

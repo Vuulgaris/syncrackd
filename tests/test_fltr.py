@@ -1,13 +1,13 @@
 """The fltr image: the xshare image with LFO.T and FLT.T on FLTR2's G and H, and the phone's load query.
 
-On request
 
-.
+
+
 
 FLTR2 is the filter page's page 10: DEL, -, FENR, -, BASE, WDTH, -, - (tools/uitable.pages). On a sampler track, with
 FLTR2 showing, the filter class's + 188 (engine/recpage.c, FLTRPAGE) answers LFO.T (record 28) for G and FLT.T (27) for
 H; its draw and its turn are stock's, the base turn stock's TRIG page turns the two with. SOLO and REC stay on the
-TRIG page as the xshare image has them. The load query (engine/phone.c, KNOWS), asked by the phone app's session: every
+TRIG page as the xshare image has them. The load query (engine/phone.c, KNOWS), asked by the phone app: every
 load is counted, and the phone's 0x63 is answered by 0x64 with the project, its bank, the count and an id of the start.
 
 Held here by running the routines with the stand-ins of tests/test_trig.py and tests/test_phone.py; not held: stock's

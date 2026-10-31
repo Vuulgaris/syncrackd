@@ -1,8 +1,8 @@
 /* Main CPU (section 3, OS 1.42 only): three sample banks. The "bank" image only.
  *
- * The on request
+ * 
  *
- * .
+ * 
  *
  * The drive. Stock keeps the 64 sample slots in one run of sectors (with the
  * larger slots: 8192 to 139,263) and nothing after it up to 244 MB. Here there

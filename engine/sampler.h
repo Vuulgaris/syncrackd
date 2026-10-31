@@ -94,10 +94,10 @@ struct slot {
 #define STEREO(m) (((m) & MODE_KIND) == MODE_STEREO)
 #ifdef RECLOCK
 /* The reclock image: a step's REC is a lock of its own and not a lock of MODE, which locked the
- * stereo switch and the source with it (on request
- * ). The unit keeps a lock for each of 71 knob slots of a track whether
- * a knob stands for the slot or not, and applies whatever a step has. Slot 24 has no knob on a
- * digital track: the voice loop copies it into the voice's "hold" flag, which our update clears
+ * stereo switch and the source with it (
+ *
+ *
+ * flag, which our update clears
  * as Twinshot's does. A step's REC is a lock there at one of two values that nothing else puts
  * in the slot, the mark in the high byte and the low byte in the middle so the main CPU's
  * smoothing cannot carry it to the next number. With any other value there the track's own REC
@@ -111,8 +111,8 @@ struct slot {
 #endif
 #ifdef HQ
 /* The pitch image: a frame between two of the sample's is worked out from 16 of them, not 2.
- * The on request
- * . That sound is the line between two frames: played two octaves
+ * 
+ * That sound is the line between two frames: played two octaves
  * down, a 6 kHz part of a sample came out with everything else it made only 30 dB under it.
  *
  * The frame at i + f/4096 is the sum of frames i - 7 to i + 8, each times a number from a table
@@ -172,7 +172,7 @@ extern const s16 hq_rows[];
 #endif
 #endif
 #ifdef FLOOR
-/* The floor image: LEN stops at 3. Below that a loop closes to a buzz (on request
+/* The floor image: LEN stops at 3. Below that a loop closes to a buzz (
  *
  *
  * ). The knob's range says so on the main CPU; this is for an LFO, a lock or a pattern
@@ -183,7 +183,7 @@ extern const s16 hq_rows[];
  * slots 2n and 2n + 1, so no value of the knob lands on a right channel. A take
  * is a stereo sample. Without the recorder its two modes play as mono. */
 #ifdef AUTO
-/* The mode image: a sample is what it is. On request
+/* The mode image: a sample is what it is. 
  *
  *
  *
@@ -203,11 +203,11 @@ extern const s16 hq_rows[];
 #define PAIRS(m) 1
 #define TAKE_ONE 1          /* frames a mono take leaves in its second slot */
 #ifdef PACK
-/* The pack image: mono samples in single slots at the back. The maintainer, 2026-10-12, told that a mono
- * sample leaves its second slot unused: "the stereo samples would fill up the first part of the bank
- * from 1 to whatever is available, and the mono samples would just get packed in the back of the
- * bank. That way, if I wanted to do 80/20 stereo versus mono samples, I could do it that much or do
- * 50/50. I don't need to have a set amount".
+/* The pack image: mono samples in single slots at the back. 
+ *
+ *
+ *
+ * 
  *
  * SAMPLE's 64 values are 64 places. 0..31 are the 32 stereo samples as they were, number n in slots
  * 2n and 2n + 1. 32..63 are the slots 32..63 by their own number, each a mono sample whatever the
@@ -373,9 +373,9 @@ struct bankmark {
 
 #ifdef GAIN
 /* The gain image (main CPU only; the sound engine is the stereo image's with the sum of twelve).
- * The on request, and earlier of where: "rec gain
- * and threshold may as well just go on the two knobs you were using for the nunber read out on
- * the sampling page". So: the lower row's second place, knob F.
+ * 
+ *
+ * So: the lower row's second place, knob F.
  *
  * A track's record gain, 0 to 24 dB a decibel a step. The feed (engine/recfeed.c) multiplies the
  * source by it before the 32 bits are made 16, so a quiet source is brought up out of the bits
@@ -412,7 +412,7 @@ struct bankmark {
 #endif
 
 #ifdef ONCE
-/* The once image (main CPU only). On request
+/* The once image (main CPU only). 
  *
  * 
  *
@@ -434,7 +434,7 @@ struct bankmark {
 #endif
 
 #ifdef SOLOKNOB
-/* The soloknob image (main CPU only). On request
+/* The soloknob image (main CPU only). 
  *
  *
  *
@@ -452,10 +452,10 @@ struct bankmark {
 #endif
 
 #ifdef XFADE
-/* The xfade image (main CPU only). On request
- *  Asked which track that is:
- * "Whichever track the knib is in should work as the current crossfade". And where: "the
- * cordsaffe and solos hould be on the second page".
+/* The xfade image (main CPU only). 
+ *
+ *
+ * 
  *
  * A number a sampler track, 0 to 127, in main CPU memory after the solos' long: 0 in the image,
  * so 0 at every start; not saved, not to be locked. Knob G of the sampling page turns the
@@ -527,9 +527,9 @@ static inline __attribute__((always_inline)) u32 div127(u32 p)
 #endif
 
 #ifdef ONETRACK
-/* One-track stereo (the stereo image, both CPUs). On request
- * : a stereo sample on one track, eight at once where a pair of tracks gave four,
- * and nothing given up in the sound. docs/STEREO.md, "One-track stereo".
+/* One-track stereo (the stereo image, both CPUs). 
+ *
+ * 
  *
  * Audio CPU (engine/sampler.c). A stereo note's right channel no longer takes the next track's
  * buffer. It waits in STASH until stock's four stages have done the eight left buffers, then
@@ -606,7 +606,7 @@ void sampler_amp(s32 *out, u8 *params, u32 trig, u32 release, u32 flags);   /* r
  *     memory, move more longs a turn (longs, send, swap there).
  * In Twinshot's other run, with the time image's routine when that is built. */
 void voice_out(s32 *voice, s32 *out, s32 *right);
-/* With TWELVE too (the time12 image, for the maintainer to hear and to read beside the other): a frame
+/* With TWELVE too (the time12 image, for a person to hear and to read beside the other): a frame
  * between two is summed from twelve frames, not sixteen. The table keeps its shape with a sinc of
  * twelve in its middle twelve places (tools/sinctable.py, rows12), and the sums leave the outer
  * two frames at each end out (engine/stub.S, HQ_SKIP). Less work for a pitched note, and 1 to 5
@@ -614,8 +614,8 @@ void voice_out(s32 *voice, s32 *out, s32 *right);
 #endif
 
 #ifdef XFADE
-/* The cross image: a loop's end blended into its start, where the fade image dipped. The maintainer, 2026-10-12:
- * "True crossfade at the loop seam. In place of the 4 ms dip. The loop's end blends into its start."
+/* The cross image: a loop's end blended into its start, where the fade image dipped. 
+ * 
  *
  * A blend needs something to blend with that leads to the place the next pass begins, and a loop that
  * keeps its length has only what lies outside it:
@@ -664,8 +664,8 @@ struct xf {
 _Static_assert(((0x44060800u << 3) + 0x23d5e000u) == 0x44062000u && sizeof(struct xf) <= 0x800, "XF: a voice's blend, from its pad");
 
 #ifdef TRIM
-/* The trim image: a pitched note, a fade and a loop's blend for less of the block. The maintainer, 2026-10-14: P "up to 100
- * at times", "its when i pitch things", "and loops to actually just not as much". Three things, each in its own place:
+/* The trim image: a pitched note, a fade and a loop's blend for less of the block. 
+ * Three things, each in its own place:
  *
  *   - The pitched sum (engine/stub.S, HQ_TAP): a frame of each side is fetched as a long, the frame after it in the
  *     low half, and that half is no longer cleared. A product's low half is that frame unsigned times the table's
@@ -685,14 +685,14 @@ _Static_assert(((0x44060800u << 3) + 0x23d5e000u) == 0x44062000u && sizeof(struc
 
 #ifdef EIGHT
 /* The eight image: the slim image with a pitched frame summed from eight frames, i - 3 to i + 4, where it was twelve,
- * in the six image's place. On request. Its own window, Kaiser
+ * in the six image's place. Its own window, Kaiser
  * beta 5.0 (tools/sinctable.py, rows8). The table, the copy and the room as the six image's; both channels sum the
  * eight places 4 to 11 (HQ_SKIP1, HQ_SKIP2). */
 #endif
 
 #ifdef SIX
-/* The six image: the slim image with a pitched frame summed from six frames, i - 2 to i + 3, where it was twelve. The
- * on request, told it is every pitched frame's cost (not at a sample's own pitch or octaves up),
+/* The six image: the slim image with a pitched frame summed from six frames, i - 2 to i + 3, where it was twelve. Asked
+ * for on 2026-10-14 once told it is every pitched frame's cost (not at a sample's own pitch or octaves up),
  * a little off the very top of anything pitched, and more aliasing on bright material pitched up. The table is the
  * same 16 places with five noughts at each end (tools/sinctable.py, rows6), so its rows, the copy made at a start and
  * the reads around a slot's ends are as they were; two channels sum the six (HQ_SKIP2), one channel eight places,
@@ -700,9 +700,9 @@ _Static_assert(((0x44060800u << 3) + 0x23d5e000u) == 0x44062000u && sizeof(struc
 #endif
 
 #ifdef SLIM
-/* The slim image: the trim image for less again, the sound the same to the bit. The maintainer, 2026-10-14, after the trim
- * image on the maintainer's unit ("def tell it sbetter ... but still cant trend to max at the wrong times"): "do hits off when
- * unused, and tightening the pitched sum". The second only: the pitched sum (hq_run and hq_safe, engine/stub.S).
+/* The slim image: the trim image for less again, the sound the same to the bit. 
+ *
+ * The second only: the pitched sum (hq_run and hq_safe, engine/stub.S).
  * Once a run, by two divides, how many frames on are inside its bounds and have all sixteen in the slot; those are
  * made with neither of the two tests a frame had, and two channels' next frame is begun where the last ended, not by
  * a branch. The frames after them are tested as before. 7 instructions fewer a pitched frame of two channels, 1 a
@@ -716,9 +716,9 @@ _Static_assert(((0x44060800u << 3) + 0x23d5e000u) == 0x44062000u && sizeof(struc
 
 #ifdef TIMED
 /* The time image, a tool and not one to keep: the stereo image with the audio CPU's load on the
- * sampling page. On request. The bench
- * counts instructions and knows nothing of time; on the unit eight pitched stereo tracks at 160,319
- * instructions an interrupt were "major distortion" and 116,679 passed, and nothing said how near
+ * sampling page. 
+ *
+ * and 116,679 passed, and nothing said how near
  * the edge either was.
  *
  * Audio CPU (engine/stub.S): a timer stock starts and never reads is read where the interrupt
@@ -738,10 +738,10 @@ _Static_assert(((0x44060800u << 3) + 0x23d5e000u) == 0x44062000u && sizeof(struc
 #endif
 
 #ifdef STOPS
-/* The stops image: SMPL stops only on real samples and one free spot of each kind. The maintainer, 2026-10-12,
- * told that on the pack image the knob has numbers that mean little where the two kinds share slots: "yea i
- * dont ant junk numbers like this ... dealing with the junk numbers somehow so the stereo to mono sample
- * switching reads cleanly". Turning SMPL on the first page stops at the stereo places that hold a sample, the
+/* The stops image: SMPL stops only on real samples and one free spot of each kind. 
+ *
+ *
+ * Turning SMPL on the first page stops at the stereo places that hold a sample, the
  * lowest stereo place that is free, the highest single slot that is free, and the single slots that hold a
  * mono sample, and at nothing else. A number keeps its meaning and the sound engine plays whatever number it
  * is given: only the knob's travel skips (engine/recpage.c).
@@ -907,8 +907,8 @@ _Static_assert(__builtin_offsetof(struct st, rec) == 51 && __builtin_offsetof(st
 #define MB_FED(window) (*(volatile u32 *)((window) + 0x800u))
 
 #ifdef SRR
-/* The srr image (-DSRR): sample rate reduction, in MODE's parameter (knob slot 23), which is freed for it. The maintainer,
- * 2026-10-13: "kill swarm, yes freeing mode if possible".
+/* The srr image (-DSRR): sample rate reduction, in MODE's parameter (knob slot 23), which is freed for it. 
+ * 
  *
  * The sound. Every frame the player makes is held for a while: a phase goes up by a step a frame, and only a frame
  * at which it runs over is let through; the frames between are that one again. No smoothing: what the hold folds
@@ -995,7 +995,7 @@ void crush(struct srr *h, s32 *l, s32 *r);          /* engine/stub.S: a block he
 /* The hits image (-DHITS): a long sample's hits start the filter's envelope again, as a trig of the filter's own. The
  * envelope is the main CPU's (docs/FINDINGS.md, "The filter's envelope is the main CPU's"), so this side says which
  * tracks reach a hit and how loud it is, and the main CPU hands the envelope a trig for each one that DEL lets
- * through (engine/hits.c). In the code of SY TOY and SY BITS, which the maintainer gave up ("get rid of either or both of
+ * through (engine/hits.c). In the code of SY TOY and SY BITS, which was given up ("get rid of either or both of
  * those machines"): a track left on either plays nothing, as one on SY SWARM.
  *
  * The scan: every slot that holds frames is gone over once, HIT_SCAN frames a block, a slot a playing voice is on
@@ -1064,9 +1064,9 @@ struct hitv {               /* a voice's, 16 bytes */
     s8 dir;                 /* the line: +1 forward, -1 backward */
 };
 #ifdef HITSCAN
-/* The scan image (-DHITSCAN): on request
+/* The scan image (-DHITSCAN): 
  *
- * . The switch image's scan wanted a window's loudest past twice a follower (6 dB over
+ * The switch image's scan wanted a window's loudest past twice a follower (6 dB over
  * whatever was held, so a hit on a held bass or a pad was none), nothing at or under -45 dB of full scale (a take
  * that peaks at -30 kept only what was within 15 dB of it), and a hit's step was its loudness in 2 dB steps.
  *
@@ -1078,7 +1078,7 @@ struct hitv {               /* a voice's, 16 bytes */
  * last. How sharp it is: the larger rise over the two followers as they were where it began, in its own window and
  * the HIT_RISE after it, kept in 1.5 dB bins. When the slot is gone over, its step is its place among the slot's
  * hits by that: the sharpest fifteenth 15, down to 1, so DEL takes the same share more of them each step whatever
- * the sample. A hit's length is found as before. In SD BASIC's code, which the maintainer gave up for it: a track on SD
+ * the sample. A hit's length is found as before. In SD BASIC's code, which was given up for it: a track on SD
  * BASIC plays nothing. */
 #define HITX_FLOOR 7        /* a rise of more than the slot's loudest shifted down this far: 42 dB under it */
 #define HITX_MIN 8          /* and of more than this, whatever the slot: -72 dB of full scale */
@@ -1102,8 +1102,8 @@ void hits_block(void);                          /* the end of the interrupt: the
 #endif
 
 #ifdef SLICE
-/* The slice image (-DSLICE): a sampler track's keys play its sample's slices where they played its pitch. The maintainer,
- * 2026-10-16: "keys switc will switch between slices or chormatic which is stock". KEYS, the sampling page's knob H,
+/* The slice image (-DSLICE): a sampler track's keys play its sample's slices where they played its pitch, or
+ * chromatically as stock. KEYS, the sampling page's knob H,
  * is bit 1 of the track's own word on slot 24 (SRR_KEYS), and the main CPU sends it as bit 7 of slot 24's low byte
  * (SLICE_BIT), under the source (engine/recword.S). At a note's start on such a track the note is latched: n, its
  * number less 60 (60 is the sample's own pitch, a trig's note when none is locked), picks the slice, and the note is
@@ -1120,8 +1120,8 @@ struct slc {
 };
 #define SLC(t) ((struct slc *)(0x44078100u + 8u * (t)))   /* free SDRAM after the hits' voices; any number will do at a start */
 #ifdef NORM
-/* The norm image: every take normalized to -1 dB once it ends (engine/sampler.c, norm_block). The maintainer, 2026-10-21:
- * "could we also add noramlize to the recorder? i notice i have to turn up db often on the sampling page", and his
+/* The norm image: every take normalized to -1 dB once it ends (engine/sampler.c, norm_block). 
+ * and the
  * choices: the take itself rewritten, always on, -1 dB. A take is scaled up by at most NORM_MOST (30 dB), never down.
  * In free SDRAM after the slices' voices, believed only while NORM_UP, voice 1's state + 80, which stock's voice reset
  * clears at a start and when track 2's machine changes, says so. */
@@ -1155,8 +1155,8 @@ void sampler_post(s32 *out, u8 *params, u32 *masks);       /* after the voice lo
 void sampler_hook(void);                                   /* stub.S: replaces the voice loop call */
 
 #ifdef STRETCH
-/* The stretch image (-DSTRETCH): a note's speed apart from its pitch. The maintainer, 2026-10-22: KEYS's four settings and
- * "a speed knob" in PTIM's place, with WSOLA. KEYS on CHST or SLST (bit 3 of the track's own word, SRR_STR, sent as
+/* The stretch image (-DSTRETCH): a note's speed apart from its pitch. 
+ * in PTIM's place, with WSOLA. KEYS on CHST or SLST (bit 3 of the track's own word, SRR_STR, sent as
  * STR_BIT of slot 24's low byte by engine/recword.S) latches a note as stretched at its start. Such a note's place
  * (s->pos) moves at SPD's speed (slot 52, PTIM's, the track's own word in the kit; slot 52 does not cross to the audio
  * CPU, so recword sends it as 0x80 and SPD in slot 24's high byte while REC is off: the third build. The first two put
@@ -1188,16 +1188,16 @@ struct str {
 #endif
 
 #ifdef LOCK
-/* The lock image (-DLOCK): a stretched note locked to the tempo. On request
- *  to auto-snap. KEYS's CHLK and
- * SLLK (bit 4 of the track's word, SRR_LOCK, with bit 3) stretch a note's region to the power of two of steps nearest
- * its length at the tempo, and SPD is then a ratio on that (64 locked, 32 half time, 96 double). The tempo is stock's
- * own, the long at 0x402d7360 that the clock adds every block (BPM times 120; 14,400 in the image, 120 BPM). Only slot
- * 24 of a track's knobs crosses that can carry it, so engine/recword.S sends four things in turn, a block each, in
- * its high byte with REC off (0x80 and seven bits) and says which in bits 4 and 5 of its low byte (LOCK_TAG): 0 SPD,
- * 1 and 2 the low and high seven bits of a step's frames over 2 (43,200,000 over the tempo), 3 the lock (bit 0) and
- * PORT (bit 1). The audio CPU keeps each (struct lck, after the tracks' struct str). PORT on (the third build, his
- * word: "move the p time around and then just nap it back to the bpm with a switch") locks a stretched note to the
+/* The lock image (-DLOCK): a stretched note locked to the tempo. 
+ *
+ *
+ *
+ *
+ *
+ *
+ *
+ *
+ * ) locks a stretched note to the
  * tempo whatever KEYS says, and SPD is not heard: on the tempo exactly. PORT is still stock's portamento too. */
 #define LOCK_TAG(lo) ((lo) >> 4 & 3u)
 #ifdef STSW
@@ -1218,22 +1218,22 @@ struct lck {
 };
 #endif
 
-/* The scrub image (-DSCRUB): STRT and LEN followed on a stretched note as on one that is not. The maintainer, 2026-10-23:
- * "when you set it to a loop and then try to adjust the start and the length while the loop's continuously repeating,
- * it doesn't work the same way it does when stretch is off". A turn that left the place past the region's new end
+/* The scrub image (-DSCRUB): STRT and LEN followed on a stretched note as on one that is not. 
+ *
+ * A turn that left the place past the region's new end
  * (live(), caught) set duck and waited for play()'s fade to reach nothing before the next pass; a stretched note is
  * made by str_play, which runs no fade, so the wait never ended and no knob was followed again until the next trig.
  * str_update now lets it through the block after (its heads cross into the new place by themselves), and a one-shot
  * so stopped goes down over a block as at its end. Audio CPU only. */
 
-/* The slscrub image (-DSLSCRUB): STRT and LEN followed on a slice as on a whole sample. On request
- * . The slice image left a slice's knobs alone while it played
+/* The slscrub image (-DSLSCRUB): STRT and LEN followed on a slice as on a whole sample. 
+ * The slice image left a slice's knobs alone while it played
  * (live() knew only the whole sample's region); live() now takes the region slice_cut gives at a note's start, STRT
  * inside the slice and LEN to the sample's end (RING), on SLCE and SLST both. Audio CPU only. */
 
 #ifdef GRAIN
-/* The grain image (-DGRAIN): a stretch that holds together. On request
- *  of two fixes. The stretch image's look for where a new
+/* The grain image (-DGRAIN): a stretch that holds together. 
+ * of two fixes. The stretch image's look for where a new
  * grain lines up was STR_W (32) frames either side, 0.67 ms: nothing under about 750 Hz could be lined up, and two
  * copies out of step went down and up at the grain's rate (94 Hz). And a drum's attack was read by every grain that
  * passed over it, early and twice. Here:
@@ -1268,9 +1268,9 @@ struct grn {
 #endif
 
 #ifdef SPREAD
-/* The spread image (-DSPREAD): the grain image's look in slices, for a lower peak. The maintainer, 2026-10-23, of P at 105
- * ("It seems like now CPU is peaking at 105"), then "build the spread search and also shrink it to 256, i want the
- * lowest peak". A head's birth is known blocks ahead (its age, or the hold), and so are where the place and the
+/* The spread image (-DSPREAD): the grain image's look in slices, for a lower peak. 
+ *
+ * A head's birth is known blocks ahead (its age, or the hold), and so are where the place and the
  * other head will be then: STR_LEAD blocks before it those are foreseen and the low-passed frames written; then
  * STR_SK candidates a block, the coarse look's (STR_SW either side, STR_SN frames) and then the fine one's, so no
  * block has more than a slice of it. At the birth the result is moved as far as the other head is from where it was
@@ -1293,8 +1293,8 @@ struct grs {
 #endif
 
 #ifdef TRAP
-/* The trap image (-DTRAP): a stretched note for less. On request
- *  for the room. Two changes, the heads' births where they were:
+/* The trap image (-DTRAP): a stretched note for less of the audio CPU, in
+ * CY ALLOY's room. Two changes, the heads' births where they were:
  *  - a head's weight is a trapezoid, not a triangle: up over STR_X frames from its birth, flat to half a grain, down
  *    over STR_X, then nothing until its next birth. The two still sum to a constant, now STR_X, so a frame is scaled
  *    by STR_SH where it was 1. A block where one head is nothing is made by the other alone (str_one);
@@ -1310,8 +1310,8 @@ struct grs {
 #define STR_SH 1
 #endif
 #ifdef LETGO
-/* The letgo image (-DLETGO). On request of the loose ends (docs/FINDINGS.md, "Loose ends and
- * cheap wins"). Two things:
+/* The letgo image (-DLETGO): loose ends on the audio CPU (docs/FINDINGS.md, "Loose ends and cheap wins"). Two
+ * things:
  *  - a stereo note that is over lets go of its right channel once that channel's last block and the left's are under
  *    LETGO_QUIET (-120 dB of full scale, 2^31; a slow tail crossing nought over a whole block can let go a little
  *    louder, -108 dB the most seen in emulation): its track leaves R_MASK, so stock's four stages are not run on its silence again, and

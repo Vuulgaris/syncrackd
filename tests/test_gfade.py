@@ -1,9 +1,9 @@
 """The gfade image: the xfade image with one crossfade for the whole unit.
 
-On request
 
-. (Not lockable:
-"xfade doesnt need to be lockable for any".)
+
+
+)
 
 The eight numbers of the xfade image hold the one crossfade in the place of the track that last turned it, the rest 0,
 so the mixer's rule and the analog voices' are the xfade image's own code, tested there.

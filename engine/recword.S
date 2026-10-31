@@ -223,8 +223,8 @@ lock_byte:
 | stock's portamento is made"). In place of stock's `mvsw %a4@(134),%d0 ; cmpil #16383,%d0` at 0x4011a280, in the
 | pitch routine 0x4011a1ac: PORT as stock loads it, or 0 (off) on a sampler track whose own word (the kit's slot 24,
 | signed) has KEYS's stretch, compared as stock compares it, so stock's bgts after the call takes the flags. a4 the
-| track in the block, d1 the track: both kept, a1 too. On request, then "cant oyu have
-| portamento just worj when strethc is off" (PORT is the lock's snap there, read from the kit, not from here).
+| track in the block, d1 the track: both kept, a1 too. Portamento works when the
+| stretch is off (PORT is the lock's snap there, read from the kit, not from here).
     .globl  port_gate
 port_gate:
     mvs.w   134(%a4),%d0

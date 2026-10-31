@@ -147,7 +147,7 @@ DISPLAY = [
 # The srr image, second build: how far a turn moves SRR. Stock's start-up routine copies sixteen bytes of knob
 # behaviour into a record's entry of the display table from a template. A plain 0 to 127 knob's (LEN's, the record
 # before MODE's two, and the two after) is {1, 4, 0, an object}; MODE's, Twinshot's sample picker, is {1, 8, 0,
-# another}: the maintainer, "too insensitive and takes to long to get form 127". MODE's entry is given the plain one: the
+# another}: MODE's entry is given the plain one: the
 # register LEN's entry pushes, which still holds it there (the record after MODE's pushes it again).
 KNOB_PLAIN, KNOB_PICKER = 0x401d6b44, 0x401d6b74
 SRR_KNOB = 0x40194396        # movel %d4,%sp@- : the template for MODE's entry
@@ -1072,8 +1072,8 @@ METER_CONTEXT = [
     (mm.FILL_RECT + 0xe4, fw.sx("8dabe449ba1a9baf2ba2"), "the rectangle routine: an odd one sets"),
     (mm.FILL_RECT + 0xf6, fw.sx("9cc1503afc96efb0"), "the rectangle routine: any other clears"),
     (mm.PAGE_REDRAW, fw.sx("a1350ee68f84f54d8291259a7fa4489f90863e2fe04e31aa93177355d1cdc5f2597ab525bea0"),
-     "the redraw request: a flag in the page object, then its maintainer's"),
-    (0x40100966, fw.sx("de0cc8185a5e38c7b719dd9f4a57636f"), "the redraw request: a flag in the maintainer, and no more"),
+     "the redraw request: a flag in the page object, then its owner's"),
+    (0x40100966, fw.sx("de0cc8185a5e38c7b719dd9f4a57636f"), "the redraw request: a flag in the owner, and no more"),
     (mm.CAVE_METER[0] - 2, "4e75", "the feed's new run starts a routine"),
     (mm.CAVE_METER[1] - 2, "4e75", "the feed's new run ends one"),
     (mm.CAVE_PAGE3[0] - 2, "4e75", "the page's third run starts a routine"),
@@ -2131,8 +2131,8 @@ def long_patches(image):
     return out, {k: syms[k] for k in ("long_queue", "long_kitnum", "long_when", "long_rec", "long_now", "long_num", "long_clear", "long_copy", "long_paste")}
 
 
-# The trig image: the sampler's own page has STRT and LOOP changed over, and LEN and SRR. On request
-# . The start-up
+# The trig image: the sampler's own page has STRT and LOOP changed over, and LEN and SRR. 
+# The start-up
 # routine stores each knob's record into machine 44's page entry (mm.PAGE_TABLE - 44, the record of knob k at + 8 + 4 k)
 # with a movel of a register to an absolute long: the four stores change places, nothing else. A lock is kept by knob
 # slot, so a project's locks stay with their knobs. (instruction, the record it stores, the knob it is stored for)
