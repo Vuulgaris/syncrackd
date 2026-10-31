@@ -37,8 +37,9 @@ are this file's rules.
 - Images are a chain, each `make image-X` built on the one before. A new feature is a new image on the newest
   one: its code under its own `#ifdef` or in a new file, the older images' text untouched, its own test file
   `tests/test_X.py`.
-- A change: build the new image, run its own test file once (`make check IMAGE=X`). The whole suite (`make test`)
-  only when asked.
+- A change: build the new image, run its own test file once (`make check IMAGE=X`), then `make test` (the tools,
+  the emulator, the engine, the release image's file). Every image's file (`make test-chain`) only when asked, or
+  after a change to source older images are built from.
 - Where a stock routine can run in emulation, run it; a stand-in shares your mistake. A change to how a page looks:
   `make screen` it first.
 - Emulation does not model the cache, real time, or the FPGAs. Instruction counts are a lower bound.

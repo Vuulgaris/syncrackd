@@ -63,10 +63,15 @@ def test_main_survey_agrees_with_what_is_known(main, official):
              mm.CAVE_SOLO[0],                                                                   # the solo image's
              mm.CAVE_FEED[0],                                                                   # the feed image's: the routine that writes a block of a take
              mm.CAVE_ONCE[0], mm.ONCE_DIRTY}                                                    # the once image's: its sixteen bytes (the second eight) and its code
+    # every run taken since is a CAVE_ of the map, chosen from this survey too; what lives in one (a cave's numbers,
+    # a routine first in it) is its own. Anything else the map names must be code something reaches.
+    caves = [v for n, v in vars(mm).items() if n.startswith("CAVE_") and isinstance(v, tuple) and len(v) == 2
+             and all(isinstance(x, int) for x in v)]
     for name in dir(mm):
         v = getattr(mm, name)
         for a in (v if isinstance(v, tuple) else (v,)):
-            if isinstance(a, int) and mm.BASE <= a < mm.CODE_END and a not in known:
+            if isinstance(a, int) and mm.BASE <= a < mm.CODE_END and a not in known \
+                    and not any(lo <= a <= hi for lo, hi in caves):
                 assert not holds(main, a), name
     # every place the images patch that is not one of our own runs is live code:
     # those patches run on the unit (mixer link, mute, knob display, recorder feed, big slots)
