@@ -1,10 +1,10 @@
 """Disassemble a decoded section with binutils objdump (ColdFire ISA C + EMAC).
 
-    python -m tools.disasm sections/1.42/sec7_audio.bin 0x40000400 > build/dis/sec7.lst
-    python -m tools.disasm sections/1.42/sec7_audio.bin 0x40000400 0x40004324 0x40004400
+python -m tools.disasm sections/1.42/sec7_audio.bin 0x40000400 > build/dis/sec7.lst
+python -m tools.disasm sections/1.42/sec7_audio.bin 0x40000400 0x40004324 0x40004400
 
-Capstone misses ColdFire instructions, so objdump is the reference listing.
-Output is Elektron code: keep it in build/ (gitignored).
+Capstone misses ColdFire instructions, so objdump is the reference listing. Output is Elektron code: keep it in build/
+(gitignored).
 """
 import shutil
 import subprocess

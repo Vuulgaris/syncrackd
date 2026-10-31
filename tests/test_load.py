@@ -1,18 +1,4 @@
-"""The "load" image: LOAD PROJECT puts the drive's samples back in the slots recorded over.
-
-A take that is not on the +Drive lives in the audio CPU's memory, and stock loads samples at
-boot only. Here the main CPU, after the stock project load, asks which slots hold such a take
-and sends each the samples the drive has for it, a sector a request, through the box that
-keeping takes uses the other way.
-
-Audio CPU side (engine/sampler.c built with LOAD) runs inside the real voice loop hook. Main CPU
-side (the load half of engine/keeptakes.c) runs with the project routines and the drive replaced
-by stubs, against a drive that is a Python dictionary; the store's own read runs as it is. Two
-tests join the sides by carrying the window's bytes across.
-
-Nothing here says what the unit does while the load job waits, how long the drive takes, or
-that the audio CPU goes on answering while a project is loaded: see docs/FINDINGS.md.
-"""
+"""The "load" image: LOAD PROJECT puts the drive's samples back in the slots recorded over."""
 import shutil
 
 import numpy as np
@@ -102,7 +88,7 @@ def heard(e, track, blocks=8):
 
 def test_the_request_bit_is_no_slot_and_the_buffers_end_under_the_stack():
     assert PUT > SLOTS and PUT < 0x10000
-    assert buffer_of(SLOTS) <= m.STACK_TOP - 0x100000       # the last slot's buffer ends well under the stack
+    assert buffer_of(SLOTS) <= m.STACK_TOP - 0x100000  # the last slot's buffer ends well under the stack
     assert m.REC_STRIDE == 2 * m.REC_MAX and m.REC_STRIDE % 512 == 0
 
 
@@ -112,12 +98,12 @@ def test_pieces_land_in_the_slots_buffer_and_the_last_word_makes_them_the_slot(a
     before = slot_entry(e, 10)
     for off, piece in pieces(x):
         ok, _, _ = ask(e, 10 | PUT, off, piece)
-        assert ok and slot_entry(e, 10) == before           # not the slot yet
+        assert ok and slot_entry(e, 10) == before  # not the slot yet
     assert bytes(e.mc.read(buffer_of(10), len(x))) == x
     assert ask(e, 10 | PUT, m.KEEP_DONE, (1500).to_bytes(4, "big"))[0]
     assert slot_entry(e, 10) == (1500, buffer_of(10))
     assert e.mc.r32(m.KEPT + 4 * 10) == 1500 ^ m.KEEP_MARK
-    assert ask(e, 10, 0)[1] == 0                            # the drive has it: a save has nothing to write
+    assert ask(e, 10, 0)[1] == 0  # the drive has it: a save has nothing to write
     assert all(slot_entry(e, k)[0] == 0 for k in range(SLOTS) if k != 10)
 
 
@@ -137,7 +123,7 @@ def test_it_takes_the_place_of_a_sample_from_the_pool(audio):
     e = engine(audio, pool={10: old, 11: old})
     x = sample(300, 4)
     assert ask(e, 10 | PUT, 0, x[:448])[0]
-    assert slot_entry(e, 10)[0] == 900                      # the pool's sample plays on until the last word
+    assert slot_entry(e, 10)[0] == 900  # the pool's sample plays on until the last word
     send(e, 10, x)
     assert slot_entry(e, 10) == (300, buffer_of(10)) and slot_entry(e, 11)[0] == 900
 
@@ -148,11 +134,11 @@ def test_a_take_is_silent_while_its_buffer_is_written_and_then_gone(audio):
     hold(e, 5, 12)
     e.set_slot(5, MODE, MONO)
     old_left, old_right = taken(e, 10).tobytes(), taken(e, 11).tobytes()
-    assert ask(e, 10, 0)[1] == len(old_left) // 2           # a take the drive does not have
+    assert ask(e, 10, 0)[1] == len(old_left) // 2  # a take the drive does not have
     x = sample(200, 5)
     assert ask(e, 10 | PUT, 0, x[:448])[0]
-    assert slot_entry(e, 10) == (0, buffer_of(10))          # no frames: not heard half old, half new
-    assert taken(e, 11).tobytes() == old_right              # its right half is another slot
+    assert slot_entry(e, 10) == (0, buffer_of(10))  # no frames: not heard half old, half new
+    assert taken(e, 11).tobytes() == old_right  # its right half is another slot
     send(e, 10, x)
     assert slot_entry(e, 10) == (200, buffer_of(10))
     assert bytes(e.mc.read(buffer_of(10), 400)) == x
@@ -183,9 +169,9 @@ def test_the_last_piece_stops_at_the_buffers_end(audio):
     e = engine(audio)
     e.mc.write(buffer_of(10) + m.REC_STRIDE - 512, bytes(1024))
     piece = bytes(range(256)) * 2
-    assert ask(e, 10 | PUT, m.REC_STRIDE - 256, piece)[0]   # not a place the main CPU cuts at: 256 bytes of room
+    assert ask(e, 10 | PUT, m.REC_STRIDE - 256, piece)[0]  # not a place the main CPU cuts at: 256 bytes of room
     assert bytes(e.mc.read(buffer_of(10) + m.REC_STRIDE - 512, 1024)) == bytes(256) + piece[:256] + bytes(512)
-    assert ask(e, 63 | PUT, m.REC_STRIDE - 512, piece)[0]   # the last buffer's last sector
+    assert ask(e, 63 | PUT, m.REC_STRIDE - 512, piece)[0]  # the last buffer's last sector
     assert bytes(e.mc.read(buffer_of(64) - 512, 512)) == piece
 
 
@@ -197,9 +183,9 @@ def test_requests_that_name_no_place_are_answered_and_write_nothing(audio):
     e.mc.uc.hook_add(UC_HOOK_MEM_WRITE, lambda uc, a, addr, size, v, u: wrote.append(addr), begin=m.KEPT, end=m.STACK_TOP - 0x10000)
     e.mc.uc.ctl_flush_tb()
     piece = bytes([0x5a]) * 512
-    for slot, off in ((64, 0), (65, 448), (0x7FFF, 0), (64, m.KEEP_DONE), (0x7FFF, m.KEEP_DONE),     # no such slot
-                      (10, m.REC_STRIDE), (10, m.REC_STRIDE + 512), (10, 0x7FFFFE00), (10, 0xFFFFFE00),   # past the buffer
-                      (10, 1), (10, 2), (10, 449), (10, 0xFFFFFFFE)):                                # not on a long
+    for slot, off in ((64, 0), (65, 448), (0x7FFF, 0), (64, m.KEEP_DONE), (0x7FFF, m.KEEP_DONE),  # no such slot
+                      (10, m.REC_STRIDE), (10, m.REC_STRIDE + 512), (10, 0x7FFFFE00), (10, 0xFFFFFE00),  # past the buffer
+                      (10, 1), (10, 2), (10, 449), (10, 0xFFFFFFFE)):  # not on a long
         assert ask(e, slot | PUT, off, piece)[0], (slot, off)
     assert not wrote
     assert bytes(e.mc.read(m.SLOT_LEN, 8 * SLOTS)) == table and bytes(e.mc.read(m.KEPT, 4 * SLOTS)) == marks
@@ -255,19 +241,20 @@ def test_cost_on_the_audio_cpu(stock, audio):
     page = build_engine.patched_image(stock, page=True)
     idle = count(audio, None) - count(page, None)
     piece = count(audio, 10 | PUT) - count(page, None)
-    assert idle == 0                                        # no request: not one instruction more than the page image
-    assert piece < 6000                                     # one block of a load: 512 bytes copied
+    assert idle == 0  # no request: not one instruction more than the page image
+    assert piece < 6000  # one block of a load: 512 bytes copied
     assert piece == COST
 
 
-COST = 1062                 # a block with a piece in it, over one without. Budget: 10,506 a voice
+COST = 1062  # a block with a piece in it, over one without. Budget: 10,506 a voice
 
 
 # ---- main CPU -----------------------------------------------------------------------------------
 
 class LoadRig(Rig):
-    """The patched main program with the project routines and the drive replaced by stubs. The store's
-    own read runs: its lock and the drive under it are the stubs."""
+    """The patched main program with the project routines and the drive replaced by stubs. The store's own read runs: its
+    lock and the drive under it are the stubs.
+    """
 
     def __init__(self, built):
         self.reads, self.loads, self.loaded, self.read_fails = [], [], 1, None
@@ -280,7 +267,7 @@ class LoadRig(Rig):
 
     def wrote(self, uc, access, address, size, value, user):
         if not (STACK[0] <= address < STACK[1] or mm.KEEP_BOX <= address < mm.KEEP_BOX + m.KEEP_ACK
-                or mm.KEEP_BOX + m.KEEP_DATA <= address < mm.KEEP_BOX + m.KEEP_SIZE     # the samples it sends
+                or mm.KEEP_BOX + m.KEEP_DATA <= address < mm.KEEP_BOX + m.KEEP_SIZE  # the samples it sends
                 or STORE <= address < STORE + 0x20000 or 0x4d800000 <= address):
             self.stray.append(address)
 
@@ -306,11 +293,12 @@ class LoadRig(Rig):
 
 
 class Audio:
-    """The audio CPU's side as the tests above show it: which slots hold a take the drive does not have,
-    and what it is sent."""
+    """The audio CPU's side as the tests above show it: which slots hold a take the drive does not have, and what it is
+    sent.
+    """
 
     def __init__(self, rig, takes):
-        self.rig, self.takes = rig, dict(takes)             # slot: frames
+        self.rig, self.takes = rig, dict(takes)  # slot: frames
         self.asked, self.sent, self.done = [], {}, {}
 
     def __call__(self):
@@ -325,7 +313,7 @@ class Audio:
                 self.takes.pop(k, None)
             else:
                 buf = self.sent.setdefault(k, bytearray())
-                buf[off:off + 512] = box[16:]               # as the audio CPU copies it: 512 bytes at off
+                buf[off:off + 512] = box[16:]  # as the audio CPU copies it: 512 bytes at off
         else:
             mc.write(mm.KEEP_BOX + m.KEEP_FRAMES, self.takes.get(slot, 0).to_bytes(4, "big") + bytes(512))
         mc.write(mm.KEEP_BOX + m.KEEP_ACK, bytes(2) + box[:2])
@@ -345,7 +333,7 @@ def test_the_load_is_one_call_and_it_goes_to_ours(stock3, official, main):
     assert stock3.count(b"\x4e\xb9" + mm.PROJECT_LOAD.to_bytes(4, "big")) == 1
     assert stock3.count(mm.PROJECT_LOAD.to_bytes(4, "big")) == 1
     assert image[mm.off(call):mm.off(call) + 6] == b"\x4e\xb9" + syms["load_keep"].to_bytes(4, "big")
-    lo, hi = mm.CAVE_KEEP                                   # the code sits with the save's, in the run the keep image proved
+    lo, hi = mm.CAVE_KEEP  # the code sits with the save's, in the run the keep image proved
     runs = deadcode.survey(stock3, mm.BASE, mm.CODE_END, mm.ENTRY, [official.section(k) for k in (2, 4, 6, 8)])
     assert mm.CAVE_KEEP in deadcode.usable(runs)
     assert all(lo <= syms[s] < hi for s in ("ask", "take", "keep_takes", "save_keep", "load_slots", "load_keep"))
@@ -358,7 +346,7 @@ def test_the_stock_load_runs_first_and_its_answer_is_passed_on(rig):
     for answer in (1, 0x12345601, 0xFFFFFFFF):
         rig.loaded = answer
         assert rig.load((7, 8, 9)) == answer
-        assert rig.loads[-1] == (7, 8, 9, 0)                # before anything is read here
+        assert rig.loads[-1] == (7, 8, 9, 0)  # before anything is read here
     assert not rig.writes and not rig.reads and not rig.stray
 
 
@@ -366,7 +354,7 @@ def test_a_failed_project_load_changes_nothing(rig):
     audio = Audio(rig, {10: 960})
     rig.serve(audio)
     box = bytes(rig.mc.read(mm.KEEP_BOX, m.KEEP_SIZE))
-    for answer in (0, 0x100, 0xABCDEF00):                   # the low byte is the answer
+    for answer in (0, 0x100, 0xABCDEF00):  # the low byte is the answer
         rig.loaded = answer
         assert rig.load() == answer
     assert not audio.asked and not rig.reads and bytes(rig.mc.read(mm.KEEP_BOX, m.KEEP_SIZE)) == box
@@ -378,7 +366,7 @@ def test_a_slot_with_a_take_gets_the_drives_samples(rig, frames):
     a, b = sample(frames, 1), sample(frames + 7, 2)
     rig.put(10, a)
     rig.put(11, b)
-    rig.put(12, sample(100, 3))                             # no take there: it is left alone
+    rig.put(12, sample(100, 3))  # no take there: it is left alone
     audio = Audio(rig, {10: 960, 11: 960})
     rig.serve(audio)
     assert rig.load() == 1
@@ -388,17 +376,17 @@ def test_a_slot_with_a_take_gets_the_drives_samples(rig, frames):
     assert [s for s, off in audio.asked if not s & PUT] == list(range(SLOTS))
     want = [(sector_of(s) + j, 512) for s, x in ((10, a), (11, b)) for j in range((64 + len(x) + 511) // 512)]
     assert rig.reads == want
-    for s, x in ((10, a), (11, b)):                         # the pieces in order, and the last word last
+    for s, x in ((10, a), (11, b)):  # the pieces in order, and the last word last
         mine = [off for k, off in audio.asked if k == s | PUT]
         assert mine == [off for off, _ in pieces(x)] + [m.KEEP_DONE]
-    assert not rig.writes and not rig.stray                 # the drive is only read
-    assert {size for _, size in rig.window} == {2, 4}       # words and longs, never a byte
+    assert not rig.writes and not rig.stray  # the drive is only read
+    assert {size for _, size in rig.window} == {2, 4}  # words and longs, never a byte
     assert rig.load() == 1 and len(rig.reads) == len(want)  # nothing holds a take any more: nothing more is read
 
 
 def test_a_slot_with_nothing_on_the_drive_is_loaded_as_empty(rig):
-    rig.put(11, sample(50, 1), name=b"JUNK" + bytes(60))    # not a sample's first sector
-    rig.put(12, b"")                                        # a header that says no frames
+    rig.put(11, sample(50, 1), name=b"JUNK" + bytes(60))  # not a sample's first sector
+    rig.put(12, b"")  # a header that says no frames
     audio = Audio(rig, {10: 960, 11: 960, 12: 960})
     rig.serve(audio)
     assert rig.load() == 1
@@ -409,7 +397,7 @@ def test_a_slot_with_nothing_on_the_drive_is_loaded_as_empty(rig):
 def test_a_full_slot_is_read_to_its_end_and_no_further(rig):
     full = sample(m.REC_MAX, 4)
     rig.put(20, full)
-    rig.put(63, full, name=header(0x7FFFFFFF, 63))          # a length no slot holds
+    rig.put(63, full, name=header(0x7FFFFFFF, 63))  # a length no slot holds
     audio = Audio(rig, {20: 960, 63: 960})
     rig.serve(audio)
     assert rig.load() == 1
@@ -418,7 +406,7 @@ def test_a_full_slot_is_read_to_its_end_and_no_further(rig):
     assert per == 1921 <= SECTORS and len(rig.reads) == 2 * per
     assert all(sector_of(s) <= r < sector_of(s) + SECTORS for s in (20, 63) for r, _ in rig.reads[(s == 63) * per:][:per])
     last = max(off for s, off in audio.asked if s & PUT and off != m.KEEP_DONE)
-    assert last == m.REC_STRIDE - 64                        # the last piece: 64 bytes of it are the slot's, and the audio CPU stops there
+    assert last == m.REC_STRIDE - 64  # the last piece: 64 bytes of it are the slot's, and the audio CPU stops there
     assert not rig.stray
 
 
@@ -431,7 +419,7 @@ def test_nothing_is_done_until_the_audio_cpu_is_up(rig):
 
 def test_an_audio_cpu_that_does_not_answer_ends_it(rig):
     rig.put(10, sample(900, 1))
-    assert rig.load() == 1                                  # nobody serves: the first question runs out of patience
+    assert rig.load() == 1  # nobody serves: the first question runs out of patience
     assert not rig.reads and not rig.stray
 
 
@@ -444,7 +432,7 @@ def test_a_drive_error_stops_it_without_the_last_word(rig, fails):
     assert rig.load() == 1
     assert not audio.done and len(rig.reads) == fails and not rig.stray
     assert [off for s, off in audio.asked if s == 10 | PUT] == [off for off, _ in pieces(sample(2000, 1))][:fails]
-    assert (11, 0) not in audio.asked                       # and the slots after it wait for the next load
+    assert (11, 0) not in audio.asked  # and the slots after it wait for the next load
 
 
 def test_saving_still_keeps_takes(rig):
@@ -463,12 +451,12 @@ def joined(e, rig):
 
     def audio_block():
         box = bytes(rig.mc.read(mm.KEEP_BOX, m.KEEP_SIZE))
-        e.mc.write(BOX, box[:m.KEEP_ACK])                   # the main CPU's fields
-        e.mc.write(BOX + m.KEEP_DATA, box[m.KEEP_DATA:])    # and what it put in the shared one
+        e.mc.write(BOX, box[:m.KEEP_ACK])  # the main CPU's fields
+        e.mc.write(BOX + m.KEEP_DATA, box[m.KEEP_DATA:])  # and what it put in the shared one
         e.block()
         blocks.append(1)
         rig.mc.write(mm.KEEP_BOX + m.KEEP_ACK, bytes(e.mc.read(BOX + m.KEEP_ACK, m.KEEP_SIZE - m.KEEP_ACK)))
-    e.block()                                               # the audio CPU's first block settles the box
+    e.block()  # the audio CPU's first block settles the box
     rig.mc.write(mm.KEEP_BOX, bytes(e.mc.read(BOX, m.KEEP_SIZE)))
     rig.serve(audio_block)
     return blocks
@@ -482,25 +470,24 @@ def take(e, track, n, seed):
 
 
 def test_record_save_record_again_load_and_the_saved_take_is_back(audio, rig):
-    """What was done on the unit on 2026-10-09, where the second take stayed."""
     e = engine(audio)
-    first = take(e, 5, 20, seed=1)                          # stereo sample 6: slots 10 and 11
+    first = take(e, 5, 20, seed=1)  # stereo sample 6: slots 10 and 11
     blocks = joined(e, rig)
-    assert rig.keep() == 1                                  # SAVE PROJECT: the take goes to the drive
+    assert rig.keep() == 1  # SAVE PROJECT: the take goes to the drive
     assert rig.slot(10)[1] == first[0] and rig.slot(11)[1] == first[1]
-    second = take(e, 5, 31, seed=2)                         # the same destination again
+    second = take(e, 5, 31, seed=2)  # the same destination again
     assert second[0] != first[0] and len(second[0]) > len(first[0])
     assert bytes(e.mc.read(buffer_of(10), len(second[0]))) == second[0]
     writes = len(rig.writes)
     del blocks[:]
-    assert rig.load() == 1                                  # LOAD PROJECT
+    assert rig.load() == 1  # LOAD PROJECT
     for k, x in ((10, first[0]), (11, first[1])):
         assert slot_entry(e, k) == (len(x) // 2, buffer_of(k))
         assert bytes(e.mc.read(buffer_of(k), len(x))) == x
         assert e.mc.r32(m.KEPT + 4 * k) == (len(x) // 2) ^ m.KEEP_MARK
     sectors = sum((64 + len(x) + 511) // 512 for x in first)
-    assert len(blocks) == SLOTS + sectors + 2               # a question a slot, a sector a block, a last word for each of the two
-    assert len(rig.writes) == writes and not rig.stray      # the drive was only read
+    assert len(blocks) == SLOTS + sectors + 2  # a question a slot, a sector a block, a last word for each of the two
+    assert len(rig.writes) == writes and not rig.stray  # the drive was only read
     # and it sounds like the first take
     fresh = engine(audio)
     assert take(fresh, 5, 20, seed=1) == first
@@ -515,22 +502,22 @@ def test_a_sample_from_the_drive_recorded_over_is_back_after_a_load(audio, rig):
     left, right = sample(4000, 5), sample(4000, 6)
     rig.put(10, left, name=b"SAMP" + bytes(8) + b"KICK L".ljust(16, b"\0") + bytes(36))
     rig.put(11, right, name=b"SAMP" + bytes(8) + b"KICK R".ljust(16, b"\0") + bytes(36))
-    for k in (10, 11):                                      # the header's length, as Transfer writes it
+    for k in (10, 11):  # the header's length, as Transfer writes it
         first = rig.drive[sector_of(k)]
         rig.drive[sector_of(k)] = first[:8] + (4000).to_bytes(4, "big") + first[12:]
     pool = {10: np.frombuffer(left, dtype=">i2").astype(np.int16), 11: np.frombuffer(right, dtype=">i2").astype(np.int16)}
-    e = engine(audio, pool=pool)                            # as the boot loaded it
+    e = engine(audio, pool=pool)  # as the boot loaded it
     before = heard(e, 5)
     e.set_slot(5, MODE, MONO)
     over = take(e, 5, 9, seed=3)
     assert slot_entry(e, 10) == (len(over[0]) // 2, buffer_of(10))
-    other = take(e, 0, 4, seed=4)                           # a take on slots 0 and 1, where the drive has nothing
+    other = take(e, 0, 4, seed=4)  # a take on slots 0 and 1, where the drive has nothing
     joined(e, rig)
     assert rig.load() == 1
     assert bytes(e.mc.read(buffer_of(10), 8000)) == left and bytes(e.mc.read(buffer_of(11), 8000)) == right
     assert slot_entry(e, 10) == (4000, buffer_of(10)) and slot_entry(e, 11) == (4000, buffer_of(11))
     assert np.array_equal(heard(e, 5), before) and np.any(before)
-    assert slot_entry(e, 0) == (0, buffer_of(0)) and slot_entry(e, 1) == (0, buffer_of(1))    # that take is gone, as after a restart
+    assert slot_entry(e, 0) == (0, buffer_of(0)) and slot_entry(e, 1) == (0, buffer_of(1))  # that take is gone, as after a restart
     assert other[0] and not rig.writes and not rig.stray
 
 

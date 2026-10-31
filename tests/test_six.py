@@ -1,8 +1,4 @@
-"""The six image (engine/sampler.h, SIX): the slim image with a pitched frame summed from six frames, not twelve.
-
-Against the slim image's engine: at a sample's own pitch the sound is the same to
-the bit; pitched, the engine's frames are the table of six's own sum (tools/sinctable.py, interp), two channels and one;
-what it costs; and what it gives up, by the table alone, against the table of twelve. Emulation only."""
+"""The six image (engine/sampler.h, SIX): the slim image with a pitched frame summed from six frames, not twelve."""
 
 import shutil
 

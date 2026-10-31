@@ -1,13 +1,4 @@
-"""The xshare image: the xknob image with knob D the pattern's one crossfade on every track.
-
-
-
-
-The crossfade the pattern has is the largest of the twelve numbers the analog mute makes every block (the sampler
-tracks' knob D, 127 less slot 25, and the analog tracks' own). Every sampler track's D shows it, unless a held step has
-a lock of its own; a turn of D with no step held first gives the turning track that amount, then goes to stock's routine
-the other way round, then takes the others' away. With a step held it locks the step and leaves the holder alone.
-"""
+"""The xshare image: the xknob image with knob D the pattern's one crossfade on every track."""
 import shutil
 
 import pytest
@@ -36,7 +27,8 @@ def main(stock3):
 
 def first(built, track, holder=2, x=60, analog=None):
     """The first page on `track`, every digital track a sampler, `holder` with a crossfade of x in its kit and in the
-    twelve numbers as the analog mute leaves them."""
+    twelve numbers as the analog mute leaves them.
+    """
     r = XK.first(built, track, {t: 44 for t in range(8)})
     for t in range(8):
         r.mc.write(G.KIT + mm.KIT_TRACK * t + mm.KIT_WORDS + 2 * DEC, ((TOP - (x if t == holder else 0)) << 8).to_bytes(2, "big"))
@@ -59,13 +51,13 @@ def test_every_tracks_d_shows_the_patterns_crossfade(main):
         r.value = lambda holder, record, own=own: own if record == R_DEC else r.mode << 8
         assert text(r, own) == "XF60"
         r.show()
-        assert r.arcs == [(60 << 8, 102, 34)]                  # the picture is drawn with the crossfade itself
+        assert r.arcs == [(60 << 8, 102, 34)]  # the picture is drawn with the crossfade itself
 
 
 def test_a_held_steps_lock_shows_its_own(main):
     r = first(main, 5)
     r.value = lambda holder, record: (TOP << 8) if record == R_DEC else r.mode << 8
-    assert text(r, 27 << 8) == "XF100"                          # not the track's own value: a lock
+    assert text(r, 27 << 8) == "XF100"  # not the track's own value: a lock
 
 
 def test_a_turn_on_another_track_carries_the_amount_and_takes_it(main):

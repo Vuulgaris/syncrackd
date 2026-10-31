@@ -1,22 +1,4 @@
-"""The stereo image's second build: the same frames for less work (engine/sampler.c and engine/stub.S built with QUICK).
-
-
-Pitched, a stereo voice summed sixteen
-frames twice a frame, 32 multiplies and 121 instructions a sum, in a loop that asked after the walls and the
-fades at every frame: eight of them made the interrupt 1.37 of stock's heaviest.
-
-Here the sums are made in the multiply and accumulate unit, as stock makes its own, a run of frames a call
-(hq_run), in Twinshot's update and render. What is held, all of it in emulation:
-  - What comes out is what came out. The engine is the reference model bit for bit at seven pitches, with the
-    knobs moving, and within reach of a slot's ends; the routine alone is the old arithmetic at every fraction
-    of a frame, both ways through a slot, at the stops; and next to the pitch image's engine, eight tracks at
-    once with stock machines between them, nothing differs anywhere.
-  - It leaves the unit as it found it: the mode word put back, every accumulator at 0 as it was, and every
-    form of instruction in it one that stock's own code runs.
-  - What it costs: eight pitched stereo tracks are under stock's heaviest interrupt.
-
-Not held here: time. The emulator counts instructions; whether the unit now has the time is the unit's to say.
-"""
+"""The stereo image."""
 import shutil
 
 import numpy as np
@@ -42,7 +24,7 @@ pytestmark = pytest.mark.skipif(not shutil.which("m68k-elf-gcc"), reason="no Col
 ST, RVALID = 1712, 50
 ROWS = sinctable.rows()
 LONGS_BYTES = 33 * 16 * 4
-SCRATCH = 0x44070000            # free memory for a test's own note, samples and frames
+SCRATCH = 0x44070000  # free memory for a test's own note, samples and frames
 
 
 @pytest.fixture(scope="module")
@@ -71,8 +53,9 @@ def descs(official):
 
 
 class Folded(P.HookEngine):
-    """The engine the earlier images' tests are written for, on a one-track image: a stereo note's right channel,
-    which waits in free memory, is shown where those images put it, in the next track's buffer."""
+    """The engine the earlier images' tests are written for, on a one-track image: a stereo note's right channel, which
+    waits in free memory, is shown where those images put it, in the next track's buffer.
+    """
 
     def block(self, trig=0, release=0):
         out = super().block(trig, release)
@@ -95,7 +78,8 @@ def folded(monkeypatch):
 @pytest.mark.parametrize("note", TP.NOTES)
 @pytest.mark.parametrize("case", range(len(CASES)))
 def test_the_engine_is_the_reference_model_bit_for_bit(quick, case, note):
-    """The pitch image's own test, on this engine: whole samples, cut ones, loops, backwards, stereo, the short slot."""
+    """The pitch image's own test, on this engine: whole samples, cut ones, loops, backwards, stereo, the short slot.
+    """
     knobs = CASES[case]
     script = hold(knobs.get("start", 0), knobs.get("length", 127), 40)
     e, left, right = play(quick, script, note=note, **knobs)
@@ -152,16 +136,17 @@ def test_the_loudest_sample_there_can_be_is_held_as_it_was(quick, mode):
     if mode:
         assert np.array_equal(out[:, 1, :].ravel(), np.array(tail(raw_r)))
         assert max(raw_r) == 2 * ref.HQ_TOP and min(raw_r) == -2 * ref.HQ_TOP - 2
-    assert e.mc.emac.overflows == 0                                 # and no accumulator ever passed its 48 bits
+    assert e.mc.emac.overflows == 0  # and no accumulator ever passed its 48 bits
 
 
-SWARM_TYPE, OTHERS = 38, (36, 37, 4)       # stock machines for the tracks that are not ours: SY SWARM, and SY TOY, SY BITS or a drum
+SWARM_TYPE, OTHERS = 38, (36, 37, 4)  # stock machines for the tracks that are not ours: SY SWARM, and SY TOY, SY BITS or a drum
 
 
 def many(built, descs, seed, blocks=70):
     """Eight tracks for a while. 0 and 4 stereo samplers (1 and 5 left silent: the earlier images put a right channel
-    there), two more mono samplers, two stock machines; samples, pitches, notes and knobs moving.
-    -> what each block left in the eight buffers, the right channels folded in."""
+    there), two more mono samplers, two stock machines; samples, pitches, notes and knobs moving. -> what each block
+    left in the eight buffers, the right channels folded in.
+    """
     rng = np.random.default_rng(seed)
     e = P.engine(built, pool=POOL)
     stockers = {(2, 7)[seed % 2]: SWARM_TYPE, (6, 3)[seed % 2]: OTHERS[seed % 3]}
@@ -197,7 +182,8 @@ def many(built, descs, seed, blocks=70):
 @pytest.mark.parametrize("seed", range(6))
 def test_next_to_the_pitch_images_engine_nothing_differs(quick, pitch, descs, seed):
     """Not the model: the engine this one replaces, the whole voice loop, eight tracks at once. A stereo track's two
-    channels, the mono ones, and the stock machines between them, whose own sums use the same accumulators."""
+    channels, the mono ones, and the stock machines between them, whose own sums use the same accumulators.
+    """
     a, ea = many(pitch, descs, seed)
     b, eb = many(quick, descs, seed)
     assert np.array_equal(a, b)
@@ -217,7 +203,6 @@ def old_sum(x16, f):
 
 
 def old_frame(x, pad, pos):
-    """A frame of one channel as engine/sampler.c picked it before: x the slot, pad its 45 words around the two ends."""
     i, f, n = pos >> 12, pos & 0xfff, len(x)
     if not f:
         return int(x[i]) * 65536
@@ -245,7 +230,7 @@ class Alone:
             self.e = P.engine(built)
         finally:
             engine_mod.Machine = real
-        self.e.block()                                              # the table is made
+        self.e.block()  # the table is made
         self.mc, self.left, self.right = self.e.mc, left, right
         self.mc.write(self.LEFT, np.asarray(left, dtype=">i2").tobytes())
         self.mc.write(self.RIGHT, np.asarray(right, dtype=">i2").tobytes())
@@ -281,18 +266,19 @@ def loud(n, seed):
 @pytest.mark.parametrize("native", [True, False])
 @pytest.mark.parametrize("stereo", [True, False])
 def test_the_routine_is_the_old_arithmetic_at_every_fraction_of_a_frame(quick, stereo, native):
-    """Every fraction there is, 4096 of them, on frames of noise and of full scale switching: frame for frame what
-    the pitch image's routine made, on both models of the unit this bench has."""
+    """Every fraction there is, 4096 of them, on frames of noise and of full scale switching: frame for frame what the
+    pitch image's routine made, on both models of the unit this bench has.
+    """
     left, right = loud(600, 1), loud(600, 2)
     a = Alone(quick, left, right, native)
     held = 0
     for start in range(0, 4096, 32):
-        pos, inc = (40 + start % 500) << 12 | start, 4097               # the fraction moves on one a frame
+        pos, inc = (40 + start % 500) << 12 | start, 4097  # the fraction moves on one a frame
         got, at, l, r = a.run(pos, inc, 1, 0, 32, 0, 0x7fffffff, stereo)
         wl, wr = a.want(pos, inc, 32, stereo)
         assert got == 32 and at == pos + 32 * inc
         assert list(l) == wl and (not stereo or list(r) == wr)
-        assert stereo or set(r) == {0x55555555}                         # one channel: the other's frames are not touched
+        assert stereo or set(r) == {0x55555555}  # one channel: the other's frames are not touched
         held += sum(abs(v) >= 0x7ffffffe for v in wl + wr)
     assert held > 20 and a.mc.emac.overflows == 0
 
@@ -300,8 +286,9 @@ def test_the_routine_is_the_old_arithmetic_at_every_fraction_of_a_frame(quick, s
 @pytest.mark.parametrize("n", [3, 15, 16, 17, 24, 200])
 @pytest.mark.parametrize("stereo", [True, False])
 def test_and_wherever_in_a_slot_the_frame_is(quick, n, stereo):
-    """Both ways through slots of a few frames and of many, a step that lands on frames of the sample and between
-    them: in the slot, and from what a note's start writes out of its ends."""
+    """Both ways through slots of a few frames and of many, a step that lands on frames of the sample and between them:
+    in the slot, and from what a note's start writes out of its ends.
+    """
     a = Alone(quick, loud(max(n, 6), n)[:n], loud(max(n, 6), n + 50)[:n])
     last = (n - 1) << 12
     for inc in (1, 517, 2048, 4096, 5000, 9000):
@@ -316,18 +303,20 @@ def test_and_wherever_in_a_slot_the_frame_is(quick, n, stereo):
 
 
 def test_a_run_stops_at_the_frame_that_is_not_in_its_stretch(quick):
-    """From frame n of a block to the first whose place is before lo or span past it; one frame wherever it is, when asked."""
+    """From frame n of a block to the first whose place is before lo or span past it; one frame wherever it is, when
+    asked.
+    """
     a = Alone(quick, loud(300, 4), loud(300, 5))
     pos, inc = (50 << 12) + 77, 3000
-    got, at, l, r = a.run(pos, inc, 1, 5, 32, 0, pos + 10 * inc - 1)              # ten frames' places are under the end
+    got, at, l, r = a.run(pos, inc, 1, 5, 32, 0, pos + 10 * inc - 1)  # ten frames' places are under the end
     wl, wr = a.want(pos, inc, 10)
     assert got == 15 and at == pos + 10 * inc
     assert list(l[5:15]) == wl and list(r[5:15]) == wr and set(l[:5]) | set(l[15:]) | set(r[:5]) | set(r[15:]) == {0x55555555}
-    got, at, l, r = a.run(pos, inc, -1, 0, 32, pos - 3 * inc, 0x7fffffff)         # backwards: down to lo and no further
+    got, at, l, r = a.run(pos, inc, -1, 0, 32, pos - 3 * inc, 0x7fffffff)  # backwards: down to lo and no further
     assert got == 4 and at == pos - 4 * inc and list(l[:4]) == a.want(pos, -inc, 4)[0]
-    got, at, l, r = a.run(pos, inc, 1, 9, 32, pos + 1, 100)                       # not in the stretch at all: nothing is made
+    got, at, l, r = a.run(pos, inc, 1, 9, 32, pos + 1, 100)  # not in the stretch at all: nothing is made
     assert got == 9 and at == pos and set(l) | set(r) == {0x55555555}
-    got, at, l, r = a.run(pos, inc, 1, 9, 10, -0x80000000, 0xffffffff)            # one frame, wherever
+    got, at, l, r = a.run(pos, inc, 1, 9, 10, -0x80000000, 0xffffffff)  # one frame, wherever
     assert got == 10 and at == pos + inc and (l[9], r[9]) == (a.want(pos, inc, 1)[0][0], a.want(pos, inc, 1)[1][0])
     assert set(l[:9]) | set(l[10:]) == {0x55555555}
 
@@ -337,7 +326,7 @@ def test_a_run_stops_at_the_frame_that_is_not_in_its_stretch(quick):
 @pytest.mark.parametrize("macsr", [0xa0, 0x20, 0xa6, 0])
 def test_the_mode_word_is_put_back_and_the_accumulators_left_at_nothing(quick, macsr):
     a = Alone(quick, loud(300, 6), loud(300, 7))
-    regs = [0x1000 * k + 0x123 for k in range(2, 8)] + [0x44070800 + 4 * k for k in range(2, 7)]      # d2-d7, a2-a6
+    regs = [0x1000 * k + 0x123 for k in range(2, 8)] + [0x44070800 + 4 * k for k in range(2, 7)]  # d2-d7, a2-a6
     for k, v in zip(list(range(2, 8)) + list(range(10, 15)), regs):
         a.mc.set_reg(k, v)
     wrote = []
@@ -348,12 +337,13 @@ def test_the_mode_word_is_put_back_and_the_accumulators_left_at_nothing(quick, m
     assert got == 32 and a.mc.emac.macsr == macsr and a.mc.emac.acc == [0, 0, 0, 0]
     assert [a.mc.reg(k) for k in list(range(2, 8)) + list(range(10, 15))] == regs
     ok = [(a.OUT_L, a.OUT_L + 128), (a.OUT_R, a.OUT_R + 128), (a.NOTE + 8, a.NOTE + 12), (m.STACK_TOP - 0x200, m.STACK_TOP)]
-    assert wrote and all(any(lo <= w and w + s <= hi for lo, hi in ok) for w, s in wrote)       # the frames, the place, its own stack
+    assert wrote and all(any(lo <= w and w + s <= hi for lo, hi in ok) for w, s in wrote)  # the frames, the place, its own stack
 
 
 def test_in_the_voice_loop_it_finds_the_unit_as_it_leaves_it(quick, factory):
     """The real interrupt, eight tracks, stock's heaviest machine on two of them: at every call the mode word is the
-    voice loop's and the four accumulators hold nothing, which is how the routine leaves them."""
+    voice loop's and the four accumulators hold nothing, which is how the routine leaves them.
+    """
     image, syms = quick
     r = Rig(image)
     r.load_pool(pool())
@@ -380,9 +370,10 @@ def test_in_the_voice_loop_it_finds_the_unit_as_it_leaves_it(quick, factory):
 
 
 def shape(i):
-    """What kind of instruction of the multiply and accumulate unit this is, registers and numbers apart: for a
-    product, the kinds of register multiplied, and for one that fetches, how the place is named, the kind of
-    register fetched into, and whether that is one of the two multiplied."""
+    """What kind of instruction of the multiply and accumulate unit this is, registers and numbers apart: for a product,
+    the kinds of register multiplied, and for one that fetches, how the place is named, the kind of register fetched
+    into, and whether that is one of the two multiplied.
+    """
     side = lambda reg: "a" if reg >= 8 else "d"
     if i.kind == "mac":
         fetch = (i.mem[0], side(i.rw), i.rw in (i.rx, i.ry)) if i.mem else ()
@@ -391,11 +382,12 @@ def shape(i):
 
 
 def test_every_form_of_instruction_in_it_is_one_stock_runs(stock, quick):
-    """The bench's model of that unit was made for stock's code and checked on it: nothing here asks more of it.
-    Signed fractions and longs only, a product with or without a fetch, by register or by a place past one, into
-    a data or an address register; the mode word saved, set to stock's and put back."""
+    """The bench's model of that unit was made for stock's code and checked on it: nothing here asks more of it. Signed
+    fractions and longs only, a product with or without a fetch, by register or by a place past one, into a data or an
+    address register; the mode word saved, set to stock's and put back.
+    """
     image, syms = quick
-    def forms(mc, spans):                                           # the instructions of that unit, as the bench takes them over
+    def forms(mc, spans):  # the instructions of that unit, as the bench takes them over
         return {shape(i) for at, i in mc.emac_sites.items() if any(lo <= at < hi for lo, hi in spans)}
     theirs = forms(Rig(stock).mc, [(m.BASE, m.CODE_END)])
     lo, hi = m.QUICK_CAVES["k"]
@@ -417,15 +409,16 @@ WANT = [[c << 15 for c in row] for row in ROWS]
 
 
 def test_the_table_is_33_rows_of_longs_made_at_every_start(quick):
-    """A number of the table shifted up 15, in a long. Made on the first interrupt after a start, and after stock's
-    reset of the first voice, from the rows in the image: nothing in that memory is believed."""
+    """A number of the table shifted up 15, in a long. Made on the first interrupt after a start, and after stock's reset
+    of the first voice, from the rows in the image: nothing in that memory is believed.
+    """
     e = P.engine(quick)
     assert e.mc.r32(m.HQ_MADE) == 0
     e.mc.write(m.HQ_LONGS - 16, b"\xa5" * (LONGS_BYTES + 32))
     e.block()
     assert e.mc.r32(m.HQ_MADE) == sinctable.magic() and longs_of(e) == WANT
     assert e.mc.read(m.HQ_LONGS - 16, 16) == e.mc.read(m.HQ_LONGS + LONGS_BYTES, 16) == b"\xa5" * 16
-    for trig in (0xff, 0, 0):                                       # each voice's first note resets it, the first voice too: made again
+    for trig in (0xff, 0, 0):  # each voice's first note resets it, the first voice too: made again
         e.block(trig=trig)
     assert e.mc.r32(m.HQ_MADE) == sinctable.magic() and longs_of(e) == WANT
     wrote = []
@@ -434,7 +427,7 @@ def test_the_table_is_33_rows_of_longs_made_at_every_start(quick):
     for b in range(4):
         e.block(trig=0 if b else 1)
     pads = range(m.HQ_PADS, m.HQ_PADS + 8 * m.HQ_PAD_BYTES)
-    assert all(a in pads for a in wrote)                            # made: left alone. And the rows of words are not written at all
+    assert all(a in pads for a in wrote)  # made: left alone. And the rows of words are not written at all
     e.mc.write(m.HQ_LONGS + 200, fw.sb("9f7cc770a4cd8734"))
     e.mc.call(m.VOICE_RESET, e.voice(0))
     assert e.mc.r32(m.HQ_MADE) == 0
@@ -444,9 +437,10 @@ def test_the_table_is_33_rows_of_longs_made_at_every_start(quick):
 
 
 def test_a_sum_is_under_32_bits_at_every_step(quick):
-    """Why an accumulator read back is the sum itself, wherever the unit holds one to: a row's numbers add up to
-    under two in size, so sixteen full-scale frames times them, in any order and stopped anywhere, stay inside
-    32 bits, where neither the 48 the unit sums in nor the 40 it may hold to is met."""
+    """Why an accumulator read back is the sum itself, wherever the unit holds one to: a row's numbers add up to under
+    two in size, so sixteen full-scale frames times them, in any order and stopped anywhere, stay inside 32 bits,
+    where neither the 48 the unit sums in nor the 40 it may hold to is met.
+    """
     assert max(sum(abs(c) for c in row) for row in ROWS) == 63807 and 63807 * 32768 < 2 ** 31
     assert all(abs(c << 15) < 2 ** 31 for row in ROWS for c in row)
     # a frame at the top of a long times a number shifted up 15 has nothing under the 40 bits the unit keeps
@@ -464,24 +458,23 @@ def test_the_tables_memory_is_no_one_elses(stock, quick):
     for image in (stock, quick[0]):
         named = [o for o in range(0, len(image) - 3, 2) if m.HQ_LONGS <= int.from_bytes(image[o:o + 4], "big") < end]
         assert all(any(m.off(lo) <= o < m.off(hi) for lo, hi in ours) for o in named) and (named or image is stock)
-    assert len([o for o in range(0, len(quick[0]) - 3, 2) if int.from_bytes(quick[0][o:o + 4], "big") == m.HQ_TABLE]) == 0     # the rows of words: gone
+    assert len([o for o in range(0, len(quick[0]) - 3, 2) if int.from_bytes(quick[0][o:o + 4], "big") == m.HQ_TABLE]) == 0  # the rows of words: gone
 
 
 # ---- what it costs ---------------------------------------------------------------------------------------
 
-COST = dict(own=76674, one=58263, four=79907, eight=108774, mono=66423, mono_own=42309)     # the third build's: tests/test_lean.py
+COST = dict(own=76674, one=58263, four=79907, eight=108774, mono=66423, mono_own=42309)
 
 
 def test_eight_pitched_stereo_tracks_are_under_stocks_heaviest_interrupt(quick, pitch, factory):
-    """Instructions an interrupt, eight sampler tracks looping. The first build's eight pitched stereo tracks were
-    160,319, 1.37 of SY SWARM on all eight; they are under it now, and everything else is less than it was too."""
+    """Instructions an interrupt, eight sampler tracks looping."""
     image, _ = quick
     got = dict(own=whole(image, factory, 8, 60)[3], one=whole(image, factory, 1, 55.25)[3], four=whole(image, factory, 4, 55.25)[3],
                eight=whole(image, factory, 8, 55.25)[3], mono=whole(image, factory, 8, 55.25, mode=0)[3],
                mono_own=whole(image, factory, 8, 60, mode=0)[3])
     assert all(abs(got[k] - COST[k]) <= 40 for k in COST), got
     assert got["eight"] < SWARM and got["own"] < 0.73 * SWARM
-    for note in (36, 48, 67):                                       # the same at any pitch between frames
+    for note in (36, 48, 67):  # the same at any pitch between frames
         assert abs(whole(image, factory, 8, note)[3] - got["eight"]) < 150
     was = whole(pitch[0], factory, 8, 55.25, mode=0, earlier=True)[3], whole(pitch[0], factory, 8, 60, mode=0, earlier=True)[3]
     assert was[0] - got["mono"] > 19000 and was[1] - got["mono_own"] > 8500
@@ -490,7 +483,8 @@ def test_eight_pitched_stereo_tracks_are_under_stocks_heaviest_interrupt(quick, 
 @pytest.mark.parametrize("note", [36, 24, 12])
 @pytest.mark.parametrize("mode", [0, 1])
 def test_a_low_notes_blocks_within_reach_of_an_end_cost_what_the_rest_do(quick, note, mode):
-    """Far below its pitch a note is within reach of its slot's end for blocks. Those frames are made by the same run."""
+    """Far below its pitch a note is within reach of its slot's end for blocks. Those frames are made by the same run.
+    """
     pool = TP.ends_pool(4000)
     e, left, right, counts = TP.low(quick, pool, note, 40, warm=True, mode=mode)
     assert max(counts[1:]) - min(counts[1:]) < 220 and left.any()
@@ -501,7 +495,8 @@ def test_a_low_notes_blocks_within_reach_of_an_end_cost_what_the_rest_do(quick, 
 def test_it_is_in_twinshots_update_and_render_and_what_it_replaces_is_gone(stock, quick, pitch):
     """Stock Twinshot's two routines, which no table of ours points at and nothing else reaches (tests/test_stereo.py
     holds that of the image without them): 830 bytes, the first use of that room. The two-channel sum and the
-    routine's ends are there; the one-channel sum is in the room the old routine left in the sampler's second run."""
+    routine's ends are there; the one-channel sum is in the room the old routine left in the sampler's second run.
+    """
     image, syms = quick
     lo, hi = m.QUICK_CAVES["k"]
     assert (lo, hi) == m.TWIN_ROOM["update and render"] == (m.TWIN_UPDATE, 0x40009b1a) and hi - lo == 830
@@ -510,5 +505,5 @@ def test_it_is_in_twinshots_update_and_render_and_what_it_replaces_is_gone(stock
     ylo, yhi = m.CAVES["y"]
     assert all(ylo <= syms[n] < yhi for n in ("hq_one", "sampler_hook")) and "hq_mid" not in syms and "hq_mid" in pitch[1]
     assert m.u32(image, m.UPDATE_TABLE + 4 * m.TWIN_ENGINE) == syms["sampler_update"] and m.u32(image, m.RENDER_TABLE + 4 * m.TWIN_ENGINE) == syms["sampler_render"]
-    other = m.TWIN_ROOM["player and filter"]                        # Twinshot's other run: the third build's (tests/test_lean.py)
+    other = m.TWIN_ROOM["player and filter"]
     assert pitch[0][m.off(other[0]):m.off(other[1])] == stock[m.off(other[0]):m.off(other[1])]

@@ -1,6 +1,4 @@
-"""The pad7 tool: the atrig image with section 7 grown to its most by zeros, to show on the unit that the updater and the
-boot take a longer section 7 (docs/FINDINGS.md, "Room past section 7's end"). Nothing of the program changes: the zeros
-land past 0x4005df10, inside what the start-up clears (0x4004f6e0..0x4404f980) before anything runs."""
+"""The pad7 tool."""
 import pytest
 
 from tools import build, ele3, fw

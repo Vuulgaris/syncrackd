@@ -1,15 +1,4 @@
-"""Names and words on screen: the "screen" image (engine/knobtext.c). OS 1.42 only.
-
-SMPL shows the stereo sample's name when MODE counts stereo samples, LOOP and MODE show
-words. One routine in the main program, called where stock calls its slot text function.
-
-Emulated here: our routine, alone and through the stock code that calls a record's text
-function, with the manager, the object that holds a track's values and the slot text function
-played by the test; and the stock slot text function itself up to the name it asks the sample
-store for. Not emulated, because the main program is not run as a whole: that the manager's
-routine gives the active track's values on the unit, and what the unit draws with the text:
-see docs/FINDINGS.md.
-"""
+"""Names and words on screen: the "screen" image (engine/knobtext.c). OS 1.42 only."""
 import shutil
 
 import pytest
@@ -30,7 +19,7 @@ TEXT0 = mm.UI_TABLE + 0x14
 SMPL, LOOP, MODE = (TEXT0 + mm.UI_STRIDE * r for r in (mm.R_SMPL, mm.R_LOOP, mm.R_MODE))
 MONO, PAIRS = (0, 4), (1, 2, 3, 5)
 NO_SAMPLE = "NO SAMPLE"
-NAME_FETCH, SPRINTF = 0x401113b6, 0x40000e82      # in the stock slot text function: (store, slot, string), (out, format, ...)
+NAME_FETCH, SPRINTF = 0x401113b6, 0x40000e82  # in the stock slot text function: (store, slot, string), (out, format, ...)
 SLOT_GUARD, STORE_GLOBAL = 0x41bab1b0, 0x444e239c
 
 
@@ -61,14 +50,15 @@ def stock_number(value):
 
 
 class Screen:
-    """The patched main program with the manager, the holder of a track's values and (unless
-    real_slot_text) the stock slot text function played by the test."""
+    """The patched main program with the manager, the holder of a track's values and (unless real_slot_text) the stock
+    slot text function played by the test.
+    """
 
     def __init__(self, built, mode=0, names=None, real_slot_text=False):
         image, self.syms = built
         mc = self.mc = Machine()
         mc.map(0x40000000, 0x800000)
-        mc.map(0x41b90000, 0x30000)                        # the function objects, the table, the text buffer
+        mc.map(0x41b90000, 0x30000)  # the function objects, the table, the text buffer
         mc.map(STORE_GLOBAL & ~0xFFF, 0x1000)
         mc.map(HEAP, 0x10000)
         mc.write(mm.BASE, image)
@@ -81,8 +71,8 @@ class Screen:
         self.stub(mm.KNOB_HOLDER, lambda manager, record, track: self.ask(manager, record, track))
         self.stub(VALUE_FN, lambda holder, record: self.value(holder, record))
         if real_slot_text:
-            mc.write(SLOT_GUARD, b"\x01")                  # its one-time set-up is done
-            mc.w32(STORE_GLOBAL, 0x12345678)               # and the sample store exists
+            mc.write(SLOT_GUARD, b"\x01")  # its one-time set-up is done
+            mc.w32(STORE_GLOBAL, 0x12345678)  # and the sample store exists
             self.stub(NAME_FETCH, lambda store, slot, string: self.fetch(store, slot))
             self.stub(SPRINTF, lambda out, fmt, arg: self.put(out, self.cstr(arg)))
         else:
@@ -114,7 +104,7 @@ class Screen:
 
     def fetch(self, store, slot):
         self.fetched.append((store, slot))
-        return 0                                           # no sample there: the stock function writes NO SAMPLE
+        return 0  # no sample there: the stock function writes NO SAMPLE
 
     def put(self, out, text):
         self.mc.write(out, text.encode() + b"\0")
@@ -146,7 +136,7 @@ def test_code_space_is_a_run_nothing_reaches(stock3, official, screen):
     # the stock function's address is in the program once, where its object is built: that is the place changed
     assert stock3.count(mm.TEXT_SLOT.to_bytes(4, "big")) == 1
     cave = image[mm.off(lo):mm.off(hi)]
-    assert image.count(mm.TEXT_SLOT.to_bytes(4, "big")) == cave.count(mm.TEXT_SLOT.to_bytes(4, "big")) == 2     # our two calls of it
+    assert image.count(mm.TEXT_SLOT.to_bytes(4, "big")) == cave.count(mm.TEXT_SLOT.to_bytes(4, "big")) == 2  # our two calls of it
     assert image[mm.off(mm.TEXT_SLOT_SITE):mm.off(mm.TEXT_SLOT_SITE) + 6] == b"\x22\x3c" + syms["knob_text"].to_bytes(4, "big")
     # the stock function itself is untouched: our routine calls it
     end = mm.TEXT_FOR
@@ -179,7 +169,7 @@ def test_in_mono_smpl_shows_what_stock_shows(screen, mode):
     s = Screen(screen, mode, names)
     for v in range(128):
         assert s.text(SMPL, v << 8) == names.get(stock_number(v << 8), NO_SAMPLE)
-    assert [value for _, value in s.slot_texts] == [v << 8 for v in range(128)]      # the value goes through as it came
+    assert [value for _, value in s.slot_texts] == [v << 8 for v in range(128)]  # the value goes through as it came
     assert all(obj == SMPL for obj, _ in s.slot_texts) and not s.stray
 
 
@@ -209,7 +199,7 @@ def test_past_32_there_is_no_stereo_sample(screen, mode):
 def test_mode_is_asked_the_way_a_page_asks(screen):
     s = Screen(screen, 1, {1: "A L"})
     assert s.text(SMPL, knob_value(1)) == "A"
-    assert s.asked == [(MANAGER, mm.R_MODE, 0xFFFFFFFF)]                # the manager, MODE's record, the active track
+    assert s.asked == [(MANAGER, mm.R_MODE, 0xFFFFFFFF)]  # the manager, MODE's record, the active track
     assert s.valued == [(HOLDER, mm.R_MODE)]
 
 
@@ -217,8 +207,8 @@ def test_loop_and_mode_read_as_words(screen):
     s = Screen(screen)
     assert [s.text(MODE, v << 8) for v in range(6)] == ["MONO", "STEREO", "REC MAIN", "REC EXT", "CHAIN", "ST CHAIN"]
     assert [s.text(LOOP, v << 8) for v in range(3)] == ["OFF", "FWD", "PING"]
-    assert s.text(MODE, (1 << 8) + 0xff) == "STEREO"                    # the fraction of an 8.8 value is not read
-    assert not s.asked and not s.slot_texts and not s.stray             # no other routine is needed for a word
+    assert s.text(MODE, (1 << 8) + 0xff) == "STEREO"  # the fraction of an 8.8 value is not read
+    assert not s.asked and not s.slot_texts and not s.stray  # no other routine is needed for a word
 
 
 def test_a_value_no_knob_has_reads_as_its_number(screen):
@@ -232,7 +222,7 @@ def test_a_value_no_knob_has_reads_as_its_number(screen):
 def test_an_object_that_is_not_loops_or_modes_is_treated_as_smpl(screen, obj):
     s = Screen(screen, 1, {1: "ONE L", 5: "THREE L"})
     assert s.text(obj, knob_value(3)) == "THREE"
-    assert s.slot_texts == [(obj, knob_value(5))]                       # the object is passed on as it came
+    assert s.slot_texts == [(obj, knob_value(5))]  # the object is passed on as it came
     s = Screen(screen, 0, {3: "THREE"})
     assert s.text(obj, knob_value(3)) == "THREE"
 
@@ -249,7 +239,7 @@ def test_through_the_stock_code_that_asks_for_a_records_text(screen):
     s = Screen(screen, 1, {3: "PAD L", 4: "PAD R"})
     for record in (mm.R_SMPL, mm.R_LOOP, mm.R_MODE):
         obj = TEXT0 + mm.UI_STRIDE * record
-        s.mc.w32(obj + 8, 1)                                            # a filled object, as the start-up routine leaves it
+        s.mc.w32(obj + 8, 1)  # a filled object, as the start-up routine leaves it
         s.mc.w32(obj + 12, s.syms["knob_text"])
     for record, value, text in ((mm.R_SMPL, knob_value(2), "PAD"), (mm.R_SMPL, knob_value(2, True), "PAD"),
                                 (mm.R_SMPL, knob_value(40), NO_SAMPLE), (mm.R_LOOP, 2 << 8, "PING"), (mm.R_MODE, 3 << 8, "REC EXT")):
@@ -266,7 +256,7 @@ def test_the_stock_slot_text_function_looks_up_the_left_slot(screen, mode):
         for reverse in (False, True):
             assert s.text(SMPL, knob_value(n, reverse)) == NO_SAMPLE
     step = 2 if mode in PAIRS else 1
-    assert [slot for _, slot in s.fetched] == [step * (n - 1) for n in (1, 2, 17, 32) for _ in range(2)]     # slots count from 0
+    assert [slot for _, slot in s.fetched] == [step * (n - 1) for n in (1, 2, 17, 32) for _ in range(2)]  # slots count from 0
     assert all(store == 0x12345678 for store, _ in s.fetched)
 
 
@@ -276,8 +266,8 @@ def test_the_words_fit_where_stock_put_a_sample_name(screen):
     words = image[mm.off(lo):mm.off(syms["put"])].split(b"\0")
     words = [w.decode() for w in words if w]
     assert words == ["MONO", "STEREO", "REC MAIN", "REC EXT", "CHAIN", "ST CHAIN", "OFF", "FWD", "PING", NO_SAMPLE]
-    assert max(map(len, words)) <= 9                                    # a slot's name is up to 15
-    assert image[mm.off(0x40251d2f):mm.off(0x40251d2f) + 10] == NO_SAMPLE.encode() + b"\0"     # stock's own words for an empty slot
+    assert max(map(len, words)) <= 9  # a slot's name is up to 15
+    assert image[mm.off(0x40251d2f):mm.off(0x40251d2f) + 10] == NO_SAMPLE.encode() + b"\0"  # stock's own words for an empty slot
 
 
 def test_screen_image_builds_and_the_others_do_not_contain_it(official_path, official, stock3, screen):
@@ -289,7 +279,7 @@ def test_screen_image_builds_and_the_others_do_not_contain_it(official_path, off
         if sid not in (3, 7):
             assert built.container.by_id(sid).stored == official.container.by_id(sid).stored
     dbl = build.build(official_path, log=quiet, double=True)[2]
-    assert built.section(7) == dbl.section(7)                           # nothing changes on the audio CPU
+    assert built.section(7) == dbl.section(7)  # nothing changes on the audio CPU
     lo, hi = mm.CAVE_TEXT
     assert dbl.section(3)[mm.off(lo):mm.off(hi)] == stock3[mm.off(lo):mm.off(hi)]
     assert dbl.section(3)[mm.off(mm.TEXT_SLOT_SITE):mm.off(mm.TEXT_SLOT_SITE) + 6] == b"\x22\x3c" + mm.TEXT_SLOT.to_bytes(4, "big")

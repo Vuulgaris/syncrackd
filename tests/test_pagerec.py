@@ -1,11 +1,4 @@
-"""Recording with the sampling page: record and its source as bits of MODE, the take's
-destination from the page. The "page" image.
-
-Two of its three pieces are here, each emulated on its own: the audio CPU's recorder (engine/sampler.c
-built with PAGE, inside the real voice loop hook) and the main CPU's feed (engine/recfeed.c built with
-PAGE, with the mixer stubbed). The page itself is in tests/test_page.py. Not emulated: the two CPUs
-running against each other, and the unit.
-"""
+"""Recording with the sampling page: record and its source as bits of MODE, the take's"""
 import shutil
 
 import numpy as np
@@ -22,7 +15,7 @@ pytestmark = pytest.mark.skipif(not shutil.which("m68k-elf-gcc"), reason="no Col
 
 SAMPLER = 44
 TUNE, SAMPLE, LENGTH, MODE, DECAY = 18, 19, 21, 23, 25
-MONO, STEREO, REC, EXT = 0, m.MODE_STEREO, m.MODE_REC, m.MODE_EXT       # MODE's three switches
+MONO, STEREO, REC, EXT = 0, m.MODE_STEREO, m.MODE_REC, m.MODE_EXT  # MODE's three switches
 BOX = m.REC_BOX
 MARKS = m.REC_MARK.to_bytes(4, "big") + (m.REC_MARK ^ 0xFFFFFFFF).to_bytes(4, "big")
 SMPL = m.DEST_SMPL
@@ -65,14 +58,15 @@ class HookEngine(Engine):
 
 
 def engine(built, mode=MONO, pool=None):
-    """Every track a sampler with SMPL on t + 1, none in a record MODE. Mono: a stereo one's right channel
-    takes the next track, so a test sets STEREO on the one track it is about."""
+    """Every track a sampler with SMPL on t + 1, none in a record MODE. Mono: a stereo one's right channel takes the next
+    track, so a test sets STEREO on the one track it is about.
+    """
     image, syms = built
     e = HookEngine(image, loop_entry=syms["sampler_hook"])
-    e.mc.map(0, 0x2000)                                    # the shared window
-    e.mc.write(0x800, bytes(np.random.default_rng(5).integers(0, 256, 0x800, dtype=np.uint8)))   # as a boot leaves it
+    e.mc.map(0, 0x2000)  # the shared window
+    e.mc.write(0x800, bytes(np.random.default_rng(5).integers(0, 256, 0x800, dtype=np.uint8)))  # as a boot leaves it
     e.mc.write(m.MAILBOX, bytes(16))
-    e.mc.write(m.KEEP_BOX, bytes(m.KEEP_SIZE))             # no save is asking for a take
+    e.mc.write(m.KEEP_BOX, bytes(m.KEEP_SIZE))  # no save is asking for a take
     e.load_pool(pool or {})
     for t in range(m.N_VOICES):
         e.set_machine(t, SAMPLER)
@@ -156,12 +150,12 @@ def test_a_destination_is_for_takes_only_and_only_its_own_tracks(audio):
     pool = {k: rng.integers(-20000, 20000, 3000).astype(np.int16) for k in range(16)}
     e = engine(audio, pool=pool)
     e.set_slot(4, MODE, REC)
-    box(e, dest={0: 30, 2: 31, 4: 20})                       # tracks 1 and 3 play: their destinations are not asked
+    box(e, dest={0: 30, 2: 31, 4: 20})  # tracks 1 and 3 play: their destinations are not asked
     data = noise(14, 4)
     out = [fed(e, data[b], trig=0b10101 if b == 0 else 0, release=0b10101 if b == 10 else 0) for b in range(14)]
     out = np.concatenate(out, axis=1)
-    assert np.any(out[0]) and np.any(out[2])                 # tracks 1 and 3 play the samples SMPL is on
-    assert not np.any(out[4])                                # the one in record is silent
+    assert np.any(out[0]) and np.any(out[2])  # tracks 1 and 3 play the samples SMPL is on
+    assert not np.any(out[4])  # the one in record is silent
     assert is_take(taken(e, 40), data, 0, 10) and untouched(e, but=tuple(range(16)) + (40, 41))
     assert all(slot_entry(e, k)[1] != m.REC_BASE + m.REC_STRIDE * k for k in range(16))  # nothing they play was taped over
 
@@ -176,9 +170,9 @@ def test_switching_the_record_bit_off_ends_the_take(audio):
     for b in range(6, 12):
         fed(e, data[b])
     got = taken(e, 2)
-    assert 4 * BLOCK <= len(got) <= 7 * BLOCK                # it stopped when REC went off, with the key still held
+    assert 4 * BLOCK <= len(got) <= 7 * BLOCK  # it stopped when REC went off, with the key still held
     whole = data[:, :, 0].ravel()
-    assert any(np.array_equal(got, whole[a:a + len(got)]) for a in range(0, 3 * BLOCK, BLOCK))    # a stretch of what was fed
+    assert any(np.array_equal(got, whole[a:a + len(got)]) for a in range(0, 3 * BLOCK, BLOCK))  # a stretch of what was fed
 
 
 @pytest.mark.parametrize("marks", [bytes(8), MARKS[:4] + bytes(4), bytes(4) + MARKS[4:], MARKS[4:] + MARKS[:4], b"\xff" * 8])
@@ -188,7 +182,7 @@ def test_a_box_the_page_has_not_set_up_is_not_believed(audio, marks):
     e.set_slot(3, MODE, REC)
     box(e, dest={t: 25 for t in range(8)}, marks=marks)
     data = hold(e, track=3, n=8)
-    assert is_take(taken(e, 6), data, 0, 8) and untouched(e, but=(6, 7))      # where SMPL points, not where the junk says
+    assert is_take(taken(e, 6), data, 0, 8) and untouched(e, but=(6, 7))  # where SMPL points, not where the junk says
 
 
 def test_a_number_past_the_last_stereo_sample_means_smpl(audio):
@@ -208,7 +202,7 @@ def test_the_bit_that_was_chain_no_longer_chains(stock, audio):
         e.block(trig=1)
         return np.concatenate([e.block() for _ in range(40)], axis=1)[:2]
     assert np.array_equal(run(EXT), run(MONO)) and np.array_equal(run(EXT | STEREO), run(STEREO))
-    assert not np.any(run(MONO)[0][-10 * BLOCK:])            # one slot of 400 frames, then silence: the next is not played on
+    assert not np.any(run(MONO)[0][-10 * BLOCK:])  # one slot of 400 frames, then silence: the next is not played on
 
 
 def test_a_new_take_is_not_on_the_drive(audio):
@@ -218,7 +212,7 @@ def test_a_new_take_is_not_on_the_drive(audio):
     e.set_slot(0, MODE, REC)
     box(e, dest={0: 6})
     hold(e, track=0, n=4)
-    assert (e.mc.r32(m.KEPT + 4 * 12), e.mc.r32(m.KEPT + 4 * 13)) == (0, 0)     # so the next project save keeps it
+    assert (e.mc.r32(m.KEPT + 4 * 12), e.mc.r32(m.KEPT + 4 * 13)) == (0, 0)  # so the next project save keeps it
     assert e.mc.r32(m.KEPT + 4 * 14) == 0x1234 + 14
 
 
@@ -232,7 +226,7 @@ def test_the_audio_cpu_reads_the_box_in_words_and_longs_and_writes_nothing_there
     box(e, dest={3: 11})
     hold(e, track=3, n=5)
     assert seen and all(kind == "r" and size in (2, 4) and addr % size == 0 for kind, addr, size in seen)
-    assert (BOX + m.REC_DEST + 6, 2) in {(addr, size) for _, addr, size in seen}       # track 4's destination
+    assert (BOX + m.REC_DEST + 6, 2) in {(addr, size) for _, addr, size in seen}  # track 4's destination
 
 
 def test_the_take_plays_back_when_the_record_bit_goes_off(audio):
@@ -248,7 +242,7 @@ def test_the_take_plays_back_when_the_record_bit_goes_off(audio):
     right = np.concatenate([o[4] for o in out]).astype(np.float64)
     want = taken(e, 6).astype(np.float64), taken(e, 7).astype(np.float64)
     heard = lambda x, w: max(np.corrcoef(x[k:k + 5 * BLOCK], w[:5 * BLOCK])[0, 1] for k in range(BLOCK + 1))
-    assert heard(left, want[0]) > 0.99 and heard(right, want[1]) > 0.99        # left on the track, right on the next
+    assert heard(left, want[0]) > 0.99 and heard(right, want[1]) > 0.99  # left on the track, right on the next
 
 
 @pytest.mark.parametrize("setup", ["no box", "a box"])
@@ -277,10 +271,10 @@ def test_what_it_costs_on_the_audio_cpu(stock, audio):
     keep = build_engine.patched_image(stock, keep=True)
     playing = count(audio, False) - count(keep, False)
     starting = count(audio, True) - count(keep, True)
-    assert (playing, starting) == COST                       # eight sampler voices; a voice's budget is 10,506
+    assert (playing, starting) == COST  # eight sampler voices; a voice's budget is 10,506
 
 
-COST = (0, 128)             # a block more than the keep image's, all eight tracks samplers: notes running, notes starting
+COST = (0, 128)  # a block more than the keep image's, all eight tracks samplers: notes running, notes starting
 
 
 # ---- main CPU: the feed ---------------------------------------------------------------------------
@@ -309,7 +303,7 @@ def test_the_feed_runs_for_a_track_whose_record_bit_is_set_from_the_source_its_o
     before = junk(0x0105)
     ret, after = rig.run(make_block(ALL, [0] * track + [mode] + [0] * (11 - track)), frame, before)
     assert ret == 0x8000DBD0
-    assert after == fed_from(before, frame, left)           # one block, the counter, the dither's number: nothing else
+    assert after == fed_from(before, frame, left)  # one block, the counter, the dither's number: nothing else
 
 
 @pytest.mark.parametrize("mode", [MONO, STEREO, EXT, EXT | STEREO])
@@ -357,4 +351,4 @@ def test_the_audio_program_differs_from_the_keep_images_only_in_our_code_space(s
     # and the three pointers into it, which follow the code as it moves
     spans += [(a, a + 4) for a in (m.UPDATE_TABLE + 4 * m.TWIN_ENGINE, m.RENDER_TABLE + 4 * m.TWIN_ENGINE, m.ISR_VOICE_LOOP_CALL + 2)]
     assert diff and all(any(a <= d < b for a, b in spans) for d in diff)
-    assert m.REC_BOX + m.REC_SIZE <= 0x1000 and m.REC_BOX == m.KEEP_BOX + m.KEEP_SIZE      # in the window, past the keep box
+    assert m.REC_BOX + m.REC_SIZE <= 0x1000 and m.REC_BOX == m.KEEP_BOX + m.KEEP_SIZE  # in the window, past the keep box

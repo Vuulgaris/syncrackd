@@ -1,16 +1,4 @@
-"""The mirror image (engine/mirror.c, MIRROR): the kind image with the screen sent to a viewer over USB as SysEx.
-
-Here,
-the main CPU only, run in emulation with stock's two routines and the sink played by the test:
-  - the viewer's 0x67 (with a rate) and 0x68 through the SysEx entry (engine/phone.c);
-  - a frame drawn is sent at the UI's next asking, at most at the rate, and only while the viewer's last 0x67 is under
-    3 s old; stock's answer to the asking is passed on;
-  - the frame as sent decodes back to the panel's 1,024 bytes;
-  - its second build: with stock's own send to the panel run, the frame sent is what reached the panel, column by
-    column (the first build sent 0x402d7110, the next frame's buffer: on the unit, dotted dials and strokes);
-  - section 7 the spread image's, and only our places differ from the kind image.
-Only the unit can show: that the UI's routine is asked often enough, that the sink takes a frame from the UI's task,
-how the screen looks in a viewer."""
+"""The mirror image (engine/mirror.c, MIRROR): the kind image with the screen sent to a viewer over USB as SysEx."""
 
 import hashlib
 import shutil
@@ -58,9 +46,9 @@ class Rig:
         self.stub(PUT, lambda sink, data, n: self.sent.append(bytes(mc.read(data, n))))
         self.stub(COMMIT, lambda sink: self.commit())
         self.panel = bytearray(1024)
-        if stock_paint:                         # stock's send run as it is; the panel played column by column
+        if stock_paint:  # stock's send run as it is; the panel played column by column
             mc.w32(OTHER_AT, OTHER)
-            if bus:                             # the column sender run too, the panel played from its bytes on the bus
+            if bus:  # the column sender run too, the panel played from its bytes on the bus
                 self.said = []
                 self.stub(0x40002762, lambda: 0)
                 self.stub(0x40002772, lambda: 0)
@@ -99,7 +87,7 @@ class Rig:
 
     def ask(self):
         self.asked += 1
-        return 0x5501                           # stock's answer, passed on as it is
+        return 0x5501  # stock's answer, passed on as it is
 
     def clock(self, t):
         self.mc.w32(CLOCK, t & 0xFFFFFFFF)
@@ -141,7 +129,7 @@ def decode(f):
 def test_a_frame_goes_once_asked_and_decodes_to_the_panels_bytes(main):
     r = Rig(main)
     r.paint()
-    assert r.tick() == 0x5501 and not r.sent                   # no viewer: nothing, stock's answer passed on
+    assert r.tick() == 0x5501 and not r.sent  # no viewer: nothing, stock's answer passed on
     r.sysex(0x67, 30)
     r.clock(1000 + TICKS // 30)
     r.paint()
@@ -155,38 +143,38 @@ def test_a_frame_goes_once_asked_and_decodes_to_the_panels_bytes(main):
 def test_the_frame_sent_is_the_panels(main):
     r = Rig(main, stock_paint=True)
     mc, rng = r.mc, np.random.default_rng(2)
-    mc.write(FRAME_AT, bytes(1024))                             # as at the start: both frames and the panel clear
+    mc.write(FRAME_AT, bytes(1024))  # as at the start: both frames and the panel clear
     mc.write(OTHER, bytes(1024))
     r.sysex(0x67, 0)
     picture = bytearray(rng.integers(0, 256, 1024).astype(np.uint8).tobytes())
     for n in range(4):
-        for g in rng.choice(128, 3, replace=False):             # a few columns change a frame, as a dial turned
+        for g in rng.choice(128, 3, replace=False):  # a few columns change a frame, as a dial turned
             picture[8 * g:8 * g + 8] = rng.integers(0, 256, 8).astype(np.uint8).tobytes()
-        drawn = mc.r32(OTHER_AT)                                # the UI draws in *0x402d7110
+        drawn = mc.r32(OTHER_AT)  # the UI draws in *0x402d7110
         mc.write(drawn, bytes(picture))
         nxt = r.paint()
         assert nxt == mc.r32(OTHER_AT) != drawn and mc.r32(SHOWN_AT) == drawn
-        assert bytes(r.panel) == bytes(picture)                 # stock's send: the panel is the frame drawn
+        assert bytes(r.panel) == bytes(picture)  # stock's send: the panel is the frame drawn
         r.clock(1000 + (n + 1) * TICKS // 15)
         r.tick()
         assert decode(r.frames()[-1])[1] == bytes(r.panel)
-        assert n == 0 or bytes(mc.read(nxt, 1024)) != bytes(r.panel)    # what the first build sent: not the panel
+        assert n == 0 or bytes(mc.read(nxt, 1024)) != bytes(r.panel)
     assert len(r.frames()) == 4
 
 
 def test_at_most_the_rate_and_only_a_new_frame(main):
     r = Rig(main)
-    r.sysex(0x67, 10)                                           # ten a second
+    r.sysex(0x67, 10)  # ten a second
     t = 1000 + TICKS // 10
     r.clock(t)
     r.paint()
     r.tick()
     r.paint()
-    r.tick()                                                    # too soon: held
+    r.tick()  # too soon: held
     assert len(r.frames()) == 1
     r.clock(t + TICKS // 10)
-    r.tick()                                                    # the held frame, at the next asking
-    r.tick()                                                    # nothing new
+    r.tick()  # the held frame, at the next asking
+    r.tick()  # nothing new
     r.clock(t + 3 * TICKS // 10)
     r.tick()
     assert [decode(f)[0] for f in r.frames()] == [0, 1]
@@ -194,8 +182,8 @@ def test_at_most_the_rate_and_only_a_new_frame(main):
 
 def test_a_viewer_gone_or_off_stops_it(main):
     r = Rig(main)
-    r.sysex(0x67, 0)                                            # 0: fifteen a second
-    r.clock(1000 + 3 * TICKS + 1)                               # 3 s and no renewal
+    r.sysex(0x67, 0)  # 0: fifteen a second
+    r.clock(1000 + 3 * TICKS + 1)  # 3 s and no renewal
     r.paint()
     r.tick()
     assert not r.sent
@@ -231,7 +219,7 @@ def test_the_image(official_path, official, main):
     quiet = lambda s: None
     raw, _, built, _, _ = build.build(official_path, log=quiet, xfade=64, prof=True)
     was_raw, _, was, _, _ = build.build(official_path, log=quiet, xfade=63, prof=True)
-    assert hashlib.sha256(was_raw).hexdigest().startswith("d542b1fe")      # the kind image, as it is
+    assert hashlib.sha256(was_raw).hexdigest().startswith("d542b1fe")  # the kind image, as it is
     print("mirror image", hashlib.sha256(raw).hexdigest())
     new, old = built.section(3), was.section(3)
     assert new == main[0]

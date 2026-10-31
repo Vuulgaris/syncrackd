@@ -1,11 +1,4 @@
-"""The spread image (engine/sampler.h, SPREAD): the stsw image with the stretch's look in slices, and smaller.
-
-
-Here:
-  - the heaviest blocks with one and eight stretched tracks, against the grain image's and the slscrub image's;
-  - a low tone still steadier than before the grain image; bursts still once and on time; at its own speed the note;
-  - a note not stretched the grain image's to the bit; the main CPU the stsw image's.
-Emulation only."""
+"""The spread image (engine/sampler.h, SPREAD): the stsw image with the stretch's look in slices, and smaller."""
 
 import shutil
 
@@ -45,8 +38,9 @@ def folded(monkeypatch):
 
 
 def blocks(image, factory, stretched):
-    """Eight stereo pitched tracks looping, the first `stretched` of them stretched, trigged together every 90 blocks.
-    -> each block's count, past the first few."""
+    """Eight stereo pitched tracks looping, the first `stretched` of them stretched, trigged together every 90 blocks. ->
+    each block's count, past the first few.
+    """
     r = Rig(image[0])
     rng = np.random.default_rng(11)
     pool = {k: rng.integers(-30000, 30000, 9000).astype(np.int16) for k in range(8)}

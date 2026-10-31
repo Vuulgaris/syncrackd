@@ -1,14 +1,4 @@
-"""The shadow image (engine/mirror.c, SHADOW): the trap image with the viewer's frame copied from what reaches the panel.
-
-On the unit the mirror image's second build (the frame shown, *0x402d7114, at the asking) still had strokes at the dials
-where the panel was clean. Here, the main CPU only, run in emulation with stock's send to the panel and its column
-sender run as they are, and the panel played from the bytes they put on the bus:
-  - at a viewer's first asking 1,024 bytes are taken from the heap, made from the frame shown, the frame paint compares
-    against turned over and a draw asked for: the next send rewrites the whole panel;
-  - from there the frame sent is the panel's, column by column, whatever the buffers hold after;
-  - no viewer, nothing taken; taken once;
-  - section 7 the trap image's, and only our places differ from it in section 3.
-Only the unit can show: that the frame sent is the panel's there too, that the heap gives 1,024 bytes."""
+"""The shadow image (engine/mirror.c, SHADOW): the trap image with the viewer's frame copied from what reaches the panel."""
 
 import hashlib
 import shutil
@@ -36,7 +26,7 @@ def rig(main):
     r.taken = []
     r.stub(0x40103952, lambda n: r.taken.append(n) or HEAP)
     r.mc.uc.ctl_flush_tb()
-    r.mc.write(FRAME_AT, bytes(1024))                           # as after the clear: both frames and the panel 0
+    r.mc.write(FRAME_AT, bytes(1024))  # as after the clear: both frames and the panel 0
     r.mc.write(OTHER, bytes(1024))
     return r
 
@@ -45,27 +35,27 @@ def test_the_frame_sent_is_what_reached_the_panel(main):
     r = rig(main)
     mc, rng = r.mc, np.random.default_rng(3)
     r.tick()
-    assert not r.taken                                          # no viewer: nothing taken
+    assert not r.taken  # no viewer: nothing taken
     r.sysex(0x67, 0)
     shown = rng.integers(0, 256, 1024).astype(np.uint8).tobytes()
-    mc.write(FRAME_AT, shown)                                   # what both buffers hold, not what the panel has
+    mc.write(FRAME_AT, shown)  # what both buffers hold, not what the panel has
     mc.write(OTHER, shown)
     r.clock(1000 + TICKS // 15)
-    r.paint()                                                   # nothing differs: nothing sent, the panel still 0
+    r.paint()  # nothing differs: nothing sent, the panel still 0
     assert bytes(r.panel) == bytes(1024)
     r.tick()
     assert r.taken == [1024] and mc.read(UI + mm.UI_DRAW_MARK, 1) == b"\x01"
-    assert bytes(mc.read(OTHER, 1024)) == bytes(b ^ 0xff for b in shown)      # turned over (the frame shown after the paint)
-    assert decode(r.frames()[-1])[1] == shown                   # the first frame: the frame shown, as the second build
+    assert bytes(mc.read(OTHER, 1024)) == bytes(b ^ 0xff for b in shown)  # turned over (the frame shown after the paint)
+    assert decode(r.frames()[-1])[1] == shown
     picture = bytearray(rng.integers(0, 256, 1024).astype(np.uint8).tobytes())
     for n in range(4):
         for g in rng.choice(128, 3, replace=False):
             picture[8 * g:8 * g + 8] = rng.integers(0, 256, 8).astype(np.uint8).tobytes()
-        mc.write(mc.r32(OTHER_AT), bytes(picture))              # the UI draws in *0x402d7110
+        mc.write(mc.r32(OTHER_AT), bytes(picture))  # the UI draws in *0x402d7110
         r.paint()
-        assert bytes(r.panel) == bytes(picture)                 # the first send rewrote the whole panel
+        assert bytes(r.panel) == bytes(picture)  # the first send rewrote the whole panel
         assert bytes(mc.read(HEAP, 1024)) == bytes(r.panel)
-        mc.write(mc.r32(SHOWN_AT) + 8 * 31, b"\xff" * 40)        # strokes in the buffer after the send: not the panel's
+        mc.write(mc.r32(SHOWN_AT) + 8 * 31, b"\xff" * 40)  # strokes in the buffer after the send: not the panel's
         r.clock(1000 + (n + 2) * TICKS // 15)
         r.tick()
         assert decode(r.frames()[-1])[1] == bytes(r.panel)

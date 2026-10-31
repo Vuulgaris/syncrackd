@@ -1,15 +1,4 @@
-"""The rxoff image: the fast image with stock's receive of the host's USB audio not run while the unit sends its own.
-
-
-Measured on the maintainer's unit
-(the evtime tool, samples/EVON3.wav and EVOFF3.wav): the per-block routine's call of stock's receive, 0x400041cc, is
-0.9 hundredths of a block with no USB audio and 3.9 with it. engine/rxgate.S: the call goes to rx_gate, which while
-0x405d40e4 (what stock's send tests first) is not 0 clears the 32 frames of USB audio in with stock's own clear and
-returns, and otherwise goes to stock's routine as it was.
-
-Held here by running the gate with stock's clear run as it is and stock's receive played; not held: the USB controller,
-the time saved on the unit, that the packets left in the receive's list are taken up again after a capture.
-"""
+"""The rxoff image: the fast image with stock's receive of the host's USB audio not run while the unit sends its own."""
 import hashlib
 import shutil
 
@@ -68,8 +57,8 @@ def test_while_the_unit_sends_its_usb_audio_the_receive_is_not_run_and_usb_in_is
     mc, seen = gate(main, 1)
     junk = bytes(range(1, 256)) + bytes(range(1, 256))
     assert seen == []
-    assert mc.read(USB_IN, 256) == bytes(256)                       # 32 frames, two longs each
-    assert mc.read(USB_IN - 16, 16) == junk[:16] and mc.read(USB_IN + 256, 16) == junk[272:288]   # and nothing round it
+    assert mc.read(USB_IN, 256) == bytes(256)  # 32 frames, two longs each
+    assert mc.read(USB_IN - 16, 16) == junk[:16] and mc.read(USB_IN + 256, 16) == junk[272:288]  # and nothing round it
 
 
 def test_the_call_goes_to_the_gate_with_its_two_arguments(main):
@@ -84,7 +73,7 @@ def test_the_image(official_path, main, fast):
     quiet = lambda s: None
     raw, _, built, _, _ = build.build(official_path, log=quiet, xfade=35, prof=True)
     was_raw, _, was, _, _ = build.build(official_path, log=quiet, xfade=34, prof=True)
-    assert hashlib.sha256(was_raw).hexdigest().startswith("1f44982f")      # the fast image, as it is
+    assert hashlib.sha256(was_raw).hexdigest().startswith("1f44982f")  # the fast image, as it is
     assert built.section(7) == was.section(7)
     new, old = built.section(3), was.section(3)
     assert new == main[0] and old == fast[0]

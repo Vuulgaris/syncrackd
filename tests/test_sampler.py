@@ -1,8 +1,4 @@
-"""Phase 5: the sampler engine, compiled for ColdFire, inside the real voice loop.
-
-The engine must be bit-identical to the reference model emu/sampler_ref.py,
-must not change any stock machine, and must stay inside the CPU budget.
-"""
+"""Phase 5: the sampler engine, compiled for ColdFire, inside the real voice loop."""
 import re
 import shutil
 
@@ -21,10 +17,10 @@ pytestmark = pytest.mark.skipif(not shutil.which("m68k-elf-gcc"), reason="no Col
 
 SAMPLER = 44
 TUNE, SAMPLE, START, LENGTH, LOOP, MODE, DECAY = 18, 19, 20, 21, 22, 23, 25
-BUDGET = 10506          # SY SWARM, instructions per voice per block (Phase 3)
+BUDGET = 10506  # SY SWARM, instructions per voice per block (Phase 3)
 STOCK_TWINSHOT = 3883
-MONO_STEREO = (2176, 2904)    # the sampler, one voice, steady
-WORST = (7848, 9079)          # steady and in any one block, see test_instruction_budget
+MONO_STEREO = (2176, 2904)  # the sampler, one voice, steady
+WORST = (7848, 9079)  # steady and in any one block, see test_instruction_budget
 
 
 @pytest.fixture(scope="module")
@@ -49,9 +45,9 @@ def make_pool():
     def noise(n):
         return rng.integers(-32768, 32768, n).astype(np.int16)
     pool = {0: noise(1500), 1: noise(1500)}
-    pool.update({4: noise(300), 5: noise(257), 6: noise(411)})          # a mono chain; slot 7 empty
-    pool.update({10: noise(350), 11: noise(350), 12: noise(290), 13: noise(290)})   # a stereo chain
-    pool[20] = (np.arange(64) * 500 - 16000).astype(np.int16)            # a ramp
+    pool.update({4: noise(300), 5: noise(257), 6: noise(411)})  # a mono chain; slot 7 empty
+    pool.update({10: noise(350), 11: noise(350), 12: noise(290), 13: noise(290)})  # a stereo chain
+    pool[20] = (np.arange(64) * 500 - 16000).astype(np.int16)  # a ramp
     return pool
 
 
@@ -65,7 +61,7 @@ def setup(image, syms, pool, track=0, note=60, **knobs):
         e.set_note(t, note)
         for slot in range(18, 27):
             e.set_slot(t, slot, 0)
-        e.set_slot(t, SAMPLE, 64 + 63)                   # the other tracks point at an empty slot
+        e.set_slot(t, SAMPLE, 64 + 63)  # the other tracks point at an empty slot
         e.set_slot(t, DECAY, 127)
     for slot, v in values.items():
         e.set_slot(track, slot, v)
@@ -91,8 +87,8 @@ def run_both(image, syms, pool, blocks, track=0, note=60, **knobs):
 
 # ---- the code lives only in dead stock code ---------------------------------
 
-ALL_CAVES = dict(m.CAVES, **m.REC_CAVES, **m.FADE_CAVES, **m.LIVE_CAVES, **m.PITCH_CAVES)      # the later images' runs are held to the same rules
-NOT_A_POINTER = 0x4001c7f2      # two neighbours in a table of rising longs, read across their join: see the test
+ALL_CAVES = dict(m.CAVES, **m.REC_CAVES, **m.FADE_CAVES, **m.LIVE_CAVES, **m.PITCH_CAVES)  # the later images' runs are held to the same rules
+NOT_A_POINTER = 0x4001c7f2  # two neighbours in a table of rising longs, read across their join: see the test
 
 
 def test_caves_are_unreferenced(stock):
@@ -158,7 +154,7 @@ def test_patch_touches_only_the_caves_and_three_pointers(stock, built):
     assert m.u32(image, m.UPDATE_TABLE + 4 * m.TWIN_ENGINE) == syms["sampler_update"]
     assert m.u32(image, m.RENDER_TABLE + 4 * m.TWIN_ENGINE) == syms["sampler_render"]
     assert m.u32(image, m.ISR_VOICE_LOOP_CALL + 2) == syms["sampler_hook"]
-    assert image[m.off(m.ISR_VOICE_LOOP_CALL):m.off(m.ISR_VOICE_LOOP_CALL) + 2] == b"\x4e\xb9"   # still jsr (xxx).L
+    assert image[m.off(m.ISR_VOICE_LOOP_CALL):m.off(m.ISR_VOICE_LOOP_CALL) + 2] == b"\x4e\xb9"  # still jsr (xxx).L
     # stock Twinshot is still there, byte for byte, just unreached
     assert image[m.off(m.TWIN_UPDATE):m.off(0x40009b1a)] == stock[m.off(m.TWIN_UPDATE):m.off(0x40009b1a)]
 
@@ -167,7 +163,7 @@ def test_engine_code_is_plain_integer_code(built):
     image, syms = built
     e = Engine(image)
     for start, end in m.CAVES.values():
-        assert not [a for a in e.mc.emac_sites if start <= a < end]     # no EMAC of our own
+        assert not [a for a in e.mc.emac_sites if start <= a < end]  # no EMAC of our own
     for name, addr in syms.items():
         assert any(s <= addr < e_ for s, e_ in m.CAVES.values()), name
 
@@ -186,7 +182,7 @@ def test_stock_machines_stay_bit_identical(stock, built, descs, mtype):
         out.append((e.render(24, trig=0xFF), e.mc.insns))
     assert out[0][0].any()
     assert np.array_equal(out[0][0], out[1][0]) and np.array_equal(out[0][0], out[2][0])
-    assert out[0][1] == out[1][1]                       # same instruction count through the stock entry
+    assert out[0][1] == out[1][1]  # same instruction count through the stock entry
 
 
 # ---- bit-identical to the reference model -----------------------------------
@@ -238,7 +234,7 @@ def test_engine_matches_reference(built, name):
 
 
 STEREO_CASES = {
-    "stereo": dict(sample=64 + 5, mode=1),               # stereo sample 5: slots 10 and 11
+    "stereo": dict(sample=64 + 5, mode=1),  # stereo sample 5: slots 10 and 11
     "stereo, pitched reverse": dict(sample=63 - 5, mode=1, note=66),
     "stereo loop": dict(sample=64 + 5, mode=1, loop=1, start=10, length=60, note=62),
     "stereo chain": dict(sample=64 + 5, mode=5, note=64),
@@ -261,8 +257,9 @@ def test_stereo_puts_right_on_the_next_track(built, name, track):
 
 
 def test_in_stereo_the_sample_knob_counts_stereo_samples(built):
-    """Every value of the knob is a left slot: number n is slots 2n and 2n + 1. In mono it is slot n.
-    Past number 31 there is no stereo sample, and nothing plays or is read."""
+    """Every value of the knob is a left slot: number n is slots 2n and 2n + 1. In mono it is slot n. Past number 31
+    there is no stereo sample, and nothing plays or is read.
+    """
     image, syms = built
     rng = np.random.default_rng(5)
     pool = {k: rng.integers(-32768, 32768, 200 + k).astype(np.int16) for k in range(64)}
@@ -278,7 +275,7 @@ def test_in_stereo_the_sample_knob_counts_stereo_samples(built):
         for mode in (1, 5):
             e = setup(image, syms, pool, track=2, sample=knob, mode=mode)
             assert not e.render(6, trig=4).any() and not e.player(2, 0)["playing"]
-    e, x, left, right, p = run_both(image, syms, pool, 12, track=2, sample=64 + 5, mode=0)      # mono: slot 5 itself
+    e, x, left, right, p = run_both(image, syms, pool, 12, track=2, sample=64 + 5, mode=0)  # mono: slot 5 itself
     assert np.array_equal(x[2][:205], pool[5].astype(np.int64) << 15) and not x[3].any()
 
 
@@ -294,7 +291,7 @@ def test_one_to_one_playback_is_the_sample_itself(built):
     pool = make_pool()
     e, x, left, right, p = run_both(image, syms, pool, 60)
     n = len(pool[0])
-    assert np.array_equal(x[0][:n], pool[0].astype(np.int64) << 15)     # int16 at -6 dB, no rounding
+    assert np.array_equal(x[0][:n], pool[0].astype(np.int64) << 15)  # int16 at -6 dB, no rounding
     assert not x[0][n:].any()
 
 
@@ -307,13 +304,13 @@ def test_retrigger_fades_the_old_note_then_restarts(built):
     got, want = [], []
     for b in range(1, 30):
         got.append(e.block(trig=1 if b == 12 else 0)[0])
-        if b in (1, 13):                                 # a note starts the block after its trig
+        if b in (1, 13):  # a note starts the block after its trig
             p.inc = e.player(0, 0)["inc"]
             p.note_on()
         l, _ = p.block()
         want.append(ref.tail(l, trig=b == 12))
     assert np.array_equal(np.concatenate(got), np.concatenate(want))
-    assert np.abs(got[11][-4:]).max() < 0.02 * np.abs(got[11][:4]).max()     # faded out by the end of the trig block
+    assert np.abs(got[11][-4:]).max() < 0.02 * np.abs(got[11][:4]).max()  # faded out by the end of the trig block
 
 
 def test_long_sample_across_slots_past_the_one_slot_limit(built):
@@ -321,27 +318,27 @@ def test_long_sample_across_slots_past_the_one_slot_limit(built):
     image, syms = built
     rng = np.random.default_rng(3)
     pool = {8 + k: rng.integers(-32768, 32768, 200000).astype(np.int16) for k in range(3)}
-    blocks = 600000 // (BLOCK * 8) + 40                  # three octaves up: 8 frames per frame
+    blocks = 600000 // (BLOCK * 8) + 40  # three octaves up: 8 frames per frame
     e, x, left, right, p = run_both(image, syms, pool, blocks, note=96, sample=64 + 8, mode=4)
     assert e.player(0, 0)["inc"] == 8 * 4096
     assert np.array_equal(x[0], left)
     last = np.flatnonzero(x[0])[-1]
-    assert 600000 // 8 - 4 <= last < 600000 // 8             # it ran to the end of the third slot
+    assert 600000 // 8 - 4 <= last < 600000 // 8  # it ran to the end of the third slot
     assert not p.playing
 
 
 def test_fastest_pitch_cannot_overflow_the_position(built):
     """A slot at the length limit, played at the top of the pitch range, ends cleanly."""
     image, syms = built
-    n = ref.MAX_FRAMES + 300                              # longer than the engine will use
+    n = ref.MAX_FRAMES + 300  # longer than the engine will use
     pool = {0: np.full(n, 12345, dtype=np.int16)}
     e = setup(image, syms, pool, note=127, tune=88, start=126.9)
     x = e.render(60, trig=1)[0]
     inc = e.player(0, 0)["inc"]
-    assert 4096 * 32 < inc < 4096 * 64                    # the largest step the stock pitch code gives
+    assert 4096 * 32 < inc < 4096 * 64  # the largest step the stock pitch code gives
     assert (ref.MAX_FRAMES << 12) + inc < 1 << 31
     played = np.flatnonzero(x)
-    assert len(played) and set(np.unique(x[played])) == {12345 << 15}     # only ever read real samples
+    assert len(played) and set(np.unique(x[played])) == {12345 << 15}  # only ever read real samples
     assert not e.player(0, 0)["playing"]
 
 
@@ -352,7 +349,7 @@ def test_decay_knob_still_shapes_the_note(built):
 
     def level(decay):
         x = setup(image, syms, pool, decay=decay).render(100, trig=1)[0].astype(float)
-        assert np.all(np.diff(np.abs(x[BLOCK:])) <= 0)       # never rises
+        assert np.all(np.diff(np.abs(x[BLOCK:])) <= 0)  # never rises
         return np.abs(x[-BLOCK:]).max()
     assert level(127) == 20000 << 15
     assert level(10) < level(40) < level(80) < level(127)
@@ -381,7 +378,7 @@ def test_a_loop_too_small_for_its_pitch_stops_the_note(built):
     for note, plays in ((84, True), (108, False)):
         e = setup(image, syms, make_pool(), note=note, loop=1, start=20, length=1)
         x = e.render(6, trig=1)[0]
-        assert x[BLOCK:2 * BLOCK].any()                  # it starts either way
+        assert x[BLOCK:2 * BLOCK].any()  # it starts either way
         assert bool(x[3 * BLOCK:].any()) == plays and bool(e.player(0, 0)["playing"]) == plays
 
 
@@ -390,11 +387,11 @@ def test_instruction_budget(built):
     big = {k: np.zeros(50000, dtype=np.int16) for k in (0, 1)}
     mono, _ = per_voice(image, syms, big)
     stereo, _ = per_voice(image, syms, big, mode=1)
-    assert mono < STOCK_TWINSHOT                       # cheaper than the machine it replaces
+    assert mono < STOCK_TWINSHOT  # cheaper than the machine it replaces
     assert stereo < STOCK_TWINSHOT
     assert (round(mono), round(stereo)) == MONO_STEREO
-    # the worst there is: a stereo chain looping over a few frames around a slot seam, octaves up.
-    # The loops that fit the pitch play on; the others stop within a block (MAX_EDGES).
+    # the worst there is: a stereo chain looping over a few frames around a slot seam, octaves up. The loops that fit
+    # the pitch play on; the others stop within a block (MAX_EDGES).
     steady, spikes, playing = [], [], 0
     for note, length in ((96, 5), (96, 6), (96, 7), (108, 9), (108, 12), (127, 20), (127, 40)):
         for loop in (1, 2):
@@ -405,27 +402,27 @@ def test_instruction_budget(built):
             e = setup(image, syms, make_pool(), **knobs)
             e.render(20, trig=1)
             playing += e.player(0, 0)["playing"]
-    assert 4 <= playing <= 10                          # both kinds are in the sweep
+    assert 4 <= playing <= 10  # both kinds are in the sweep
     assert max(spikes) < BUDGET
     assert (round(max(steady)), round(max(spikes))) == WORST
 
 
 # ---- stereo through the real interrupt: the next track follows -------------------
 
-AMP_STATE = 0x800049e0      # 12 bytes per track, kept by the amp stage
+AMP_STATE = 0x800049e0  # 12 bytes per track, kept by the amp stage
 
 
 def stereo_board(image, mode, track1_machine=SAMPLER):
     rng = np.random.default_rng(11)
     both = rng.integers(-20000, 20000, 3000).astype(np.int16)
     b = E.Board(image)
-    b.load_pool({10: both, 11: both.copy()})             # dual mono: left and right carry the same data
+    b.load_pool({10: both, 11: both.copy()})  # dual mono: left and right carry the same data
     for t in range(m.N_VOICES):
         b.set_machine(t, SAMPLER)
         b.set_note(t, 60)
         for slot in range(18, 52):
             b.set_slot(t, slot, 0)
-        b.set_slot(t, SAMPLE, 127)                       # empty slot
+        b.set_slot(t, SAMPLE, 127)  # empty slot
         b.set_slot(t, DECAY, 127)
     # track 0: the instrument, with its own filter, drive and amp settings
     for slot, v in ((TUNE, 64), (LENGTH, 127), (SAMPLE, 64 + (5 if mode == 1 else 10)), (MODE, mode), (26, 90), (27, 2), (29, 40), (37, 20), (38, 100),
@@ -452,10 +449,10 @@ def test_right_track_gets_the_left_tracks_filter_amp_and_trigs(built, track1_mac
             assert b.stages["voice_loop"][0].any() and b.stages["amp"][0].any()
         assert not b.stages["voice_loop"][2:].any()
         p0, p1 = b.mc.read(b.params(0), m.PARAM_STRIDE), b.mc.read(b.params(1), m.PARAM_STRIDE)
-        assert p1[80:132] == p0[80:132]                  # OVER and the filter and amp pages
-        assert p1[62] == track1_machine                  # its own machine setting is left alone
+        assert p1[80:132] == p0[80:132]  # OVER and the filter and amp pages
+        assert p1[62] == track1_machine  # its own machine setting is left alone
         assert b.mc.r32(0x80008188 + 4) == 0x52345678
-        assert b.mc.read(AMP_STATE + 12, 12) == b.mc.read(AMP_STATE, 12)   # same trigs reached the amp stage
+        assert b.mc.read(AMP_STATE + 12, 12) == b.mc.read(AMP_STATE, 12)  # same trigs reached the amp stage
 
 
 def test_mono_notes_leave_the_next_track_alone(built):
@@ -465,7 +462,7 @@ def test_mono_notes_leave_the_next_track_alone(built):
         b.interrupt(trig=0x01 if blk == 0 else 0)
     assert b.stages["voice_loop"][0].any() and not b.stages["voice_loop"][1:].any()
     p1 = b.mc.read(b.params(1), m.PARAM_STRIDE)
-    assert p1[0x1c + 2 * 37] == 77 and p1[0x1c + 2 * 26] == 5       # its own settings survive
+    assert p1[0x1c + 2 * 37] == 77 and p1[0x1c + 2 * 26] == 5  # its own settings survive
     assert b.mc.r32(0x80008188 + 4) == 0x00777777
 
 

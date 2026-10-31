@@ -1,12 +1,4 @@
-"""The ask image (engine/phone.c, SEEN): the letgo image with LOAD PROJECT asking the phone only once it has said so.
-
-
-The phone app says 0x63 at every connect (its backup's
-whichProject), and 0x65 or 0x66 for a capture: either is the phone's hello. Here:
-  - a host's message made the sink, no hello: a load is stock's straight away, where the letgo image asked and waited;
-  - after 0x63, or a capture's frame, the load asks and waits as the phone image does; the viewer's 0x67 is no hello;
-  - the image: only the phone's runs differ from the letgo image's, section 7 the letgo image's.
-Emulation only."""
+"""The ask image (engine/phone.c, SEEN): the letgo image with LOAD PROJECT asking the phone only once it has said so."""
 import shutil
 
 import pytest

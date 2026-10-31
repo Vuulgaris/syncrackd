@@ -46,7 +46,7 @@ def test_it_commits_what_is_new_and_pushes(repo):
     assert set(git(origin, "ls-tree", "-r", "--name-only", "main").split()) == {"notes.md", "push.command", "sub/code.py"}
     assert git(work, "log", "-1", "--format=%s").startswith("Snapshot ")
     assert "Co-Authored" not in git(work, "log", "-1", "--format=%B")
-    again = run(work)                                       # nothing new: no empty commit
+    again = run(work)  # nothing new: no empty commit
     assert again.returncode == 0 and "Nothing new" in again.stdout
     assert git(work, "rev-list", "--count", "HEAD") == "2"
 
@@ -62,8 +62,8 @@ def test_it_refuses_firmware_and_what_is_made_from_it(repo, name):
     before = git(origin, "rev-parse", "main")
     done = run(work)
     assert done.returncode == 1 and "Refused" in done.stdout and name in done.stdout
-    assert git(origin, "rev-parse", "main") == before == git(work, "rev-parse", "HEAD")     # no commit, no push
-    assert git(work, "diff", "--cached", "--name-only") == ""                               # and nothing left staged
+    assert git(origin, "rev-parse", "main") == before == git(work, "rev-parse", "HEAD")  # no commit, no push
+    assert git(work, "diff", "--cached", "--name-only") == ""  # and nothing left staged
 
 
 def test_check_changes_nothing(repo):

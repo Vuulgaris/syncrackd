@@ -2,14 +2,14 @@
 
 Plain stream = [u32 container length][u32 content checksum][container][zero pad].
 Container    = 0x20 byte header ("ELE3", model, version, section count at 0x1C),
-               16-byte table entries [id][offset][stored size][dest],
-               sections, each 16-byte aligned, zero pad to 16 at the end.
+16-byte table entries [id][offset][stored size][dest],
+sections, each 16-byte aligned, zero pad to 16 at the end.
 
-The Syntakt container has no HMAC trailer (confirmed on 1.42). A container
-with bytes past the aligned end of its sections is refused.
+The Syntakt container has no HMAC trailer (confirmed on 1.42). A container with bytes past the aligned end of its
+sections is refused.
 
-A compressed section is stored as [u32 stream length][u32 byte sum][aPLib
-stream][zero pad to 4]. Raw sections have no header.
+A compressed section is stored as [u32 stream length][u32 byte sum][aPLib stream][zero pad to 4]. Raw sections have no
+header.
 """
 import array
 import os
@@ -36,10 +36,10 @@ SECT_HDR = 8
 
 @dataclass(frozen=True)
 class Section:
-    index: int       # slot in the table
+    index: int  # slot in the table
     id: int
     off: int
-    size: int        # stored size
+    size: int  # stored size
     dest: int
     stored: bytes
 
@@ -158,8 +158,7 @@ def depack(stored):
 def repack(data, ops, dirty):
     """Re-encode a same-length section. dirty marks changed bytes.
 
-    Untouched ops are emitted as they came in, so an unchanged section
-    repacks to its original stored bytes.
+    Untouched ops are emitted as they came in, so an unchanged section repacks to its original stored bytes.
     """
     body = aplib.repack(data, ops, dirty)
     return body + b"\0" * (_align(len(body), 4) - len(body))

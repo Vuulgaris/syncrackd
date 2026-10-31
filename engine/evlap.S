@@ -1,14 +1,13 @@
 /* Main CPU (section 3, OS 1.42 only), the evtime image: a tool, not one to keep. The per-block routine's stretch of
  * events and knobs (from its first call to its wait for the audio CPU, 28.5 hundredths of a block on a heavy pattern
  * with the unit's USB audio streaming, 25.1 without) cut in five by four more readings of the profile's timer
- * (engine/prof.S), each in front of one of stock's calls in it. 
- * 
+ * (engine/prof.S), each in front of one of stock's calls in it.
  *
  * A call of stock's comes here in place of its routine: d0 is kept on the stack for three instructions and taken back
- * before the jump, so the routine finds every register and its arguments as the caller left them (the caller may count
- * on a register the routine leaves alone). The readings go where the interrupt's start put what it stopped: + 16 its
- * stack pointer, + 12 its PC, + 56 the last of its six stack longs, + 60 the running task. A call that was not made
- * this block leaves those. tools/prof_read.py knows the layout. */
+ * before the jump, so the routine finds every register and its arguments as the caller left them (the caller may
+ * count on a register the routine leaves alone). The readings go where the interrupt's start put what it stopped: +
+ * 16 its stack pointer, + 12 its PC, + 56 the last of its six stack longs, + 60 the running task. A call that was not
+ * made this block leaves those. tools/prof_read.py knows the layout. */
 #define TIMER 0xfc07000c
 #define STR2(x) #x
 #define STR(x) STR2(x)
@@ -24,9 +23,6 @@
         jmp     \to
         .endm
 
-/* Second build: the first's laps at 0x40003686 and 0x40119b84 were never reached on the unit (samples/EV ON.wav, EV
- * OFF.wav); these four close in on stock's receive of the host's audio, in USB AUDIO/MIDI mode, which comes before the
- * tracks' events: its clear of 0x400 bytes, its read of the incoming packets, and what it does with them after. */
 ev_lap1: lap 16, 0x40115b68
 ev_lap2: lap 12, 0x400041cc
 ev_lap3: lap 56, 0x4010d7a2

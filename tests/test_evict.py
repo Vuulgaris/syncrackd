@@ -1,15 +1,4 @@
-"""The evict image (engine/keeptakes.c and engine/scratch.c, EVICT): the stream image with the phone's reload (0x6B)
-loading every slot it names, a take not saved there or not.
-
-
-The load drops the take as LOAD PROJECT's always did (the audio CPU
-counts a slot loaded from the drive as kept); and since the scratch image holds a take not saved in a place on the drive,
-which a save copies into the bank and a start sends back to its slot, the slots named lose their places first.
-  - the job loads the slots named, a take in one or not, after their places are dropped;
-  - scratch_forget: the places of the slots in the phone's mask emptied on the drive, the rest kept; nothing written
-    when none is theirs, nor for another bank's table;
-  - the image: the stream image's but for the reload's runs and the new one.
-Emulation only."""
+"""The evict image (engine/keeptakes.c and engine/scratch.c, EVICT): the stream image with the phone's reload (0x6B)"""
 import shutil
 
 import pytest
@@ -36,7 +25,7 @@ def test_the_job_loads_every_slot_named_a_take_in_it_or_not(evict):
     r.stub(r.syms["scratch_forget"], lambda: r.log.append(("forget", T.masks(r, r.syms["phone_mask"]))))
     r.stub(r.syms["load_slots"], load)
     mc.uc.ctl_flush_tb()
-    mc.w32(T.KEEP_FRAMES, 900)                  # every slot holds a take the drive does not have
+    mc.w32(T.KEEP_FRAMES, 900)  # every slot holds a take the drive does not have
     mc.w32(r.syms["stream_bits"], T.MASK & 0xffffffff)
     mc.w32(r.syms["stream_bits"] + 4, T.MASK >> 32)
     mc.w32(r.syms["stream_busy"], 1)

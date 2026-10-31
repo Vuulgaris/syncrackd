@@ -1,13 +1,4 @@
-"""The apage image: the dma image with the sampling page's solo and crossfade on the analog tracks.
-
-
-Built here: the page. Not built: the lock (an analog machine uses both knob slots a digital track
-leaves free, so a lock on an analog track has no known place yet).
-
-SYN again on tracks 9 to 12 opens a second page: SOLO on knob E, the unit's one crossfade on knob G, the other six
-places empty. The solos' long keeps twelve bits and the crossfade is twelve numbers; the mixer link and the analog
-mute go by all twelve.
-"""
+"""The apage image: the dma image with the sampling page's solo and crossfade on the analog tracks."""
 import shutil
 
 import pytest
@@ -45,9 +36,9 @@ def page(built, track, index=1, machine=None, xf=None, word=0):
     if "apage_turn" in syms:
         r.entry = syms["apage_turn_side"], syms["apage_turn"]
     if track >= 8 or machine is not None:
-        r.machines = {track: track if machine is None else machine}     # an analog track's machine: any that is not the sampler
-    r.mc.map(0x80007000, 0x1000)                                    # on-chip memory: the dma image's letter is read there
-    r.xf_all = []                                                   # every write to the twelve numbers, in order: (offset, size)
+        r.machines = {track: track if machine is None else machine}  # an analog track's machine: any that is not the sampler
+    r.mc.map(0x80007000, 0x1000)  # on-chip memory: the dma image's letter is read there
+    r.xf_all = []  # every write to the twelve numbers, in order: (offset, size)
     r.mc.uc.hook_add(UC_HOOK_MEM_WRITE, lambda uc, t, a, n, v, u: r.xf_all.append((a - mm.XFADES, n)), begin=mm.XFADES, end=mm.XFADES + 11)
     r.mc.write(mm.XFADES, bytes(xf or [0] * 12))
     r.mc.w32(PAGE + mm.PAGE_INDEX, index)
@@ -61,14 +52,14 @@ def xf12(r):
 @pytest.mark.parametrize("track", ANALOG)
 def test_an_analog_track_has_two_pages_and_the_second_holds_the_solo_and_the_crossfade(main, track):
     r = page(main, track)
-    assert [r.ask(k) for k in range(8)] == [0] * 8 and r.pages == 2 and r.index == 1       # no knob there is stock's
+    assert [r.ask(k) for k in range(8)] == [0] * 8 and r.pages == 2 and r.index == 1  # no knob there is stock's
     assert r.fifth() == ["", "S OFF"] and r.third() == ["", "XF0"]
     ours = [t[2] for t in r.show() if t[2]]
-    assert sorted(ours) == sorted(["S OFF", "XF0", "C047"])         # and nothing else is written: the six other places are empty
+    assert sorted(ours) == sorted(["S OFF", "XF0", "C047"])  # and nothing else is written: the six other places are empty
     assert r.twist(E, 1) == 1 and r.solos == 1 << track and r.fifth() == ["", "SOLO"]
     assert r.twist(E, -1) == 1 and r.solos == 0
     assert r.twist(G, 40) == 1 and xf12(r) == [40 if t == track else 0 for t in range(12)] and r.third() == ["", "XF40"]
-    for k in range(1, 9):                                           # the six others turn nothing
+    for k in range(1, 9):  # the six others turn nothing
         if k not in (E, G):
             assert r.twist(k, 3) == 1
     assert r.solos == 0 and xf12(r) == [40 if t == track else 0 for t in range(12)]
@@ -87,11 +78,11 @@ def test_an_analog_tracks_first_page_is_stocks(main, before, track):
 
 def test_one_crossfade_for_twelve_tracks_and_the_track_that_turns_it_stays(main):
     r = page(main, 10, xf=[0, 0, 90, 0, 0, 0, 0, 0, 0, 0, 0, 0])
-    assert r.third() == ["", "XF90"]                                # a sampler's, shown on an analog track's page
+    assert r.third() == ["", "XF90"]  # a sampler's, shown on an analog track's page
     r.twist(G, 1)
     assert xf12(r) == [91 if t == 10 else 0 for t in range(12)]
-    assert r.xf_all == [(8, 4), (0, 4), (4, 4)]                     # the track's own long first: never all twelve at 0 on the way
-    s = page(main, 5, xf=xf12(r))                                   # and a sampler takes it from the analog track
+    assert r.xf_all == [(8, 4), (0, 4), (4, 4)]  # the track's own long first: never all twelve at 0 on the way
+    s = page(main, 5, xf=xf12(r))  # and a sampler takes it from the analog track
     assert s.third() == ["", "XF91"]
     s.twist(G, -1)
     assert xf12(s) == [90 if t == 5 else 0 for t in range(12)] and s.xf_all == [(4, 4), (0, 4), (8, 4)]
@@ -126,7 +117,7 @@ def test_an_analog_tracks_solo_silences_the_other_eleven_and_is_kept(rig, track)
     for mutes in (0, 1 << track, 0x0fff):
         quiet, voices = K.heard(rig, knob=1 << track, mutes=mutes, pattern=mutes)
         assert quiet == [t for t in range(12) if t != track] and voices == [v for v in range(4) if 8 + v != track]
-        assert rig.left == 1 << track                               # an analog track is never without its knob: the bit stays
+        assert rig.left == 1 << track  # an analog track is never without its knob: the bit stays
     quiet, voices = K.heard(rig, knob=1 << track | 1 << 2)
     assert quiet == [t for t in range(12) if t not in (2, track)] and rig.left == 1 << track | 1 << 2
 
@@ -136,9 +127,9 @@ def test_an_analog_tracks_solo_silences_the_other_eleven_and_is_kept(rig, track)
 def test_an_analog_track_that_holds_the_crossfade_stays_and_the_rest_follow_the_law(rig, xf):
     shown, levels, vols, was = X.mixed(rig, xf=xf)
     assert (shown, levels) == X.law(vols, was, xf)
-    assert list(rig.mc.read(mm.XFADES, 12)) == xf                   # the analog tracks' numbers are not taken away
+    assert list(rig.mc.read(mm.XFADES, 12)) == xf  # the analog tracks' numbers are not taken away
     top = max(range(12), key=lambda t: xf[t])
-    if xf.count(xf[top]) == 1 and top >= 8:                         # the holder's own voice is as stock made it when no other is up
+    if xf.count(xf[top]) == 1 and top >= 8:  # the holder's own voice is as stock made it when no other is up
         others = max(x for t, x in enumerate(xf) if t != top)
         if not others:
             assert levels[top - 8] == was[top - 8] and levels[top - 4] == was[top - 4]
@@ -151,11 +142,13 @@ def test_with_no_analog_number_it_is_the_dma_images_mixer(rig, before):
     assert K.heard(rig, knob=0x21) == K.heard(old, knob=0x21)
 
 
-# ---- the image ------------------------------------------------------------------------------------------------------
+# ---- the image
+# ------------------------------------------------------------------------------------------------------
 
 def test_the_image(official_path, official, stock3, main):  # noqa: F811
-    """The dma image's but for: the page's runs and a seventh, the mixer link's run, the analog mute's, four more
-    bytes of 0 after the eight, and the class's pointers to the three methods."""
+    """The dma image's but for: the page's runs and a seventh, the mixer link's run, the analog mute's, four more bytes
+    of 0 after the eight, and the class's pointers to the three methods.
+    """
     quiet = lambda s: None
     built = build.build(official_path, log=quiet, xfade=4)[2]
     was = build.build(official_path, log=quiet, xfade=3)[2]
@@ -173,7 +166,7 @@ def test_the_image(official_path, official, stock3, main):  # noqa: F811
              mm.CAVE_METER, mm.CAVE_FEED, (mm.XFADES, mm.XFADES + 12), (mm.SYN_CLASS, mm.SYN_CLASS + 0x100), (mm.SYN_SIDE, mm.SYN_SIDE + 0x40)]
     diff = [k for k in range(len(new)) if new[k] != old[k]]
     stray = [k for k in diff if not any(mm.off(a) <= k < mm.off(b) for a, b in spans)]
-    assert len(stray) <= 64, [hex(mm.BASE + k) for k in stray[:20]]       # operands that name a routine that moved
+    assert len(stray) <= 64, [hex(mm.BASE + k) for k in stray[:20]]  # operands that name a routine that moved
     for sid in official.ids:
         if sid not in (3, 7):
             assert built.container.by_id(sid).stored == official.container.by_id(sid).stored

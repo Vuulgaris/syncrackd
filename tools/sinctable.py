@@ -1,19 +1,18 @@
 """The interpolation table of the "pitch" image: a windowed sinc, 16 taps, 32 phases.
 
-    python -m tools.sinctable            # what it does to a pitched sine, against the two-point line it replaces
+python -m tools.sinctable            # what it does to a pitched sine, against the two-point line it replaces
 
-The engine reads a sample between frames i and i + 1, f/4096 of the way along, as the sum of 16
-frames around it, each times a number from this table: row f >> 7 and the next row, blended by
-the low 7 bits of f. A row is the sinc for that fraction of a frame under a Kaiser window, held
-to 15 bits and made to add up to exactly ONE, so a steady level stays where it is at every
-fraction. Row 0 is one frame alone; row 32 is the next frame alone.
+The engine reads a sample between frames i and i + 1, f/4096 of the way along, as the sum of 16 frames around it, each
+times a number from this table: row f >> 7 and the next row, blended by the low 7 bits of f. A row is the sinc for
+that fraction of a frame under a Kaiser window, held to 15 bits and made to add up to exactly ONE, so a steady level
+stays where it is at every fraction. Row 0 is one frame alone; row 32 is the next frame alone.
 
 Only rows 0 to 16 are stored in the image: row 32 - r is row r backwards.
 """
 import numpy as np
 
 TAPS, PHASES = 16, 32
-BEFORE = TAPS // 2 - 1          # the first tap is this many frames before frame i
+BEFORE = TAPS // 2 - 1  # the first tap is this many frames before frame i
 ONE = 32767
 BETA = 8.0
 
@@ -25,23 +24,24 @@ def rows(taps=TAPS, phases=PHASES, beta=BETA, one=ONE):
         n = np.arange(taps) - (taps // 2 - 1) - p / phases
         h = np.sinc(n) * np.i0(beta * np.sqrt(np.clip(1 - (n / (taps / 2)) ** 2, 0, 1))) / np.i0(beta)
         q = np.round(h / h.sum() * one).astype(int)
-        q[int(np.argmax(q))] += one - int(q.sum())      # what rounding left over goes to the largest
+        q[int(np.argmax(q))] += one - int(q.sum())  # what rounding left over goes to the largest
         half.append([int(v) for v in q])
     # the middle row is used as it is: ONE is odd, so its two halves cannot be the same
     return half + [half[phases - p][::-1] for p in range(phases // 2 + 1, phases + 1)]
 
 
-TWELVE, SKIP = 12, 2            # the table of twelve: a sinc of 12 frames in the middle 12 places of the 16, SKIP noughts at each end
+TWELVE, SKIP = 12, 2  # the table of twelve: a sinc of 12 frames in the middle 12 places of the 16, SKIP noughts at each end
 
 
 def rows12():
     """The table of twelve, in the shape of the table of sixteen: the engine built with TWELVE leaves the outer two
-    frames at each end out of the sum, which is what a nought there does."""
+    frames at each end out of the sum, which is what a nought there does.
+    """
     return [[0] * SKIP + r + [0] * SKIP for r in rows(taps=TWELVE)]
 
 
-SIX, BETA6 = 6, 5.0              # the six image: a sinc of 6 frames in places 5 to 10 of the 16, a window of its own
-#   (the sixteen's, 8.0, left a sine at 10 kHz pitched a fifth only 34 dB clean; 5.0 makes it 60, and 71 at 5 kHz)
+SIX, BETA6 = 6, 5.0  # the six image: a sinc of 6 frames in places 5 to 10 of the 16, a window of its own
+# (the sixteen's, 8.0, left a sine at 10 kHz pitched a fifth only 34 dB clean; 5.0 makes it 60, and 71 at 5 kHz)
 
 
 def rows6():
@@ -49,8 +49,9 @@ def rows6():
     return [[0] * 5 + r + [0] * 5 for r in rows(taps=SIX, beta=BETA6)]
 
 
-EIGHT, BETA8 = 8, 5.0            # the eight image: a sinc of 8 frames in places 4 to 11 of the 16, a window of its own
-#   (a fifth up, 15 kHz 44 dB clean where the sixteen's 8.0 left 27, 10 kHz 96, 5 kHz 61; the gain within 0.7 dB to 18 kHz)
+EIGHT, BETA8 = 8, 5.0  # the eight image: a sinc of 8 frames in places 4 to 11 of the 16, a window of its own
+# (a fifth up, 15 kHz 44 dB clean where the sixteen's 8.0 left 27, 10 kHz 96, 5 kHz 61; the gain within 0.7 dB to 18
+# kHz)
 
 
 def rows8():
@@ -73,8 +74,9 @@ def magic(twelve=False, six=False, eight=False):
 
 
 def source(cave="z", twelve=False, narrow=False, six=False, eight=False):
-    """The stored rows as assembler, for the engine's build: in the run of code the build names.
-    narrow: the table of twelve without the two numbers at each end of a row, which are 0 and which no sum reads."""
+    """The stored rows as assembler, for the engine's build: in the run of code the build names. narrow: the table of
+    twelve without the two numbers at each end of a row, which are 0 and which no sum reads.
+    """
     out = ["| made by tools/sinctable.py: rows 0 to %d of the interpolation table, %d taps each" % (PHASES // 2, EIGHT if eight else SIX if six else TWELVE if twelve else TAPS),
            "    .section .cave.%s,\"ax\"" % cave, "    .globl  hq_rows", "hq_rows:"]
     for row in stored(twelve, six, eight):

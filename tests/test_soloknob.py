@@ -1,15 +1,4 @@
-"""The soloknob image: the purple keys are stock's pattern mutes again, and a solo is on the sampling page's knob E.
-
-
-
-
-
-
-What runs here, from the built image: the page's drawing and its knobs (tests/test_once.py's rig), and our mixer link
-and analog mute around a stand-in for the mixer (tests/test_mainpatch.py's rig), next to the once image's.
-Nothing of stock's is changed by this image that the once image did not change, and seven places it changed are
-stock's again: that is tested against the official section.
-"""
+"""The soloknob image: the purple keys are stock's pattern mutes again, and a solo is on the sampling page's knob E."""
 import shutil
 
 import numpy as np
@@ -24,8 +13,8 @@ from tools import mainmap as mm
 
 pytestmark = pytest.mark.skipif(not shutil.which("m68k-elf-gcc"), reason="no ColdFire cross-compiler")
 
-SOLO_KNOB = 5                                   # knob E, as a turn names it
-FIFTH = (33, 12)                                # where the fifth place's value goes; its name, at (33, 0), is empty
+SOLO_KNOB = 5  # knob E, as a turn names it
+FIFTH = (33, 12)  # where the fifth place's value goes; its name, at (33, 0), is empty
 TRACKS, SAMPLER = 12, 44
 ALL = 0x0fff
 
@@ -75,7 +64,7 @@ def test_knob_e_is_the_tracks_solo_and_the_place_says_which(main, track):
     assert r.fifth() == ["", "S OFF"] and r.solos == 0
     assert r.twist(SOLO_KNOB, 1) == 1
     assert r.solos == 1 << track and r.fifth() == ["", "SOLO"]
-    r.twist(SOLO_KNOB, 4)                                          # on is on
+    r.twist(SOLO_KNOB, 4)  # on is on
     assert r.solos == 1 << track
     r.twist(SOLO_KNOB, -1)
     assert r.solos == 0 and r.fifth() == ["", "S OFF"]
@@ -87,7 +76,7 @@ def test_knob_e_is_the_tracks_solo_and_the_place_says_which(main, track):
 
 
 def test_several_tracks_each_its_own_bit(main):
-    r = Page(main, track=2, word=0b1000_0001)                      # tracks 1 and 8 are soloed already
+    r = Page(main, track=2, word=0b1000_0001)  # tracks 1 and 8 are soloed already
     assert r.fifth() == ["", "S OFF"]
     r.twist(SOLO_KNOB, 1)
     assert r.solos == 0b1000_0101 and r.fifth() == ["", "SOLO"]
@@ -96,7 +85,7 @@ def test_several_tracks_each_its_own_bit(main):
     r.twist(SOLO_KNOB, -1)
     assert r.solos == 0b0000_0101
     r = Page(main, track=0, word=0b0000_0101)
-    r.twist(SOLO_KNOB, 0)                                           # a turn of nothing
+    r.twist(SOLO_KNOB, 0)  # a turn of nothing
     assert r.solos == 0b0000_0101 and not r.solo_writes
 
 
@@ -124,7 +113,8 @@ def test_on_the_once_image_the_place_is_empty_and_the_knob_turns_nothing(before)
     assert r.fifth() == [] and r.twist(SOLO_KNOB, 1) == 1 and r.solos == 0x55 and not r.solo_writes
 
 
-# ---- what is silenced: our mixer link and analog mute ---------------------------------------------------------------
+# ---- what is silenced: our mixer link and analog mute
+# ---------------------------------------------------------------
 
 class Rig(M.Rig):
     """test_mainpatch's rig with the knob's long beside stock's words."""
@@ -152,7 +142,8 @@ MACHINES = [SAMPLER] * 8 + [8, 9, 10, 11]
 def heard(rig, machines=MACHINES, **state):
     """One mixer call. -> (the tracks the mixer is shown at volume 0, the analog voices whose two level words are 0).
     Nothing else of the block the mixer is given, of the level words or of the control block moves: the FX track's
-    part of each among them."""
+    part of each among them.
+    """
     block, level2 = M.make_block(machines, [0] * 12, seed=6)
     assert 0 not in M.vols(block)
     quiet = M.muted_tracks(rig, block, level2, **state)
@@ -161,7 +152,7 @@ def heard(rig, machines=MACHINES, **state):
     ret, after, level2_after = rig.run(block, level2, **state)
     assert ret == 0x8000DBD0 and after == block and level2_after == level2
     got = rig.mc.read(mm.CONTROL, M.CONTROL_BYTES)
-    assert rig.seen["control"] == got                              # done before the mixer runs
+    assert rig.seen["control"] == got  # done before the mixer runs
     voices = [v for v in range(4) if got[2 * v:2 * v + 2] == b"\0\0"]
     want = bytearray(was)
     for v in voices:
@@ -183,7 +174,8 @@ def test_with_no_solo_it_is_the_mutes_as_on_the_once_image(rig, old):
 def test_one_solo_silences_the_other_eleven(rig, track):
     others = [t for t in range(TRACKS) if t != track]
     assert heard(rig, knob=1 << track) == (others, [0, 1, 2, 3]) and rig.left == 1 << track
-    # a soloed track is heard when it is green-muted, and when it is purple-muted; a mute on a silenced track changes nothing
+    # a soloed track is heard when it is green-muted, and when it is purple-muted; a mute on a silenced track changes
+    # nothing
     assert heard(rig, knob=1 << track, mutes=1 << track) == (others, [0, 1, 2, 3])
     assert heard(rig, knob=1 << track, pattern=1 << track) == (others, [0, 1, 2, 3])
     assert heard(rig, knob=1 << track, mutes=ALL, pattern=ALL) == (others, [0, 1, 2, 3])
@@ -194,12 +186,12 @@ def test_one_solo_silences_the_other_eleven(rig, track):
 @pytest.mark.parametrize("knob", [0b0000_0101, 0b1000_0001, 0b0111_1110, 0xff, 0b0001_1000])
 @pytest.mark.parametrize("mutes, pattern", [(0, 0), (0x0a5a, 0x0005), (0x1fff, 0x1fff)])
 def test_several_solos_whatever_is_muted(rig, knob, mutes, pattern):
-    quiet = [t for t in range(TRACKS) if not knob >> t & 1]        # exactly the tracks not soloed, the analog four among them
+    quiet = [t for t in range(TRACKS) if not knob >> t & 1]  # exactly the tracks not soloed, the analog four among them
     assert heard(rig, knob=knob, mutes=mutes, pattern=pattern) == (quiet, [0, 1, 2, 3]) and rig.left == knob
 
 
 def test_stocks_own_solo_word_is_not_followed_any_more(rig, old):
-    assert heard(old, solos=0b0100) == ([t for t in range(TRACKS) if t != 2], [0, 1, 2, 3])     # the once image: stock's rule
+    assert heard(old, solos=0b0100) == ([t for t in range(TRACKS) if t != 2], [0, 1, 2, 3])  # the once image: stock's rule
     assert heard(rig, solos=0b0100) == ([], [])
     assert heard(rig, solos=0b0100, mutes=0b0010_0000_0001) == ([0, 9], [1])
     assert heard(rig, solos=0b0100, knob=0b1000) == ([t for t in range(TRACKS) if t != 3], [0, 1, 2, 3])
@@ -207,7 +199,8 @@ def test_stocks_own_solo_word_is_not_followed_any_more(rig, old):
 
 def test_a_track_that_is_no_sampler_any_more_has_no_solo(rig):
     """Its page is gone and with it the knob: the bit is cleared where the mixer link looks, a block later for the analog
-    voices, which are looked at first."""
+    voices, which are looked at first.
+    """
     machines = [SAMPLER, 3, SAMPLER] + [SAMPLER] * 5 + [8, 9, 10, 11]
     block, level2 = M.make_block(machines, [0] * 12, seed=6)
     assert M.muted_tracks(rig, block, level2, knob=0b0010) == [] and rig.left == 0
@@ -231,7 +224,8 @@ def test_the_long_is_read_and_only_written_when_a_bit_has_to_go(rig):
         rig.mc.uc.hook_del(hook)
 
 
-# ---- the purple keys are stock's again -------------------------------------------------------------------------------
+# ---- the purple keys are stock's again
+# -------------------------------------------------------------------------------
 
 def test_the_solo_images_seven_places_hold_stocks_bytes(main, before, stock3):
     image, syms = main
@@ -244,7 +238,8 @@ def test_the_solo_images_seven_places_hold_stocks_bytes(main, before, stock3):
     for a, n in ((mm.PATTERN_MUTES_SET, 12), (mm.MIDI_MUTES_SET, 12), (mm.PATTERN_MUTED, 0x3a), (mm.KEY_COLOURS, 0x180), (mm.MUTE_TEST, 6),
                  (0x400a3d6a, 6), (0x400a4250, 6), (0x4010de7e, 6), (0x4010deb2, 6)):
         assert image[mm.off(a):mm.off(a) + n] == stock3[mm.off(a):mm.off(a) + n]
-    # none of the solo image's routines is in the image, and the run its code was in is stock's but for our long at its start
+    # none of the solo image's routines is in the image, and the run its code was in is stock's but for our long at
+    # its start
     assert not [n for n in syms if n.startswith("solo_")] and [n for n in was if n.startswith("solo_")]
     lo, hi = mm.CAVE_SOLO
     assert image[mm.off(lo):mm.off(lo) + 4] == bytes(4) and mm.SOLO_WORD == lo
@@ -252,7 +247,9 @@ def test_the_solo_images_seven_places_hold_stocks_bytes(main, before, stock3):
 
 
 def test_the_pattern_word_goes_to_the_engines_as_it_is(main):
-    """Stock's routine that stores the per-block routine's copy, run from the image: the word, not the tracks its solos silence."""
+    """Stock's routine that stores the per-block routine's copy, run from the image: the word, not the tracks its solos
+    silence.
+    """
     mc = Rig(*main, entry="mix_amute").mc
     for word in (0, 1, 0x0005, 0x0a5a, 0x1000, 0x1fff):
         mc.write(mm.PATTERN_MUTES, b"\xa5\x5a")
@@ -263,7 +260,7 @@ def test_the_pattern_word_goes_to_the_engines_as_it_is(main):
 # ---- the image ---------------------------------------------------------------------------------------------------
 
 RUNS = [mm.CAVE, mm.CAVE_AMUTE, mm.CAVE_SOLO, mm.CAVE_PAGE]
-MOVED = (mm.TRIG_MUTE + 2, mm.HOLD_WRITE + 2, mm.MIX_CALL + 2)      # the operands of three calls into the runs that were built again
+MOVED = (mm.TRIG_MUTE + 2, mm.HOLD_WRITE + 2, mm.MIX_CALL + 2)  # the operands of three calls into the runs that were built again
 POINTERS = O.POINTERS
 
 
@@ -277,7 +274,8 @@ def test_the_main_program_is_the_once_images_but_for_its_declared_places(main, b
     assert diff and all(any(mm.off(s) <= k < mm.off(e) for s, e in spans) for k in diff), [hex(mm.BASE + k) for k in diff if not any(mm.off(s) <= k < mm.off(e) for s, e in spans)][:6]
     for s, e in RUNS:
         assert image[mm.off(s):mm.off(e)] != old[mm.off(s):mm.off(e)], hex(s)
-    # the once image's own run and its three places, the keep code, the banks, the text and the right channel's: as they were
+    # the once image's own run and its three places, the keep code, the banks, the text and the right channel's: as
+    # they were
     for lo, hi in (mm.CAVE_ONCE, mm.CAVE_KEEP, mm.CAVE_BANK, mm.CAVE_RIGHT, mm.CAVE_HALVES, mm.CAVE_TEXT):
         assert image[mm.off(lo):mm.off(hi)] == old[mm.off(lo):mm.off(hi)]
     for a, n in O.SITES:

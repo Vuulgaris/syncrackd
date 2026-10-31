@@ -1,18 +1,16 @@
 """The main CPU's knob display table, read out of its start-up code. **OS 1.42 only.**
 
-How a knob's value is shown is not in the descriptor records (tools/params.py).
-A start-up routine (mainmap.UI_INIT) first builds about 170 small function
-objects, then fills a table in RAM with one 84-byte entry per descriptor record:
+How a knob's value is shown is not in the descriptor records (tools/params.py). A start-up routine (mainmap.UI_INIT)
+first builds about 170 small function objects, then fills a table in RAM with one 84-byte entry per descriptor record:
 
-    +0x00 flags   +0x04 16 bytes of knob behaviour, copied from a template
-    +0x14 text    +0x24 graphic    +0x34 (not named)    +0x44 FUNC+turn step
++0x00 flags   +0x04 16 bytes of knob behaviour, copied from a template
++0x14 text    +0x24 graphic    +0x34 (not named)    +0x44 FUNC+turn step
 
-The last four are copies of function objects. This module reads the routine as
-straight-line code (objdump listing, constant registers, the outgoing argument
-stack) and returns the table without running anything.
+The last four are copies of function objects. This module reads the routine as straight-line code (objdump listing,
+constant registers, the outgoing argument stack) and returns the table without running anything.
 
-Entry k belongs to record k of the array at mainmap.UI_RECORDS; the accessor at
-mainmap.UI_ENTRY returns UI_TABLE + 84 * k for k < 505.
+Entry k belongs to record k of the array at mainmap.UI_RECORDS; the accessor at mainmap.UI_ENTRY returns UI_TABLE + 84
+* k for k < 505.
 """
 import os
 import re
@@ -42,8 +40,9 @@ def _listing(image):
 
 
 def walk(image):
-    """-> (stores {address: (value or None, instruction address)},
-           calls [(instruction address, target, [(argument, address of the push)], first first)])."""
+    """-> (stores {address: (value or None, instruction address)}, calls [(instruction address, target, [(argument,
+    address of the push)], first first)]).
+    """
     reg, stack, stores, calls = {}, [], {}, []
 
     def top(v, a):
@@ -132,17 +131,17 @@ def walk(image):
             for r in SCRATCH:
                 reg[r] = None
             continue
-        m = re.search(r",%" + R + "$", t)                 # anything else that writes a register
+        m = re.search(r",%" + R + "$", t)  # anything else that writes a register
         if m and not t.startswith(("cmp", "tst", "btst")):
             reg[m.group(1)] = None
     return stores, calls
 
 
 def table(image):
-    """-> list of mm.UI_COUNT dicts: flags, template, and per function field
-    {"object": address of the function object copied in (None if built in place),
-     "target": the function it calls, "site": address of the instruction that names the object,
-     "copy": the routine that copies it}."""
+    """-> list of mm.UI_COUNT dicts: flags, template, and per function field {"object": address of the function object
+    copied in (None if built in place), "target": the function it calls, "site": address of the instruction that names
+    the object, "copy": the routine that copies it}.
+    """
     stores, calls = walk(image)
     end = mm.UI_TABLE + mm.UI_STRIDE * mm.UI_COUNT
     out = [{} for _ in range(mm.UI_COUNT)]
@@ -167,9 +166,10 @@ def table(image):
 
 
 def pages(image):
-    """-> {page number: {"name": address of its short name, "long": address of its long name,
-    "knobs": the record behind each of the 8 knobs (0: none), "level": the LEVEL knob's record}}
-    for -1 (the entry before the table: machine 44's own page) to mm.PAGE_COUNT - 1."""
+    """-> {page number: {"name": address of its short name, "long": address of its long name, "knobs": the record behind
+    each of the 8 knobs (0: none), "level": the LEVEL knob's record}} for -1 (the entry before the table: machine 44's
+    own page) to mm.PAGE_COUNT - 1.
+    """
     stores, calls = walk(image)
     first = mm.PAGE_TABLE - mm.PAGE_STRIDE
     end = mm.PAGE_TABLE + mm.PAGE_STRIDE * mm.PAGE_COUNT
@@ -178,6 +178,6 @@ def pages(image):
     out = {}
     for k in range(-1, mm.PAGE_COUNT):
         e = mm.PAGE_TABLE + mm.PAGE_STRIDE * k
-        vals = [stores[e + 8 + 4 * i][0] for i in range(9)]            # KeyError: the routine is not what was read
+        vals = [stores[e + 8 + 4 * i][0] for i in range(9)]  # KeyError: the routine is not what was read
         out[k] = {"name": names[e], "long": names[e + 4], "knobs": vals[:8], "level": vals[8]}
     return out

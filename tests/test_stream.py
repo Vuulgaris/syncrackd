@@ -1,16 +1,4 @@
-"""The stream image (engine/phone.c and engine/keeptakes.c, STREAM): the wipe image with a project's own samples back at
-its load, written by the phone once the load is done and loaded slot by slot.
-
-On the unit (2026-10-27, the phone app's log) the phone's writes go unanswered while a load waits on it, so LOAD PROJECT
-left A as it was: "That sample that I recorded carried over". Here, with stock's routines around it played (test_phone's
-rig):
-  - LOAD PROJECT the phone answered ends by saying so, the ask frame with 0x6C in its id's place; not answered, nothing;
-  - 0x6B, at any time, ORs its slots into the reload's and starts one job on stock's runner, none while one is queued;
-  - the job takes the slots, drops any holding a take the drive does not have, and loads the rest as the load loads the
-    phone's, again while more come, then lets go;
-  - the loader in a reload reads the named slots alone, and as the wipe image's otherwise;
-  - the image: the wipe image's but for the phone's and the banks' runs, the new runs, the SysEx entry and the load call.
-Emulation only."""
+"""The stream image (engine/phone.c and engine/keeptakes.c, STREAM): the wipe image with a project's own samples back at"""
 import shutil
 
 import pytest
@@ -46,15 +34,15 @@ def put_of(r, built):
 def rig(built, answer=True):
     r = F.rig(built, now_project=9, project_bank=0, now=0)
     mc = r.mc
-    mc.map(0x10000000, 0x10000)                 # the shared window: the keep box
-    mc.map(0x43bd0000, 0x10000)                 # the audio CPU's up mark
-    mc.map(0x4d800000, 0x200000)                # the loader's staging
+    mc.map(0x10000000, 0x10000)  # the shared window: the keep box
+    mc.map(0x43bd0000, 0x10000)  # the audio CPU's up mark
+    mc.map(0x4d800000, 0x200000)  # the loader's staging
     mc.w32(AUDIO_UP, 1)
     r.stub(mm.PROJECT_MAKE, lambda m, p: r.log.append(("make",)))
     r.stub(JOB_RUNNER, lambda: 0x5555)
     r.stub(JOB_START, lambda run, name, what, done: r.log.append(("job", mc.read(name, 11), mc.r32(what + 12), run)))
 
-    def wait(sem):                              # (the rig's own hook on the wait logs it)
+    def wait(sem):  # (the rig's own hook on the wait logs it)
         if answer:
             mc.w32(r.syms["phone_answer"], 1)
     r.stub(P.KERNEL_WAIT, wait)
@@ -96,7 +84,7 @@ def test_0x6b_names_slots_and_starts_one_job(stream):
     data, n = r.frame(0x6b, 1 << 40, 18)
     r.log.clear()
     r.mc.call(r.syms["stream_sysex"], data, n, 4)
-    assert r.log == []                          # one queued already: the slot joins it
+    assert r.log == []  # one queued already: the slot joins it
     assert masks(r, r.syms["stream_bits"]) == (MASK & 0xffffffff, (MASK >> 32) | 1 << 8)
 
 
@@ -126,7 +114,7 @@ def test_the_job_keeps_a_take_not_saved_loads_the_rest_and_takes_what_comes_mean
 
     def load(all, progress):
         r.log.append(("load", masks(r, r.syms["phone_mask"]), r.var("stream_now"), all, progress))
-        if late:                                # a 0x6B while the first reload runs
+        if late:  # a 0x6B while the first reload runs
             mc.w32(r.syms["stream_bits"], mc.r32(r.syms["stream_bits"]) | late.pop())
     r.stub(put, asked)
     r.stub(r.syms["load_slots"], load)

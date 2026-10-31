@@ -1,32 +1,31 @@
 /* Main CPU (section 3, OS 1.42 only): the scratch image. A take is on the drive before the project is saved, so a
- * power off does not lose it, and it is still a take that has not been saved. 
- * 
+ * power off does not lose it, and it is still a take that has not been saved.
  *
- * The room. After our sector of the banks (BANK_MARK_SECTOR, 196 MB) the drive is free up to 244 MB (mainmap.DRIVE_FREE):
- * one sector of ours, the table, then 47 places of 1 MB, a slot's size. A place holds a take as a slot does, header
- * first. The table says which slot each place holds (the slot + 1, 0 none) and for which bank. Nothing here reaches a
- * sector of the three banks' runs but scratch_commit, through the store as every save does.
+ * The room. After our sector of the banks (BANK_MARK_SECTOR, 196 MB) the drive is free up to 244 MB
+ * (mainmap.DRIVE_FREE): one sector of ours, the table, then 47 places of 1 MB, a slot's size. A place holds a take as
+ * a slot does, header first. The table says which slot each place holds (the slot + 1, 0 none) and for which bank.
+ * Nothing here reaches a sector of the three banks' runs but scratch_commit, through the store as every save does.
  *
  * Writing (hold_body, a job on stock's runner, where the takes are written at a save). The main task's loop calls
- * scratch_poll at each message (engine/once.S). When the feed's long (MB_FED: its count and which tracks were fed) has
- * moved since the last job and has not moved since the message before, the takes have stopped: a job goes over the 64
- * slots as keep_takes does, writes each take the drive does not have into its place (the place the slot had, or a free
- * one), the header last and only if the take is still the length it had, then the table, then tells the audio CPU the
- * take is kept. So a take is asked for once, and a new take in the slot clears that mark as it always did. 47 places:
- * a 48th slot's take is not held, and is lost at a power off as before.
+ * scratch_poll at each message (engine/once.S). When the feed's long (MB_FED: its count and which tracks were fed)
+ * has moved since the last job and has not moved since the message before, the takes have stopped: a job goes over
+ * the 64 slots as keep_takes does, writes each take the drive does not have into its place (the place the slot had,
+ * or a free one), the header last and only if the take is still the length it had, then the table, then tells the
+ * audio CPU the take is kept. So a take is asked for once, and a new take in the slot clears that mark as it always
+ * did.
  *
  * Back at a start (back_body, the first job, once the audio CPU is up and the bank is known): every place the table
  * gives for the loaded bank is sent to its slot as the loader sends the drive's samples (KEEP_PUT, three sectors a
  * request), and counts as kept. The slot plays the take, not the bank's sample.
  *
- * A save (scratch_commit, from engine/keeptakes.c, before keep_takes and in the same job): each place is copied into its
- * slot of the bank, the first sector last, the store's table read again, and the table emptied. keep_takes then writes
- * what is newer. A load (scratch_drop, from load_keep before the slots are loaded): the slots the table gives are
- * loaded from the bank like the slots the phone changed, and the table emptied: LOAD PROJECT still goes back to the
- * project as it was saved.
+ * A save (scratch_commit, from engine/keeptakes.c, before keep_takes and in the same job): each place is copied into
+ * its slot of the bank, the first sector last, the store's table read again, and the table emptied. keep_takes then
+ * writes what is newer. A load (scratch_drop, from load_keep before the slots are loaded): the slots the table gives
+ * are loaded from the bank like the slots the phone changed, and the table emptied: LOAD PROJECT still goes back to
+ * the project as it was saved.
  *
- * The buffers are in the block the boot stages the pool in, 2 MB in, past the loader's slot (engine/keeptakes.c, SLOT_AT):
- * every job is on the one worker, so no two use it at once. */
+ * The buffers are in the block the boot stages the pool in, 2 MB in, past the loader's slot (engine/keeptakes.c,
+ * SLOT_AT): every job is on the one worker, so no two use it at once. */
 #include "sampler.h"
 
 #define AUDIO_UP (*(const volatile u32 *)0x43bdd824)

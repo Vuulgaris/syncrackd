@@ -1,14 +1,4 @@
-"""The alock image: the slock image with an analog track's solo lockable to a step too.
-
-
-
-
-An analog track's lock is on knob slot 26, the last of the ten words that are a track's machine (17 to 26): no analog
-machine has a knob on it (theirs are 17 to 24, and 25 on one). The same two marks as a sampler track's on slot 17,
-counted only on a track that holds an analog machine.
-
-NOT SHOWN, and emulation cannot: that nothing of an analog voice reads that word. Only the unit can.
-"""
+"""The alock image: the slock image with an analog track's solo lockable to a step too."""
 import shutil
 
 import pytest
@@ -45,8 +35,9 @@ def locks(r, slot):
 
 
 def test_no_analog_machine_has_a_knob_on_the_slot(stock3):  # noqa: F811
-    """Every record of the main program by its machine: the analog machines are 8 to 33 and 39 to 43, and none names
-    slot 26. Stock copies a machine as ten words, 17 to 26 (0x400a9c2e), so it is a machine's word and no page's."""
+    """Every record of the main program by its machine: the analog machines are 8 to 33 and 39 to 43, and none names slot
+    26. Stock copies a machine as ten words, 17 to 26 (0x400a9c2e), so it is a machine's word and no page's.
+    """
     by = {}
     for p in params.load(stock3, "1.42"):
         by.setdefault(p.type, set()).add(p.slot)
@@ -67,7 +58,7 @@ def test_knob_e_with_a_step_held_locks_the_steps_solo_on_an_analog_track(main, t
     assert locks(r, mm.SOLO_SLOT) == {} and not r.rec_locks and r.others == {(track, 12, SLOT)}
     assert r.twist(E, -1) == 1 and locks(r, SLOT) == {} and r.count(12) == 0 and r.fifth() == ["", "S OFF"]
     r.hold()
-    assert r.twist(E, 1) == 1 and r.solos == 1 << track and locks(r, SLOT) == {}    # no step held: the track's own, as before
+    assert r.twist(E, 1) == 1 and r.solos == 1 << track and locks(r, SLOT) == {}  # no step held: the track's own, as before
     r.hold(3)
     assert r.fifth() == ["", "SOLO"]
     r.twist(E, -1)
@@ -78,7 +69,7 @@ def test_a_track_that_holds_the_midi_machine_gets_no_lock(main):
     r = A.page(main, 10, machine=35)
     r.hold(2)
     r.twist(E, 1)
-    assert locks(r, SLOT) == {} and r.solos == 1 << 10              # the slot may be a knob there: the track's own is turned
+    assert locks(r, SLOT) == {} and r.solos == 1 << 10  # the slot may be a knob there: the track's own is turned
 
 
 def test_a_samplers_is_on_slot_17_as_it_was(main, before):
@@ -89,7 +80,8 @@ def test_a_samplers_is_on_slot_17_as_it_was(main, before):
     assert locks(a, mm.SOLO_SLOT) == locks(b, mm.SOLO_SLOT) == {7: ON} and locks(a, SLOT) == {} and a.show() == b.show()
 
 
-# ---- this block's solos --------------------------------------------------------------------------------------------------
+# ---- this block's solos
+# --------------------------------------------------------------------------------------------------
 
 @pytest.fixture(scope="module")
 def rig(main):
@@ -99,7 +91,9 @@ def rig(main):
 
 
 def marks(rig, words, types=(8, 9, 10, 11)):
-    """What the playing steps left: slot 17 of a digital track, slot 26 of an analog one. And the analog tracks' machines."""
+    """What the playing steps left: slot 17 of a digital track, slot 26 of an analog one. And the analog tracks'
+    machines.
+    """
     for t in range(12):
         slot = mm.SOLO_SLOT if t < 8 else SLOT
         rig.mc.write(WORDS + 142 * t + 28 + 2 * slot, words.get(t, 0).to_bytes(2, "big"))
@@ -113,7 +107,7 @@ def test_a_step_locked_on_solos_its_analog_track(rig, track):
     assert quiet == [t for t in range(12) if t != track] and voices == [v for v in range(4) if 8 + v != track]
     assert rig.left == 0 and rig.mc.r32(mm.SOLO_NOW) == 1 << track
     marks(rig, {track: OFF})
-    quiet, voices = K.heard(rig, knob=1 << track | 1 << 1)          # locked off on a soloed track: out of the solos
+    quiet, voices = K.heard(rig, knob=1 << track | 1 << 1)  # locked off on a soloed track: out of the solos
     assert quiet == [t for t in range(12) if t != 1] and voices == [0, 1, 2, 3] and rig.left == 1 << track | 1 << 1
     marks(rig, {})
 
@@ -122,7 +116,7 @@ def test_a_step_locked_on_solos_its_analog_track(rig, track):
 def test_anything_else_in_the_slot_and_any_machine_that_is_not_analog_leave_the_tracks_own(rig, word):
     marks(rig, {t: word for t in ANALOG})
     assert K.heard(rig, knob=0) == ([], [])
-    marks(rig, {9: ON}, types=(8, 35, 10, 11))                      # the MIDI machine on the track
+    marks(rig, {9: ON}, types=(8, 35, 10, 11))  # the MIDI machine on the track
     assert K.heard(rig, knob=0) == ([], [])
     marks(rig, {9: ON}, types=(8, 44, 10, 50))
     assert K.heard(rig, knob=0) == ([], [])
@@ -132,9 +126,9 @@ def test_anything_else_in_the_slot_and_any_machine_that_is_not_analog_leave_the_
 def test_slot_26_of_a_digital_track_and_slot_17_of_an_analog_one_are_not_looked_at(rig):
     marks(rig, {})
     for t in range(8):
-        rig.mc.write(WORDS + 142 * t + 28 + 2 * SLOT, ON.to_bytes(2, "big"))         # a sampler's own knob is there
+        rig.mc.write(WORDS + 142 * t + 28 + 2 * SLOT, ON.to_bytes(2, "big"))  # a sampler's own knob is there
     for t in ANALOG:
-        rig.mc.write(WORDS + 142 * t + 28 + 2 * mm.SOLO_SLOT, ON.to_bytes(2, "big"))   # an analog machine's first knob
+        rig.mc.write(WORDS + 142 * t + 28 + 2 * mm.SOLO_SLOT, ON.to_bytes(2, "big"))  # an analog machine's first knob
     assert K.heard(rig, knob=0) == ([], [])
     for t in range(12):
         rig.mc.write(WORDS + 142 * t + 28, bytes(114))
@@ -166,7 +160,7 @@ def test_the_image(official_path, official, stock3, main):  # noqa: F811
              mm.CAVE_ALOCK, mm.CAVE_REC, mm.CAVE_METER, mm.CAVE_FEED, (mm.SYN_CLASS, mm.SYN_CLASS + 0x100), (mm.SYN_SIDE, mm.SYN_SIDE + 0x40)]
     diff = [k for k in range(len(new)) if new[k] != old[k]]
     stray = [k for k in diff if not any(mm.off(a) <= k < mm.off(b) for a, b in spans)]
-    assert len(stray) <= 64, [hex(mm.BASE + k) for k in stray[:20]]       # operands that name a routine that moved
+    assert len(stray) <= 64, [hex(mm.BASE + k) for k in stray[:20]]  # operands that name a routine that moved
     for sid in official.ids:
         if sid not in (3, 7):
             assert built.container.by_id(sid).stored == official.container.by_id(sid).stored

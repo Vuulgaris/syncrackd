@@ -1,6 +1,5 @@
-| Replaces the audio interrupt's call to the voice loop (jsr at 0x40000a34).
-| Runs the real voice loop, then sampler_post. The interrupt keeps the trig
-| mask in d2 and the release mask in d4 for the later stages, so both are
+| Replaces the audio interrupt's call to the voice loop (jsr at 0x40000a34). Runs the real voice loop, then
+| sampler_post. The interrupt keeps the trig mask in d2 and the release mask in d4 for the later stages, so both are
 | handed to sampler_post by reference and written back.
     .section .cave.y,"ax"
     .globl  sampler_hook
@@ -15,17 +14,17 @@ sampler_hook:
 #ifdef MULTI
     jsr     rec_all                 | the multi image: the takes have their blocks first, before the main CPU writes the next
 #endif
-    move.l  16(%sp),-(%sp)          | release mask
-    move.l  16(%sp),-(%sp)          | trig mask
-    move.l  16(%sp),-(%sp)          | params
-    move.l  16(%sp),-(%sp)          | out
+    move.l  16(%sp),-(%sp)          | release mask trig mask params out
+    move.l  16(%sp),-(%sp)
+    move.l  16(%sp),-(%sp)
+    move.l  16(%sp),-(%sp)
     jsr     0x40004324
     lea     16(%sp),%sp
     move.l  %d4,-(%sp)
     move.l  %d2,-(%sp)              | masks[0] = trig, masks[1] = release
     pea     (%sp)
-    move.l  20(%sp),-(%sp)          | params
-    move.l  20(%sp),-(%sp)          | out
+    move.l  20(%sp),-(%sp)          | params out
+    move.l  20(%sp),-(%sp)
     jsr     sampler_post
     lea     12(%sp),%sp
     move.l  (%sp)+,%d2
@@ -36,8 +35,8 @@ sampler_hook:
     rts
 #endif
 #if defined(HQ) && !defined(QUICK)
-| s32 hq_mid(const s16 *x, u32 f): the frame f/4096 past x[7], from x[0] to x[15] and two rows of the
-| table, the row for the top 5 bits of f and the next, blended by the low 7. engine/sampler.h.
+| s32 hq_mid(const s16 *x, u32 f): the frame f/4096 past x[7], from x[0] to x[15] and two rows of the table, the row
+| for the top 5 bits of f and the next, blended by the low 7. engine/sampler.h.
     .section .cave.y,"ax"
     .globl  hq_mid
 hq_mid:
@@ -78,17 +77,14 @@ hq_mid:
     rts
 #endif
 #ifdef QUICK
-| int hq_run(struct st *s, s32 *l, s32 *r, int n, int end, s32 lo, u32 span): frames n to end - 1 of a block,
-| for as long as the position is at or past lo and less than span past it. Each frame is the sample's own
-| where the position is on one, and else the sum of sixteen around it, from the slot or from what the note's
-| start wrote out of its ends, as engine/sampler.c picked them a frame at a time before; the position then
-| moves on a step. -> the first frame not made. r is 0 for one channel. engine/sampler.h, QUICK.
+| int hq_run(struct st *s, s32 *l, s32 *r, int n, int end, s32 lo, u32 span): frames n to end - 1 of a block, for as
+| long as the position is at or past lo and less than span past it.
 |
-| The sums are stock's kind: signed fractions, 32 bits by 32 into 48, which takes the top 40 bits of the
-| product doubled. A frame at the top of a long times a table number shifted up 15 is the two multiplied,
-| times 2^8, with nothing under the 40 bits: read back, an accumulator is the sum itself, as the integer
-| sum was. The mode is set and put back as stock's own routines do, and every accumulator is left at 0.
-| Every form of instruction here is one stock's own code runs.
+| The sums are stock's kind: signed fractions, 32 bits by 32 into 48, which takes the top 40 bits of the product
+| doubled. A frame at the top of a long times a table number shifted up 15 is the two multiplied, times 2^8, with
+| nothing under the 40 bits: read back, an accumulator is the sum itself, as the integer sum was. The mode is set and
+| put back as stock's own routines do, and every accumulator is left at 0. Every form of instruction here is one
+| stock's own code runs.
     .equ    S_L, 0
     .equ    S_R, 4
     .equ    S_POS, 8
@@ -96,8 +92,8 @@ hq_mid:
     .equ    S_INC, 24
     .equ    S_DIR, 28
     .equ    S_PAD, 72
-    .equ    F_STEP, 0               | what the position moves by a frame
-    .equ    F_WHOLE, 4              | frames - 15, or 0: frame i has all sixteen in the slot when i - 7 is under this
+    .equ    F_STEP, 0               | what the position moves by a frame frames - 15, or 0: frame i has all sixteen in
+    .equ    F_WHOLE, 4              | the slot when i - 7 is under this
     .equ    F_MACSR, 8
     .equ    A_S, 60                 | past eleven registers and the return address
     .equ    A_L, 64
@@ -130,9 +126,9 @@ hq_mid:
     .section .cave.e,"ax"
     .globl  hq_safe
     .globl  hq_rearm
-| From hq_mid2, two channels, a frame tested and found inside the slot while there was no stretch (a run begun
-| within reach of the slot's start, or one whose stretch ran out with frames still inside): the stretch again, from
-| the frame after it. d0 and d4 are kept; d1 to d3 and d6 are hq_safe's to lose.
+| From hq_mid2, two channels, a frame tested and found inside the slot while there was no stretch (a run begun within
+| reach of the slot's start, or one whose stretch ran out with frames still inside): the stretch again, from the frame
+| after it. d0 and d4 are kept; d1 to d3 and d6 are hq_safe's to lose.
 hq_rearm:
     lea     4(%sp),%a0              | hq_run's frame, past the return
     add.l   F_STEP(%a0),%d5
@@ -268,9 +264,9 @@ hq_mid1:
     HQ_SUM  %a3, %d6
     bra.w   hq_next1
 
-| Two channels, sharing the numbers. A frame of the sample is taken as a long, the one after it in the low half,
-| which is cleared: the next of each side is fetched by a multiply of this one, into the other of two registers.
-| d0/d1 the left's and d2/d3 the right's, a2 and d6 the two rows' numbers, d4 how far past the frame.
+| Two channels, sharing the numbers. A frame of the sample is taken as a long, the one after it in the low half, which
+| is cleared: the next of each side is fetched by a multiply of this one, into the other of two registers. d0/d1 the
+| left's and d2/d3 the right's, a2 and d6 the two rows' numbers, d4 how far past the frame.
 .macro  HQ_TAP k, l, r, nl, nr
     mac.l   \l,%a2,2*\k+2(%a0),\nl,%acc0
     mac.l   \r,%a2,4*\k+4(%a1),%a2,%acc2
@@ -475,22 +471,20 @@ hq_ends2:                           | before frame 7 or within 8 of the last: fr
     bra.w   hq_table2
 #endif
 #ifdef ONETRACK
-| const u8 seed_runs[]: a track's part of stock's memory of the two filters (engine/sampler.c, seed). Seven runs
-| of longs: where the first track's begins, in longs from 0x80008550, and how many a track.
+| const u8 seed_runs[]: a track's part of stock's memory of the two filters (engine/sampler.c, seed). Seven runs of
+| longs: where the first track's begins, in longs from 0x80008550, and how many a track.
     .section .cave.b,"ax"
     .globl  seed_runs
 seed_runs:
-    .byte   4, 1                    | 0x80008560: the type
-    .byte   12, 1                   | 0x80008580: a sum
-    .byte   124, 8                  | 0x80008740: coefficients
-    .byte   188, 3                  | 0x80008840: levels
-    .byte   212, 2                  | 0x800088a0: the first filter's sums
-    .byte   228, 1                  | 0x800088e0
-    .byte   244, 2                  | 0x80008920: the second filter's sums
+    .byte   4, 1                    | 0x80008560: the type 0x80008580: a sum 0x80008740: coefficients 0x80008840:
+    .byte   12, 1                   | levels 0x800088a0: the first filter's sums 0x800088e0 0x80008920: the second
+    .byte   124, 8                  | filter's sums
+    .byte   188, 3
+    .byte   212, 2
+    .byte   228, 1
+    .byte   244, 2
 #endif
 #ifdef LEAN
-| The stereo image's third build: the same sound for less of a block (engine/sampler.h, LEAN).
-|
 | void voice_out(s32 *voice, s32 *out, s32 *right): a note's channels from Twinshot's scratch buffers to the track's
 | buffer (and the right's, when right is not 0), through the envelope's level and the voice's gain. What stock's two
 | routines make of them, 0x400045a0 and then 0x400049f4 with its second layer at nothing, which the sampler called
@@ -608,8 +602,8 @@ voice_layers:
 
     .section .cave.b,"ax"
 #ifndef ALLRIGHT        /* the allright image: send_all, below, in its place */
-| void send(u32 mask): the right channels of the tracks of the mask to the window, two halves of sixteen longs a
-| track (engine/sampler.h, RW_HALF): nine halves from 0x5c0, then seven from 0xe40. Longs, as everything there.
+| void send(u32 mask): the right channels of the tracks of the mask to the window, two halves of sixteen longs a track
+| (engine/sampler.h, RW_HALF): nine halves from 0x5c0, then seven from 0xe40. Longs, as everything there.
     .globl  send
 send:
     move.l  4(%sp),%d0
@@ -637,21 +631,17 @@ send:
 #endif
 
 #ifdef ALLRIGHT
-| void send_all(void): the allright image. Every track's right half to the window: a stereo
-| track's right channel (the mask's), as send does, and every other track's own buffer, the left after stock's four
-| stages, so that the main CPU's transfers bring all eight and the main CPU copies none (it took one-track stereo's
-| copies for the lag with the unit's USB audio streaming: docs/FINDINGS.md, the hardware log of 2026-10-17). Nine
-| halves from 0x5c0, then seven from 0xe40, sixteen longs each.
+| void send_all(void): the allright image. Nine halves from 0x5c0, then seven from 0xe40, sixteen longs each.
     .globl  send_all
 send_all:
-    move.l  0x44050400,%d0          | the stereo tracks (R_MASK)
-    lea     0x44050000,%a0          | their right channels, waiting
+    move.l  0x44050400,%d0          | the stereo tracks (R_MASK) their right channels, waiting
+    lea     0x44050000,%a0
     move.l  %a2,-(%sp)
     move.l  %a3,-(%sp)
     lea     0x80003840,%a2          | every track's left, where stock's last stage leaves it and its transfer takes it
     lea     0x5c0,%a1
-    moveq   #0,%d1                  | the half
-1:  move.l  %a2,%a3                 | a mono track's own buffer
+    moveq   #0,%d1                  | the half a mono track's own buffer
+1:  move.l  %a2,%a3
     btst    #0,%d0
     beq.s   2f
     move.l  %a0,%a3                 | a stereo track's right channel
@@ -695,11 +685,11 @@ longs:
     bne.s   3b
 4:  rts
 
-| void hq_pads(struct st *s): at a note's start, the frames around both ends of its slot written out for the sums,
-| the end frame standing in for what is past it (engine/sampler.h, HQ): 45 words a side, frames -7 to 14 and then
-| n - 15 to n + 7, into the voice's 128 words of free memory. What the pitch image's routine writes, which asked
-| of every word where it lay: here the first frame seven times, as many of the first fifteen as the slot has, the
-| last frame for the rest; the first for those before the slot's last fifteen, those, and the last eight times.
+| void hq_pads(struct st *s): at a note's start, the frames around both ends of its slot written out for the sums, the
+| end frame standing in for what is past it (engine/sampler.h, HQ): 45 words a side, frames -7 to 14 and then n - 15
+| to n + 7, into the voice's 128 words of free memory. What the pitch image's routine writes, which asked of every
+| word where it lay: here the first frame seven times, as many of the first fifteen as the slot has, the last frame
+| for the rest; the first for those before the slot's last fifteen, those, and the last eight times.
     .section .cave.s,"ax"
     .globl  hq_pads
 hq_pads:
@@ -766,9 +756,9 @@ hq_copy:                            | d3 words from a3
     rts
 
 #ifdef TRIM
-| void fade_run(struct st *s, s32 *l, s32 *r, int n, int m), the trim image's (engine/sampler.h, TRIM): the frames
-| the one below makes, to the bit. A frame is (x >> 13) times twice the gain with its lowest four bits cleared, which
-| is (x >> 13) times the gain, 3 dropped, 4 put back. The gain moves a step a frame with no test up to the frame after
+| void fade_run(struct st *s, s32 *l, s32 *r, int n, int m), the trim image's (engine/sampler.h, TRIM): the frames the
+| one below makes, to the bit. A frame is (x >> 13) times twice the gain with its lowest four bits cleared, which is
+| (x >> 13) times the gain, 3 dropped, 4 put back. The gain moves a step a frame with no test up to the frame after
 | which it is held, worked out once: (4095 - gain) / step frames on going up, gain / -step going down. Held, it is
 | 4096 with the step 0, or 0 with the step as it was.
     .section .cave.e,"ax"
@@ -788,9 +778,9 @@ fade_run:
     add.l   %d0,%d3
 1:  movea.l %d3,%a2                 | the right's, or 0
     movea.l 32(%sp),%a1
-    mvs.w   60(%a1),%d2             | the gain
-    mvs.w   62(%a1),%d3             | its step
-    move.l  %d1,%d4                 | frames before it is held: with no step, all of them
+    mvs.w   60(%a1),%d2             | the gain its step frames before it is held: with no step, all of them
+    mvs.w   62(%a1),%d3
+    move.l  %d1,%d4
     move.l  %d3,%d0
     beq.s   3f
     bgt.s   2f
@@ -861,9 +851,9 @@ fade_frames:
     bne.s   2b
 3:  rts
 #else
-| void fade_run(struct st *s, s32 *l, s32 *r, int n, int m): frames n to m - 1 through the fade that is on. A frame
-| is 28 bits here: 13 dropped, times the gain (0 to 4096), 3 dropped, 4 put back, as engine/sampler.c's faded has
-| it. Then the gain moves its step: at 4096 it stays and the step is 0, and it does not go under 0 (fade_move).
+| void fade_run(struct st *s, s32 *l, s32 *r, int n, int m): frames n to m - 1 through the fade that is on. A frame is
+| 28 bits here: 13 dropped, times the gain (0 to 4096), 3 dropped, 4 put back, as engine/sampler.c's faded has it.
+| Then the gain moves its step: at 4096 it stays and the step is 0, and it does not go under 0 (fade_move).
     .section .cave.m,"ax"
     .globl  fade_run
 fade_run:
@@ -880,9 +870,9 @@ fade_run:
     move.l  24(%sp),%d3
     beq.s   1f
     add.l   %d0,%d3
-1:  movea.l %d3,%a2                 | the right's, or 0
-    mvs.w   60(%a1),%d2             | the gain
-    mvs.w   62(%a1),%d3             | its step
+1:  movea.l %d3,%a2                 | the right's, or 0 the gain its step
+    mvs.w   60(%a1),%d2
+    mvs.w   62(%a1),%d3
 2:  move.l  (%a0),%d0
     asr.l   #8,%d0
     asr.l   #5,%d0
@@ -951,9 +941,9 @@ swap:
 | The cross image: a loop's end blended into its start (engine/sampler.h, XFADE).
 |
 | void bake(struct st *s, struct xf *x): eight frames more of the seam's blend, both channels, from the frame the
-| voice's count says. A frame of the blend is a frame of the pass, and over it by so many 256ths the frame as far
-| from the place the seam leads to: 0 for the frames the pass comes in by, a 256th more a frame through the 256
-| before its wall, all of it from there on. Frames from outside a slot are read where they count for nothing.
+| voice's count says. A frame of the blend is a frame of the pass, and over it by so many 256ths the frame as far from
+| the place the seam leads to: 0 for the frames the pass comes in by, a 256th more a frame through the 256 before its
+| wall, all of it from there on. Frames from outside a slot are read where they count for nothing.
     .equ    S_DIR0, 29
     .equ    S_XN, 84
     .equ    X_WALL, 0
@@ -979,8 +969,8 @@ bake:
     asr.l   #8,%d1
     asr.l   #3,%d1
     add.l   %d0,%d1
-    add.l   %d0,%d1                 | bytes from the slot's start to the frame to write
-    lea     X_L(%a0,%d0.l*2),%a0    | where it goes: the right's is 2 * XF_N on
+    add.l   %d0,%d1                 | bytes from the slot's start to the frame to write where it goes: the right's is
+    lea     X_L(%a0,%d0.l*2),%a0    | 2 * XF_N on
     move.l  %d0,%d2
     moveq   #XF_FAR,%d3
     sub.l   %d3,%d2                 | the gain, and what it moves by a frame
@@ -1032,24 +1022,23 @@ bake:
 #if defined(PACK) && !defined(MULTI)
 | The pack image: single slots at the back (engine/sampler.h, PACK).
 |
-| void rec_step(struct st *s, u32 release): one block of a running take, as engine/sampler.c has it for the
-| images before, written out here because the compiler's is 60 bytes more than the run holds. Every block of
-| the ring not taken yet, in order, into the slot's buffer; more than a ring behind, a note let go, or a
-| buffer that is full, and the take ends. A stereo place's take puts the ring's two sides in the slot's
-| buffer and the next one's, and the next slot's line of the table says as long, or one frame for a mono
-| take. A single slot's take is half of the two sides added, in its own buffer, and the next slot's buffer
-| and line are not touched.
+| void rec_step(struct st *s, u32 release): one block of a running take, as engine/sampler.c has it for the images
+| before, written out here because the compiler's is 60 bytes more than the run holds. Every block of the ring not
+| taken yet, in order, into the slot's buffer; more than a ring behind, a note let go, or a buffer that is full, and
+| the take ends. A stereo place's take puts the ring's two sides in the slot's buffer and the next one's, and the next
+| slot's line of the table says as long, or one frame for a mono take. A single slot's take is half of the two sides
+| added, in its own buffer, and the next slot's buffer and line are not touched.
     .equ    S_LINK, 49              | what the take is: 0 mono, 1 stereo, below nothing a single slot's
     .equ    S_REC, 51
     .equ    S_RK, 52
     .equ    S_RSEQ, 54
     .equ    S_RPOS, 56
-    .equ    MB_SEQ, 0x800           | the ring's count, in the window
-    .equ    MB_RING, 0x810          | its eight blocks of 32 frames, left, right, ...
-    .equ    SLOTS, 0x4404f754       | the table: frames, then where
+    .equ    MB_SEQ, 0x800           | the ring's count, in the window its eight blocks of 32 frames, left, right, ...
+    .equ    MB_RING, 0x810          | the table: frames, then where
+    .equ    SLOTS, 0x4404f754
     .equ    REC_BUFS, 0x44080000
-    .equ    REC_STRIDE, 0xf0000     | bytes from a slot's buffer to the next
-    .equ    REC_MAX, 0x78000        | frames a buffer holds
+    .equ    REC_STRIDE, 0xf0000     | bytes from a slot's buffer to the next frames a buffer holds
+    .equ    REC_MAX, 0x78000
     .section .cave.r,"ax"
     .globl  rec_step
 rec_step:
@@ -1082,8 +1071,8 @@ rec_step:
     and.l   %d1,%d0
     lsl.l   #7,%d0
     movea.l %d0,%a0
-    lea     MB_RING(%a0),%a0        | the next block of the ring
-    lea     (%a2,%d3.l*2),%a3       | where the take has got to
+    lea     MB_RING(%a0),%a0        | the next block of the ring where the take has got to
+    lea     (%a2,%d3.l*2),%a3
     moveq   #32,%d6
     add.l   %d6,%d3
     tst.b   S_LINK(%a1)
@@ -1132,9 +1121,9 @@ rec_step:
     lea     28(%sp),%sp
     rts
 #ifdef STOPS
-10: subq.l  #1,%d3                  | the stops image: a single slot's take is a frame short of its whole blocks, so its
-    bcc.s   9b                      | length is odd from its first block on, which is what says it is one. (The voice's
-    moveq   #0,%d3                  | own count of frames is as it was; and no frames are none.)
+10: subq.l  #1,%d3                  | the stops image: a single slot's take is a frame short of its whole blocks, so
+    bcc.s   9b                      | its length is odd from its first block on, which is what says it is one. (The
+    moveq   #0,%d3                  | voice's own count of frames is as it was; and no frames are none.)
     bra.s   9b
 #endif
 #endif
@@ -1143,11 +1132,11 @@ rec_step:
 |
 | void rec_all(void): a block of every running take, before the voice loop. Called by sampler_hook alone, with the
 | release mask in d4 as the interrupt keeps it. The window's long at 0x800 is the main CPU's count and, under it, a
-| bit a track whose block it wrote with that count. A voice that is the sampler's and has a take running, whose
-| count is not the one it saw last and whose bit is set, takes its track's block, the 32 frames at 0x810 + 128 t:
-| a stereo place's take the two sides into the slot's buffer and the next one's, a single slot's half of the two
-| added. A note let go or a full buffer ends the take, and the table's lines are written, all as the stops image's
-| rec_step has them. The lines are written in the stops image's run of rec_step's caller (rec_line), for room.
+| bit a track whose block it wrote with that count. A voice that is the sampler's and has a take running, whose count
+| is not the one it saw last and whose bit is set, takes its track's block, the 32 frames at 0x810 + 128 t: a stereo
+| place's take the two sides into the slot's buffer and the next one's, a single slot's half of the two added. A note
+| let go or a full buffer ends the take, and the table's lines are written, all as the stops image's rec_step has
+| them. The lines are written in the stops image's run of rec_step's caller (rec_line), for room.
     .equ    S_LINK, 49              | what the take is: 0 mono, 1 stereo, below nothing a single slot's
     .equ    S_REC, 51
     .equ    S_RK, 52
@@ -1155,20 +1144,20 @@ rec_step:
     .equ    S_RPOS, 56
     .equ    S_VOICE, 1712           | a voice's sampler state in the voice
     .equ    V_STRIDE, 1800
-    .equ    MB_SEQ, 0x800           | the count, and the bits under it
-    .equ    MB_RING, 0x810          | eight blocks of 32 frames, left, right, ...: a track's each
-    .equ    SLOTS, 0x4404f754       | the table: frames, then where
+    .equ    MB_SEQ, 0x800           | the count, and the bits under it eight blocks of 32 frames, left, right, ...: a
+    .equ    MB_RING, 0x810          | track's each the table: frames, then where
+    .equ    SLOTS, 0x4404f754
     .equ    REC_BUFS, 0x44080000
-    .equ    REC_STRIDE, 0xf0000     | bytes from a slot's buffer to the next
-    .equ    REC_MAX, 0x78000        | frames a buffer holds
+    .equ    REC_STRIDE, 0xf0000     | bytes from a slot's buffer to the next frames a buffer holds
+    .equ    REC_MAX, 0x78000
     .section .cave.r,"ax"
     .globl  rec_all
 rec_all:
     lea     -36(%sp),%sp
     movem.l %d2-%d7/%a2-%a3/%a5,(%sp)
-    move.l  %d4,%d7                 | the notes let go, this track's the lowest bit
-    mvz.w   MB_SEQ.w,%d4            | the count
-    mvz.w   MB_SEQ+2.w,%d6          | the blocks written with it, this track's the lowest bit
+    move.l  %d4,%d7                 | the notes let go, this track's the lowest bit the count the blocks written with
+    mvz.w   MB_SEQ.w,%d4            | it, this track's the lowest bit
+    mvz.w   MB_SEQ+2.w,%d6
 #ifdef HANDREC
 | The handrec image: the word's high byte is the main CPU's tracks whose take runs past its note's release (a note
 | played by hand, held for the TRIG page's LEN: engine/once.S, hand_rec). Their releases end nothing; the feed's
@@ -1181,8 +1170,8 @@ rec_all:
     move.l  #REC_STRIDE,%d5
     lea     MB_RING.w,%a0
     lea     0x80000000+S_VOICE,%a1
-1:  movea.l %a0,%a5                 | this track's block
-    lea     128(%a0),%a0            | and the next one's
+1:  movea.l %a0,%a5                 | this track's block and the next one's
+    lea     128(%a0),%a0
     moveq   #11,%d0
     cmp.l   -S_VOICE(%a1),%d0       | the voice is the sampler's (V_ENGINE, ENGINE_ID)
     bne.s   9f
@@ -1192,8 +1181,8 @@ rec_all:
     move.l  %d2,%d0
     mulu.l  %d5,%d0
     add.l   #REC_BUFS,%d0
-    movea.l %d0,%a2                 | the slot's buffer
-    move.l  S_RPOS(%a1),%d3         | frames taken
+    movea.l %d0,%a2                 | the slot's buffer frames taken
+    move.l  S_RPOS(%a1),%d3
     mvz.w   S_RSEQ(%a1),%d0
     move.w  %d4,S_RSEQ(%a1)
     cmp.l   %d0,%d4
@@ -1201,8 +1190,8 @@ rec_all:
     btst    #0,%d6
     beq.s   5f                      | or not this track's block
     cmp.l   #REC_MAX,%d3
-    bcc.s   6f                      | full: nothing past the buffer's end, whatever the count of frames says
-    lea     (%a2,%d3.l*2),%a3       | where the take has got to
+    bcc.s   6f                      | full: nothing past the buffer's end, whatever the count of frames says where the
+    lea     (%a2,%d3.l*2),%a3       | take has got to
     moveq   #32,%d0
     add.l   %d0,%d3
     tst.b   S_LINK(%a1)
@@ -1235,10 +1224,10 @@ rec_all:
     movem.l (%sp),%d2-%d7/%a2-%a3/%a5
     lea     36(%sp),%sp
     rts
-| The slot's line of the table, and the next slot's: d2 the slot, d3 the take's frames, a2 its buffer, d5 the bytes
-| to the next slot's buffer, a1 the voice's state. A mono take leaves 2 frames in the next slot's line, so it is no
-| right channel and no single slot's sample (TAKE_ONE); a single slot's take leaves that line as it is, and is a
-| frame short of its whole blocks, so its length is odd from its first block on.
+| The slot's line of the table, and the next slot's: d2 the slot, d3 the take's frames, a2 its buffer, d5 the bytes to
+| the next slot's buffer, a1 the voice's state. A mono take leaves 2 frames in the next slot's line, so it is no right
+| channel and no single slot's sample (TAKE_ONE); a single slot's take leaves that line as it is, and is a frame short
+| of its whole blocks, so its length is odd from its first block on.
     .section .cave.p,"ax"
     .globl  rec_line
 rec_line:
@@ -1262,12 +1251,12 @@ rec_line:
     bra.s   2b
 #endif
 #ifdef STOPS
-| The stops image: what every slot holds, said to the main CPU (engine/sampler.h, STOPS). Called at the end of
-| every block, after the takes have had theirs. Sixteen slots a block, by a count of blocks in free memory that
-| may be any number at a start: two bits a slot into one long, the first slot's the highest, a slot's length's
-| lowest bit and then whether anything is left without it. The long goes to its place in the window, and the
-| mark is moved up a byte with 0xa5 under it: it reads right after four blocks, when all four longs are written.
-| In two runs: neither has room for all of it.
+| The stops image: what every slot holds, said to the main CPU (engine/sampler.h, STOPS). Called at the end of every
+| block, after the takes have had theirs. Sixteen slots a block, by a count of blocks in free memory that may be any
+| number at a start: two bits a slot into one long, the first slot's the highest, a slot's length's lowest bit and
+| then whether anything is left without it. The long goes to its place in the window, and the mark is moved up a byte
+| with 0xa5 under it: it reads right after four blocks, when all four longs are written. In two runs: neither has room
+| for all of it.
     .equ    ST_COUNT, 0x44050a18
     .equ    ST_MARK, 0x5bc
     .equ    ST_SLOTS, 0x4404f754    | the table: frames, then where
@@ -1277,12 +1266,12 @@ stops_say:
     lea     ST_COUNT,%a0
     addq.l  #1,(%a0)
     moveq   #3,%d0
-    and.l   (%a0),%d0               | which sixteen
-    movea.w stops_at(%pc,%d0.l*2),%a0   | where their long goes
+    and.l   (%a0),%d0               | which sixteen where their long goes
+    movea.w stops_at(%pc,%d0.l*2),%a0
     lsl.l   #7,%d0
     add.l   #ST_SLOTS,%d0
-    movea.l %d0,%a1                 | their lines of the table
-    moveq   #1,%d1                  | a bit that falls out of the long's top after the sixteenth slot
+    movea.l %d0,%a1                 | their lines of the table a bit that falls out of the long's top after the
+    moveq   #1,%d1                  | sixteenth slot
     bra.w   stops_bits
 stops_at:
     .word   0x808, 0x80c, 0xe38, 0xe3c
@@ -1303,16 +1292,14 @@ stops_bits:
     rts
 #endif
 #ifdef TIMED
-| The time image, a tool: how long the audio CPU works on a block, measured on the unit (engine/sampler.h, TIMED).
-| Stock starts the second of the chip's timers counting at its start (0x40000dec: its clock on, then its mode word
-| 3, which is run free on the bus clock) and never reads or names it again. Its count is read here where the
-| interrupt calls the voice loop and where its last stage comes back: nearly all of an interrupt lies between.
-| Every 256 blocks the longest of those is put to the window as hundredths of a block (a block being the 256th
-| of the 256 gaps from one interrupt to the next), and after it the most that has been in the last 32 to 64 such
-| lots, 5 to 11 seconds.
-    .equ    T_COUNT, 0xfc07400c     | the second timer's count
-    .equ    T_STATE, 0x44050a00     | free memory: this interrupt's start, the longest, the gaps' sum, blocks, the most of
-    .equ    T_BOX, 0x5b4            | this stretch of lots and of the one before. The window, after the right channels' long
+| Stock starts the second of the chip's timers counting at its start (0x40000dec: its clock on, then its mode word 3,
+| which is run free on the bus clock) and never reads or names it again. Its count is read here where the interrupt
+| calls the voice loop and where its last stage comes back: nearly all of an interrupt lies between. Every 256 blocks
+| the longest of those is put to the window as hundredths of a block (a block being the 256th of the 256 gaps from one
+| interrupt to the next), and after it the most that has been in the last 32 to 64 such lots, 5 to 11 seconds.
+    .equ    T_COUNT, 0xfc07400c     | the second timer's count free memory: this interrupt's start, the longest, the
+    .equ    T_STATE, 0x44050a00     | gaps' sum, blocks, the most of this stretch of lots and of the one before. The
+    .equ    T_BOX, 0x5b4            | window, after the right channels' long
 #ifdef PACK
     .section .cave.i,"ax"           | (the pack image: beside the routine's last part, for room where a note starts)
 #else
@@ -1417,19 +1404,19 @@ timed_text:                         | a number up to 999 in d0 -> its three figu
 | The srr image: sample rate reduction (engine/sampler.h, SRR). In SY SWARM's room.
 |
 | crush(h, l, r): the block's 32 frames at l, and at r unless it is 0, held. h: the step, the phase, the two frames
-| held. A frame at which the phase runs over is let through and kept; every other one is the frame kept.
-| Five instructions a frame held and six a frame let through; with a right channel six and eight.
+| held. A frame at which the phase runs over is let through and kept; every other one is the frame kept. Five
+| instructions a frame held and six a frame let through; with a right channel six and eight.
     .section .cave.d,"ax"
     .globl  crush
 crush:
     lea     -16(%sp),%sp
     movem.l %d2-%d4/%a2,(%sp)
-    movea.l 20(%sp),%a1             | h
-    movea.l 24(%sp),%a0             | the left
-    movea.l 28(%sp),%a2             | the right, or 0
-    move.l  (%a1)+,%d2              | the step
-    move.l  (%a1)+,%d1              | the phase
-    move.l  (%a1)+,%d0              | the left's frame, held
+    movea.l 20(%sp),%a1             | h the left the right, or 0 the step the phase the left's frame, held
+    movea.l 24(%sp),%a0
+    movea.l 28(%sp),%a2
+    move.l  (%a1)+,%d2
+    move.l  (%a1)+,%d1
+    move.l  (%a1)+,%d0
     moveq   #32,%d4
     move.l  %a2,%d3
     beq.s   3f
@@ -1456,8 +1443,8 @@ crush:
     lea     16(%sp),%sp
     rts
 
-| SY SWARM is gone: its code is this room. A track left on it plays nothing: an update that does nothing and a
-| render that fills the track's block with nothing. Engine 10's two table entries.
+| SY SWARM is gone: its code is this room. A track left on it plays nothing: an update that does nothing and a render
+| that fills the track's block with nothing. Engine 10's two table entries.
     .globl  swarm_update
     .globl  swarm_render
 swarm_update:
@@ -1473,9 +1460,9 @@ swarm_render:
 
 #ifdef BACK
 | The back image: our code that was in SY SWARM's, SY TOY's and SY BITS's and SD BASIC's runs (caves d, e, g) is
-| linked at FAR_DST and carried past section 7's end (FAR_SRC), which the start's BSS clear would wipe. Called in place
-| of the start's two calls (0x400010b4): stock's copy of its SRAM data, then ours, then stock's clear. All before the
-| cache is set (0x400010d0), so nothing is flushed. Their runs and their engines are stock's again.
+| linked at FAR_DST and carried past section 7's end (FAR_SRC), which the start's BSS clear would wipe. Called in
+| place of the start's two calls (0x400010b4): stock's copy of its SRAM data, then ours, then stock's clear. All
+| before the cache is set (0x400010d0), so nothing is flushed. Their runs and their engines are stock's again.
     .section .cave.x,"ax"
     .globl  far_load
     .globl  far_copy

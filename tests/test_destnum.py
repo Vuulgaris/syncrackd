@@ -1,15 +1,4 @@
-"""The destnum image (engine/recpage.c, DESTNUM): the onedest image with DEST's numbers back.
-
-
-Here, on the sampling
-page:
-  - a STER track's B goes SMPL, then the stereo places SMPL stops at (those with a sample and the lowest free one), and
-    the box says each place; a MONO track's the single slots SMPL stops at (the highest free one and those with one);
-  - a DEST of the other kind goes back to SMPL when KIND is turned, one of the track's kind stays;
-  - nothing of NEXT: the poll holds no place and leaves the number in the box;
-  - the image: only the page's runs differ from the onedest image's, and outside them addresses into them; section 7
-    the onedest image's.
-Emulation only."""
+"""The destnum image (engine/recpage.c, DESTNUM): the onedest image with DEST's numbers back."""
 import shutil
 
 import pytest
@@ -58,7 +47,7 @@ def test_a_mono_track_goes_smpl_then_the_single_slots_smpl_stops_at(main):
     t = 5
     r = N.rig(main, t, N.bank(**FRAMES))
     N.turns(r, 1, 1, 1, 1, 1)
-    G.twist(r, C_, 1)                                           # KIND MONO
+    G.twist(r, C_, 1)  # KIND MONO
     assert N.word(r, t) & N.KIND
     got = walk(r, t, [1, 1, 1, 1])
     print(got)
@@ -69,14 +58,14 @@ def test_a_dest_of_the_other_kind_goes_back_to_smpl_at_a_turn_of_kind(main):
     t = 1
     r = N.rig(main, t, N.bank(**FRAMES))
     N.turns(r, 1, 1, 1, -1, 1)
-    walk(r, t, [1, 1])                                          # 02, a stereo place
-    G.twist(r, C_, 1)                                           # MONO: 02 is not one of its places
+    walk(r, t, [1, 1])  # 02, a stereo place
+    G.twist(r, C_, 1)  # MONO: 02 is not one of its places
     assert N.dest(r, t) == N.DEST_SMPL and "SMPL" in N.says(r)
-    G.twist(r, B_, -1)                                          # SMPL already: stays
+    G.twist(r, B_, -1)  # SMPL already: stays
     G.twist(r, B_, 1)
-    assert N.dest(r, t) == 61                                   # the first single slot SMPL stops at
+    assert N.dest(r, t) == 61  # the first single slot SMPL stops at
     r.answers[:] = [256]
-    G.twist(r, C_, 1)                                           # MONO again: 62 stays
+    G.twist(r, C_, 1)  # MONO again: 62 stays
     assert N.dest(r, t) == 61
 
 

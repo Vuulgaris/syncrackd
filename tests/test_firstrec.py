@@ -1,23 +1,4 @@
-"""The firstrec image: the handrec image with PLAY recording a ONCE on the first step on the first pass, and only then.
-
-PLAY with a ONCE on the first step records the first pass, and only that pass.
-
-Read before (docs/FINDINGS.md, the recprobe tool and the playrec image): a start queues for each track the record the
-step routine's other caller built last (at STOP or a listener's pass), with the step's locks; the step routine itself
-first plays the second step. That record carries a ONCE and records, and nothing spent it there, so the sequencer's
-play of the step a pass later recorded again; and, on every playrec build, the page's REC at ONCE (the track's own,
-which the sequencer uses up at the first step it plays itself: the second pass's first) was armed too, INFERRED from
-"the record button switches off right when I start" on the handrec image. The handrec image takes that ONCE at a start.
-
-Now the other caller's step is kept a track (first_keep, 0xff for a step with no locks), a start spends a ONCE on the
-step of each sampler track's queued record that has a trig (first_spend, from hand_start), and the sequencer's own play
-of that step on the next pass has the main task take the spent lock off (first_late): its event has it, no mark.
-
-Held here, stock's step routine run as it is: each of those; the stay image as it was for the other caller; the main
-program differing from the handrec image's only in the once run, the long image's run and the calls into them.
-
-Not held: that the queued record's ONCE records the first pass (it did on the playrec image's second build), and one take in all. For the unit.
-"""
+"""The firstrec image: the handrec image with PLAY recording a ONCE on the first step on the first pass, and only then."""
 import shutil
 
 import pytest
@@ -50,8 +31,9 @@ def rig(main, track):
 
 
 def play(r, step, place, track=None):
-    """The step routine from its test of the event on, `place` its fifth argument (0 from the sequencer).
-    -> the event's locks, [(slot, value)]."""
+    """The step routine from its test of the event on, `place` its fifth argument (0 from the sequencer). -> the event's
+    locks, [(slot, value)].
+    """
     mc, track = r.mc, r.track if track is None else track
     sp = O.STACK[1] - 0x800
     mc.write(O.LOCKS, b"\x77" * 0x400)
@@ -92,15 +74,15 @@ def v(r, name):
 def test_a_start_spends_the_once_its_queued_record_plays_and_the_next_pass_has_it_taken_off(main, track, step):
     r = rig(main, track)
     r.lay(step, ONCE)
-    for _ in range(3):                                          # STOP's pass and a listener's: nothing spent, as on the stay image
+    for _ in range(3):  # STOP's pass and a listener's: nothing spent, as on the stay image
         assert play(r, step, place(track)) == [(SLOT, ONCE)]
         assert r.lock_at(step) == ONCE and r.dirty == [0] * 8
     assert v(r, "first_kept")[track] == step
     start(r, [track])
     assert r.lock_at(step) == SPENT and r.dirty == [0] * 8
     assert v(r, "first_step")[track] == step and v(r, "first_late_v") == [int(t == track) for t in range(8)]
-    assert play(r, step + 1, 0) == [] and r.dirty == [0] * 8    # the sequencer's next step: still waiting
-    assert play(r, step, 0) == [(SLOT, SPENT)]                  # the step again, a pass on: no mark, and taken off
+    assert play(r, step + 1, 0) == [] and r.dirty == [0] * 8  # the sequencer's next step: still waiting
+    assert play(r, step, 0) == [(SLOT, SPENT)]  # the step again, a pass on: no mark, and taken off
     assert r.dirty == [int(t == track) for t in range(8)] and v(r, "first_late_v") == [0] * 8
 
 
@@ -108,14 +90,14 @@ def test_a_start_spends_nothing_where_no_trig_is_queued_or_the_step_is_on_off_or
     r = rig(main, 2)
     r.lay(0, ONCE)
     play(r, 0, place(2))
-    start(r, [])                                                # no trig queued for it
+    start(r, [])  # no trig queued for it
     assert r.lock_at(0) == ONCE and v(r, "first_late_v") == [0] * 8
     for word in (ON, O.OFF):
         r.lay(4, word)
         play(r, 4, place(2))
         start(r, [2])
         assert r.lock_at(0) == ONCE and r.lock_at(4) == word and v(r, "first_late_v") == [0] * 8
-    play(r, 6, place(2))                                        # a step with no locks
+    play(r, 6, place(2))  # a step with no locks
     assert v(r, "first_kept")[2] == 0xff
     start(r, [2])
     assert r.lock_at(0) == ONCE and v(r, "first_late_v") == [0] * 8

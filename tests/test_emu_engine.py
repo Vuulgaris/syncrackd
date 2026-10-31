@@ -107,11 +107,11 @@ def test_render_is_deterministic(image, descs):
 def test_every_stock_machine_sounds_and_emac_never_overflows(image, descs, mtype):
     e = solo(image, descs, mtype, pool=make_pool())
     x = e.render(40, trig=0x01)
-    assert not x[0, :BLOCK].any()             # the note starts on the block after the trig
+    assert not x[0, :BLOCK].any()  # the note starts on the block after the trig
     assert x[0, BLOCK:].any()
-    assert not x[1:].any()                    # untrigged tracks stay silent
-    assert e.mc.emac.overflows == 0           # the unverified 48-bit saturation path never ran
-    assert e.mc.emac.macsr & 0xF0 == 0x20     # MACSR as the loop leaves it
+    assert not x[1:].any()  # untrigged tracks stay silent
+    assert e.mc.emac.overflows == 0  # the unverified 48-bit saturation path never ran
+    assert e.mc.emac.macsr & 0xF0 == 0x20  # MACSR as the loop leaves it
 
 
 @pytest.mark.parametrize("note,hz", [(60, 261.63), (72, 523.25), (48, 130.81)])
@@ -130,7 +130,7 @@ def test_sd_vintage_agrees_with_published_measurements(image, descs):
 def test_twinshot_plays_the_pool_one_to_one(image, descs):
     pool = make_pool()
     e = solo(image, descs, TWIN, pool=pool)
-    e.set_slot(0, knob(descs, TWIN, "MIX"), 0)            # sample 1 only
+    e.set_slot(0, knob(descs, TWIN, "MIX"), 0)  # sample 1 only
     x = e.render(40, trig=0x01)[0].astype(np.int64)
     a = e.player(0, 0)
     assert (a["inc"], a["len"] >> 12, a["playing"], a["reverse"]) == (4096, len(pool[0]), 1, 0)
@@ -138,7 +138,7 @@ def test_twinshot_plays_the_pool_one_to_one(image, descs):
     s = pool[0].astype(np.int64)
     y, ref = x[BLOCK + 1:BLOCK + 801], s[1:801]
     gain = np.dot(y, ref) / np.dot(ref, ref)
-    assert gain == pytest.approx(2 ** 15, rel=0.002)       # int16 << 16, times the mix gain 0.5
+    assert gain == pytest.approx(2 ** 15, rel=0.002)  # int16 << 16, times the mix gain 0.5
     assert np.std(y - gain * ref) < 0.01 * np.std(y)
 
 
@@ -156,13 +156,13 @@ def test_twinshot_mix_and_sample_select(image, descs):
         x = e.render(80, trig=0x01)[0][64:64 + 2048].astype(float)
         s = np.abs(np.fft.rfft(x * np.hanning(len(x))))
         return s[int(round(hz * len(x) / RATE))]
-    assert level(0, 1000) > 1e4 * level(0, 250)            # slot 0 only
-    assert level(127, 250) > 1e4 * level(127, 1000)        # slot 1 only
+    assert level(0, 1000) > 1e4 * level(0, 250)  # slot 0 only
+    assert level(127, 250) > 1e4 * level(127, 1000)  # slot 1 only
     assert level(64, 1000) == pytest.approx(level(64, 250), rel=0.1)
 
 
 def test_twinshot_reverse(image, descs):
-    ramp = {0: (np.arange(3000) * 8).astype(np.int16)}     # rising ramp: direction is visible
+    ramp = {0: (np.arange(3000) * 8).astype(np.int16)}  # rising ramp: direction is visible
 
     def run(smp1):
         e = solo(image, descs, TWIN, pool=ramp)
@@ -193,7 +193,7 @@ def test_instruction_budget(image, descs):
             counts.append(e.mc.insns - before)
         steady[mtype] = max(counts[3:])
         if mtype == SWARM:
-            assert counts[1] == 93436                     # machine change and note-on, 8 voices
+            assert counts[1] == 93436  # machine change and note-on, 8 voices
     assert max(steady, key=steady.get) == SWARM
     assert steady[SWARM] == 84044
     assert steady[TWIN] == 31060

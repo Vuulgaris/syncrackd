@@ -1,8 +1,4 @@
-"""Phase 4: where the track buffers go after the voice loop, and where pan is applied.
-
-Audio CPU side runs the real interrupt (section 7). Main CPU side runs the
-real pan law and mix kernel (section 3, OS 1.42).
-"""
+"""Phase 4: where the track buffers go after the voice loop, and where pan is applied."""
 import numpy as np
 import pytest
 
@@ -68,7 +64,7 @@ def test_audio_cpu_never_receives_pan_volume_or_sends(image):
     mc = e.mc
     mc.write(m.PARAM_BUF, bytes(m.PARAM_STRIDE * m.N_VOICES))
     block = bytearray(b"\x5a" * E.HOST_SIZE)
-    block[0x180:0x184] = bytes(4)                       # no trigs
+    block[0x180:0x184] = bytes(4)  # no trigs
     e.host_block = lambda trig=0, release=0: bytes(block)
     e.interrupt()
     p = mc.read(m.PARAM_BUF, m.PARAM_STRIDE)
@@ -85,10 +81,10 @@ def test_audio_cpu_hands_over_eight_mono_buffers(image, descs, track_defaults):
     for b in range(4):
         out = e.interrupt(0x01 if b == 0 else 0)
     assert e.dma() == (m.OUT_BUF, E.HOST + E.HOST_AUDIO, m.N_VOICES * m.OUT_STRIDE)
-    assert np.array_equal(out, e.stages["amp"])          # the DMA carries the final track buffers
+    assert np.array_equal(out, e.stages["amp"])  # the DMA carries the final track buffers
     assert e.stages["voice_loop"][0].any() and out[0].any() and not out[1:].any()
     # the block in and the audio out are the whole shared area init clears
-    assert E.HOST_SIZE + m.N_VOICES * m.OUT_STRIDE == 0x5b0 == m.u32(image, 0x40000e98) & 0xFFFF   # pea 0x5b0, the memset at init
+    assert E.HOST_SIZE + m.N_VOICES * m.OUT_STRIDE == 0x5b0 == m.u32(image, 0x40000e98) & 0xFFFF  # pea 0x5b0, the memset at init
 
 
 def test_dma_static_fields_are_what_init_programs(image):
@@ -114,31 +110,31 @@ def test_tracks_do_not_bleed_into_each_other(image, descs, track_defaults):
         a = np.concatenate([s[name] for s in alone], axis=1)
         b = np.concatenate([s[name] for s in both], axis=1)
         assert a[0].any(), name
-        assert np.array_equal(a[0], b[0]), name          # track 0 unchanged by track 1
+        assert np.array_equal(a[0], b[0]), name  # track 0 unchanged by track 1
         assert b[1].any() and not a[1].any(), name
-        assert not b[2:].any(), name                     # nothing leaks into the other tracks
+        assert not b[2:].any(), name  # nothing leaks into the other tracks
 
 
 # ---- main CPU (section 3, OS 1.42) -----------------------------------------
 
 def test_main_cpu_copies_the_track_buffers_out_of_the_window(sec3):
-    assert mm.u16(sec3, mm.DMA_SETUP + 2) == 0xDE40            # 64 iterations, linked to itself
-    assert mm.u32(sec3, 0x400a4802 + 2) == mm.TRACKS           # lea TRACKS,a2
-    assert mm.u32(sec3, 0x400a4808 + 2) == E.TCD47 + 0x10      # -> destination
-    assert mm.u32(sec3, 0x400a480e + 2) == mm.SHARED_AUDIO     # movea.l #window+0x1b0,a3
-    assert mm.u32(sec3, 0x400a4814 + 2) == E.TCD47             # -> source
+    assert mm.u16(sec3, mm.DMA_SETUP + 2) == 0xDE40  # 64 iterations, linked to itself
+    assert mm.u32(sec3, 0x400a4802 + 2) == mm.TRACKS  # lea TRACKS,a2
+    assert mm.u32(sec3, 0x400a4808 + 2) == E.TCD47 + 0x10  # -> destination
+    assert mm.u32(sec3, 0x400a480e + 2) == mm.SHARED_AUDIO  # movea.l #window+0x1b0,a3
+    assert mm.u32(sec3, 0x400a4814 + 2) == E.TCD47  # -> source
     assert mm.u32(sec3, 0x400a482c + 2) == E.DMA_START
-    assert mm.u32(sec3, 0x40082fe8 + 2) == mm.SHARED_CHUNK     # boot sample chunks go here
+    assert mm.u32(sec3, 0x40082fe8 + 2) == mm.SHARED_CHUNK  # boot sample chunks go here
 
 
 def test_main_cpu_mixer_reads_pan_and_volume_and_calls_the_pan_law(sec3):
-    assert sec3[mm.off(0x4008f2b6):mm.off(0x4008f2ba)] == bytes.fromhex(fw.sx("5a114ec6aad1a0a8"))   # mvs.w 124(a3),d7
-    assert sec3[mm.off(0x4008f2f8):mm.off(0x4008f2fc)] == bytes.fromhex(fw.sx("995e1e2b3ec8bebc"))   # mvs.w 122(a3),d7
+    assert sec3[mm.off(0x4008f2b6):mm.off(0x4008f2ba)] == bytes.fromhex(fw.sx("5a114ec6aad1a0a8"))  # mvs.w 124(a3),d7
+    assert sec3[mm.off(0x4008f2f8):mm.off(0x4008f2fc)] == bytes.fromhex(fw.sx("995e1e2b3ec8bebc"))  # mvs.w 122(a3),d7
     assert mm.u32(sec3, 0x4008f300 + 2) == mm.PAN_LAW
     assert mm.u16(sec3, 0x4008f3fe + 2) == mm.P_DELAY_SEND
     assert mm.u16(sec3, 0x4008f402 + 2) == mm.P_REVERB_SEND
-    # two passes of the mix kernel over the DMA'd track buffers: left, then right. These two are the
-    # delay send's sum; the dry mix is another pair of passes, with the same pan gains (tests/test_mixer_whole.py)
+    # two passes of the mix kernel over the DMA'd track buffers: left, then right. These two are the delay send's sum;
+    # the dry mix is another pair of passes, with the same pan gains (tests/test_mixer_whole.py)
     assert [mm.u32(sec3, a + 2) for a in (0x4008f7ea, 0x4008f7f0, 0x4008f7f6)] == [mm.GAIN_L, mm.TRACKS, mm.BUS_L]
     assert [mm.u32(sec3, a + 2) for a in (0x4008f806, 0x4008f80c, 0x4008f812)] == [mm.GAIN_R, mm.TRACKS, mm.BUS_R]
     assert 0x4008f7fc + 2 + int.from_bytes(sec3[mm.off(0x4008f7fe):mm.off(0x4008f800)], "big", signed=True) == mm.MIX_KERNEL
@@ -165,10 +161,10 @@ def pan_gains(mc, pan):
 def test_pan_law_isolates_hard_panned_tracks(main_cpu):
     left = pan_gains(main_cpu, 0)
     right = pan_gains(main_cpu, 127)
-    assert left == (1.0, 0.0)                       # hard left: nothing at all on the right bus
-    assert right[1] == 1.0 and 0 <= right[0] <= 4 / 2 ** 31    # hard right: 4 lsb on the left
+    assert left == (1.0, 0.0)  # hard left: nothing at all on the right bus
+    assert right[1] == 1.0 and 0 <= right[0] <= 4 / 2 ** 31  # hard right: 4 lsb on the left
     centre = pan_gains(main_cpu, 64)
-    assert centre == pytest.approx((0.75, 0.75), abs=1e-8)     # parabolic sine: 0.75, not 0.707
+    assert centre == pytest.approx((0.75, 0.75), abs=1e-8)  # parabolic sine: 0.75, not 0.707
     gains = [pan_gains(main_cpu, pan) for pan in range(128)]
     lefts, rights = [g[0] for g in gains], [g[1] for g in gains]
     assert lefts == sorted(lefts, reverse=True) and rights == sorted(rights)
@@ -192,10 +188,10 @@ def test_mix_kernel_sums_mono_tracks_into_one_side_of_the_stereo_bus(main_cpu):
     for n in range(32):
         acc = 0
         for k in range(8):
-            acc -= (gains[k] * int(tracks[k, n])) >> 23       # MSAC of a negative gain
+            acc -= (gains[k] * int(tracks[k, n])) >> 23  # MSAC of a negative gain
         want.append(max(-2 ** 31, min(2 ** 31 - 1, acc >> 8)))
     assert bus[:, 0].tolist() == want
-    assert not bus[:, 1].any()                                # the other side is left alone
+    assert not bus[:, 1].any()  # the other side is left alone
 
 
 def test_two_hard_panned_tracks_come_out_as_left_and_right(main_cpu):

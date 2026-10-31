@@ -1,20 +1,4 @@
-"""The xknob image: the box image with the crossfade on the first page's knob D, in DEC's place and on its slot.
-
-
-
-
-
-
-On slot 25 the crossfade is kept with the pattern's kit, locks to a step and takes an LFO, as DEC did. It is stored
-upside down, 127 less the slot's value, so a track made before (DEC at 127, stock's default) has none. The analog mute
-reads it every block (engine/amute.c, XKNOB) into the eight numbers the mixer link and itself go by; the sampler no
-longer reads DEC, a note always holds; a turn of D goes to stock's routine the other way round and takes the other
-sampler tracks' crossfades and the analog tracks' away; D reads XF0 to XF127 and its picture is drawn again the right
-way up. The sampling page's knob G is empty.
-
-Held here by running the routines. Not held: that the kit is kept slot for slot with the pattern (the srr image's REC
-word, kept the same way, is the evidence), how D's picture looks, how the knob feels turned the other way round.
-"""
+"""The xknob image: the box image with the crossfade on the first page's knob D, in DEC's place and on its slot."""
 import shutil
 
 import numpy as np
@@ -32,7 +16,7 @@ from tools import mainmap as mm
 
 pytestmark = pytest.mark.skipif(not shutil.which("m68k-elf-gcc"), reason="no ColdFire cross-compiler")
 
-DEC, D, G_KNOB = 25, 4, 7                           # the slot; knob D and knob G as a turn names them
+DEC, D, G_KNOB = 25, 4, 7  # the slot; knob D and knob G as a turn names them
 ARC, BLIT, R_DEC = 0x400701b4, 0x400f8f70, 504
 STRIDE, KNOBS = 142, 28
 TOP = 127
@@ -53,7 +37,8 @@ def before(stock3):
     return build_main.patched_image(stock3, xfade=25)
 
 
-# ---- the mixer: the crossfade from slot 25 ----------------------------------------------------------------------------
+# ---- the mixer: the crossfade from slot 25
+# ----------------------------------------------------------------------------
 
 @pytest.fixture(scope="module")
 def mix(main):
@@ -70,8 +55,9 @@ def old(before):
 
 
 def mixed(rig, decs, machines=X.MACHINES, seed=6, xf=None, **state):
-    """One mixer call with each digital track's slot 25 at decs[t]. -> (the volumes the mixer is shown, the analog
-    level words as sent, the twelve numbers after, the volumes and level words as they were)."""
+    """One mixer call with each digital track's slot 25 at decs[t]. -> (the volumes the mixer is shown, the analog level
+    words as sent, the twelve numbers after, the volumes and level words as they were).
+    """
     block, level2 = M.make_block(machines, [0] * 12, seed=seed)
     block = bytearray(block)
     for t, d in enumerate(decs):
@@ -102,7 +88,7 @@ def test_an_old_project_dec_at_127_everywhere_has_no_crossfade(mix, old):
     a = mixed(mix, [TOP] * 8)
     assert a[2] == [0] * 12 and a[0] == a[3]
     b = mixed(old, [TOP] * 8)
-    assert a[:2] == b[:2]                                       # the box image's mixer with no crossfade
+    assert a[:2] == b[:2]  # the box image's mixer with no crossfade
 
 
 def test_a_track_that_is_no_sampler_has_none_whatever_its_slot_holds(mix):
@@ -116,7 +102,8 @@ def test_the_analog_tracks_numbers_are_theirs(mix):
     assert xf[9] == 70 and (shown, levels) == X.law(vols, was, xf)
 
 
-# ---- the sampler: DEC no longer read ----------------------------------------------------------------------------------
+# ---- the sampler: DEC no longer read
+# ----------------------------------------------------------------------------------
 
 @pytest.fixture(scope="module")
 def engine(official):
@@ -133,7 +120,8 @@ def test_a_note_always_holds(engine, dec):
     assert e.mc.r32(e.voice(0) + 4 * 252) == 0x80000000
 
 
-# ---- the first page's knob D --------------------------------------------------------------------------------------------
+# ---- the first page's knob D
+# --------------------------------------------------------------------------------------------
 
 def kit_dec(r, t):
     return int.from_bytes(r.mc.read(G.KIT + mm.KIT_TRACK * t + mm.KIT_WORDS + 2 * DEC, 2), "big")
@@ -158,16 +146,16 @@ def first(built, track, machines=None):
 def test_d_turns_stock_s_way_the_other_way_round_and_takes_the_others_away(main):
     track = 2
     machines = {t: 44 for t in range(8)}
-    machines[6] = 3                                             # a track on another machine: its slot 25 is its own knob
+    machines[6] = 3  # a track on another machine: its slot 25 is its own knob
     r = first(main, track, machines)
     r.mc.write(mm.XFADES + 8, bytes([0, 50, 0, 0]))
     assert G.twist(r, D, 5) == 0x77 and r.seen_steps == [-5 & 0xffffffff]
     assert [kit_dec(r, t) for t in range(8)] == [TOP << 8 if t not in (track, 6) else 40 << 8 for t in range(8)]
     assert list(r.mc.read(mm.XFADES + 8, 4)) == [0, 0, 0, 0]
-    assert r.mc.r32(EVENT + mm.EVENT_STEPS) == 5                # the event as it came
+    assert r.mc.r32(EVENT + mm.EVENT_STEPS) == 5  # the event as it came
     for k in (1, 3, 5, 6, 7, 8):
         G.twist(r, k, 1)
-    assert r.seen_steps[1:] == [1] * 6                          # every other knob of the page as stock has it (SMPL, B, is the stops image's)
+    assert r.seen_steps[1:] == [1] * 6  # every other knob of the page as stock has it (SMPL, B, is the stops image's)
 
 
 def test_d_is_drawn_the_right_way_up_over_an_eraser(main):
@@ -210,13 +198,14 @@ def test_d_is_named_xfade(main):
     assert (name(0x30), name(0x28)) == ("XFADE", "Crossfade") and mm.u32(image, rec + 4) == DEC
 
 
-# ---- the sampling page and the analog tracks' page --------------------------------------------------------------------
+# ---- the sampling page and the analog tracks' page
+# --------------------------------------------------------------------
 
 def test_the_sampling_pages_g_is_empty(main):
     r = A.page(main, 3)
     G.geared(r, [256])
     texts = r.show()
-    assert not [t for t in texts if t[0] == 85 and t[1] in (0, 12) and t[2]]     # knob G's place, the lower row
+    assert not [t for t in texts if t[0] == 85 and t[1] in (0, 12) and t[2]]  # knob G's place, the lower row
     assert G.twist(r, G_KNOB, 4) == 1 and list(r.mc.read(mm.XFADES, 8)) == [0] * 8
 
 
@@ -231,7 +220,8 @@ def test_an_analog_tracks_crossfade_takes_the_samplers_away(main):
     assert A.xf12(r)[10] == 30 and [kit_dec(r, t) for t in range(8)] == [TOP << 8] * 8
 
 
-# ---- the image ------------------------------------------------------------------------------------------------------
+# ---- the image
+# ------------------------------------------------------------------------------------------------------
 
 def test_the_image(official_path, main):
     quiet = lambda s: None
@@ -250,5 +240,5 @@ def test_the_image(official_path, main):
     assert stray == []
     a7, b7 = built.section(7), was.section(7)
     diff7 = [k for k in range(len(a7)) if a7[k] != b7[k]]
-    assert diff7 and len(diff7) < 600                           # the sampler's update: DEC not read; its run's code moved up
+    assert diff7 and len(diff7) < 600  # the sampler's update: DEC not read; its run's code moved up
     print("xknob image", __import__("hashlib").sha256(raw).hexdigest(), "section 7 bytes changed", len(diff7))

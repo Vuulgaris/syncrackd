@@ -1,20 +1,14 @@
 /* Sampler engine for the Syntakt audio CPU, in Twinshot's place (machine type 44).
  *
- * One sample per voice, with start, length, loop, ping-pong, reverse, stereo
- * pairs and chained slots. A loop is the whole region: there is no loop point.
- * Behaviour is specified by the reference model emu/sampler_ref.py; tests hold
- * this code bit-identical to it.
- * Plain integer code: no EMAC, no libgcc, no data sections. (With QUICK the sums of
+ * One sample per voice, with start, length, loop, ping-pong, reverse, stereo pairs and chained slots. A loop is the
+ * whole region: there is no loop point. Behaviour is specified by the reference model emu/sampler_ref.py; tests hold
+ * this code bit-identical to it. Plain integer code: no EMAC, no libgcc, no data sections. (With QUICK the sums of
  * sixteen frames are made in the EMAC, in engine/stub.S: see sampler.h.)
  *
- * The code goes into two runs of stock functions that nothing references
- * (tools/audiomap.py CAVES). Stock Twinshot is left in place, unreached.
+ * The code goes into two runs of stock functions that nothing references (tools/audiomap.py CAVES). Stock Twinshot is
+ * left in place, unreached.
  *
- * Positions are 20.12 inside the current slot. A region [a, b) can span
- * several slots (chain); the "wall" is where travel ends in the current
- * direction: the far end of the region, or the end it started from on the
- * way back in ping-pong.
- */
+ * Positions are 20.12 inside the current slot. */
 #include "sampler.h"
 
 #define CAVE(n) __attribute__((section(".cave." #n), noinline))
@@ -25,8 +19,8 @@
 #endif
 #define CAVE2(n) CAVE(n)
 #ifdef HQ
-/* The pitch image: the table takes the third run whole, and what was there, with the step after
- * the voice loop, moves to runs of its own. */
+/* The pitch image: the table takes the third run whole, and what was there, with the step after the voice loop, moves
+ * to runs of its own. */
 #define ZY t
 #define ZR r
 #define ZQ q
@@ -57,7 +51,7 @@
 #endif
 
 #ifdef LEAN
-#define YA a                /* the third build: one small routine moves to a run of the right channels', for room in the second */
+#define YA a                
 #else
 #define YA y
 #endif
@@ -79,7 +73,7 @@ CAVE2(XW) static u32 scale(u32 x, u32 v)
 CAVE2(YW) static void enter(struct st *s, u32 k)
 {
     s32 n = slot_frames(k);
-    s32 wall_p = s->dir0 > 0 ? s->pa : s->pb;   /* on the way back: to where this pass began */
+    s32 wall_p = s->dir0 > 0 ? s->pa : s->pb;   
 
     if (s->dir == s->dir0)
         wall_p = s->dir0 > 0 ? s->pb : s->pa;
@@ -100,7 +94,7 @@ CAVE2(YW) static void enter(struct st *s, u32 k)
     s32 n = slot_frames(k);
     u32 wall_k = s->kc;
 #ifdef LIVE
-    s32 wall_p = s->dir0 > 0 ? s->pa : s->pb;   /* on the way back: to where this pass began */
+    s32 wall_p = s->dir0 > 0 ? s->pa : s->pb;   
 #else
     s32 wall_p = s->pc;
 #endif
@@ -213,13 +207,12 @@ CAVE(y) static void edge(struct st *s)
     s->pos = s->dir > 0 ? wall + over : wall - 8192 - over;
 }
 
-/* 32 frames, linear interpolation. r is 0 for mono.
- * A block gets MAX_EDGES seams and turns, then the note stops: a loop of a few
- * frames played octaves up would otherwise turn several times a frame, at a
- * cost per block past the heaviest stock machine. */
+/* 32 frames, linear interpolation. r is 0 for mono. A block gets MAX_EDGES seams and turns, then the note stops: a
+ * loop of a few frames played octaves up would otherwise turn several times a frame, at a cost per block past the
+ * heaviest stock machine. */
 #ifdef FADE
-/* One frame's gain: a sample is 28 bits here, so 9 are dropped before the product and 3 after.
- * Only called while a fade is on: at FADE_ONE the frame is left exactly as it was. */
+/* One frame's gain: a sample is 28 bits here, so 9 are dropped before the product and 3 after. Only called while a
+ * fade is on: at FADE_ONE the frame is left exactly as it was. */
 CAVE(w) static s32 faded(s32 x, s32 g)
 {
     return ((x >> 9) * g) >> 3;
@@ -241,8 +234,8 @@ CAVE(w) static void fade_move(struct st *s)
 #endif
 
 #ifdef HQ
-/* The table's 33 rows from the 17 the image holds: row 32 - r is row r backwards. The middle row is
- * as it is stored: it adds up to an odd number, so it is not quite its own mirror. */
+/* The table's 33 rows from the 17 the image holds: row 32 - r is row r backwards. The middle row is as it is stored:
+ * it adds up to an odd number, so it is not quite its own mirror. */
 CAVE(t) void hq_init(void)
 {
     const s16 *src = hq_rows;
@@ -254,8 +247,8 @@ CAVE(t) void hq_init(void)
     u32 r, k;
 
 #ifdef NARROW
-/* The mode image on: the image holds a row's middle twelve numbers, the sum of twelve reads no others, and the
- * two at each end of a row of the copy are left as the memory has them. */
+/* The mode image on: the image holds a row's middle twelve numbers, the sum of twelve reads no others, and the two at
+ * each end of a row of the copy are left as the memory has them. */
 #define HQ_ENDS 2
 #else
 #define HQ_ENDS 0
@@ -283,9 +276,9 @@ s32 hq_mid(const s16 *x, u32 f);
 #if MODE_CHAIN
 #error "the frames around a slot's ends are written out once a note: a note must stay in one slot"
 #endif
-/* A note's start: the frames around both ends of its slot, written out with the end frame standing in
- * for what is past it, so that a frame within reach of an end is summed like any other. Each side:
- * frames -7 to 14, then frames n - 15 to n + 7. */
+/* A note's start: the frames around both ends of its slot, written out with the end frame standing in for what is
+ * past it, so that a frame within reach of an end is summed like any other. Each side: frames -7 to 14, then frames n
+ * - 15 to n + 7. */
 #ifdef LEAN
 void hq_pads(struct st *s);     /* engine/stub.S: the same words for a third of the work. Eight notes on a step do this together */
 #else
@@ -308,8 +301,8 @@ CAVE(s) static void hq_pads(struct st *s)
 #endif
 
 #ifdef QUICK
-/* hq_run, for a note whose right channel is not there (its slot has become the shorter since the block began):
- * that side is nothing, as it was. */
+/* hq_run, for a note whose right channel is not there (its slot has become the shorter since the block began): that
+ * side is nothing, as it was. */
 CAVE(y) static int run(struct st *s, s32 *l, s32 *r, int n, int end, s32 lo, u32 span)
 {
     int m = hq_run(s, l, s->r ? r : 0, n, end, lo, span);
@@ -321,8 +314,8 @@ CAVE(y) static int run(struct st *s, s32 *l, s32 *r, int n, int end, s32 lo, u32
 }
 
 #ifdef LEAN
-/* Frames n to m - 1 of the block, made at full level, taken through a fade that is on: each by the gain as it
- * stands, which then moves a step. What faded and fade_move make of them a frame at a time: engine/stub.S. */
+/* Frames n to m - 1 of the block, made at full level, taken through a fade that is on: each by the gain as it stands,
+ * which then moves a step. What faded and fade_move make of them a frame at a time: engine/stub.S. */
 void fade_run(struct st *s, s32 *l, s32 *r, int n, int m);
 #endif
 
@@ -335,10 +328,9 @@ CAVE2(XO) static int outside(const struct st *s)
     return s->dir0 < 0 ? d <= 0 : d > 0;
 }
 
-/* A block begins. May a loop's pass go into its seam's blend in it: the blend is all written, no fade is on
- * (in a block of one the seam is not looked at again, and the blend may be another seam's), and the pass was
- * short of it when that was first so (it may have come to it since, at the block's very end). -> that, or that
- * it is in it. */
+/* A block begins. May a loop's pass go into its seam's blend in it: the blend is all written, no fade is on (in a
+ * block of one the seam is not looked at again, and the blend may be another seam's), and the pass was short of it
+ * when that was first so (it may have come to it since, at the block's very end). -> that, or that it is in it. */
 CAVE2(XM) static int seam(struct st *s)
 {
     if (!s->playing || s->mode != 1)
@@ -348,10 +340,10 @@ CAVE2(XM) static int seam(struct st *s)
     return s->xuse;
 }
 
-/* Before a frame is made by itself: a pass that has reached its blend's frames goes into them. The note is
- * pointed at them in the sample's place, its place and its wall counted from the first of them, and none of them
- * taken for a frame near a slot's end. It stays so until the pass wraps (edge). (A run of frames stops short of
- * the blend, so the first frame in it is always one made by itself. Asked only of a pass that may go in.) */
+/* Before a frame is made by itself: a pass that has reached its blend's frames goes into them. The note is pointed at
+ * them in the sample's place, its place and its wall counted from the first of them, and none of them taken for a
+ * frame near a slot's end. It stays so until the pass wraps (edge). (A run of frames stops short of the blend, so the
+ * first frame in it is always one made by itself. Asked only of a pass that may go in.) */
 CAVE2(XG) static void into(struct st *s)
 {
     struct xf *x;
@@ -396,9 +388,7 @@ CAVE(y) static void play(struct st *s, s32 *l, s32 *r)
             continue;
         }
 #ifdef LEAN
-        /* A run under a fade, too: up to the frame whose step reaches the wall, and no further than a fade in
-         * lasts. (The second build made every frame of a fade one at a time: a block of them was half as much
-         * work again as a block without, and tracks that start or turn together are in theirs together.) */
+        /* A run under a fade, too: up to the frame whose step reaches the wall, and no further than a fade in lasts. */
         int fading = live && s->fstep && s->fade != FADE_ONE;
 #else
 #define fading 0
@@ -553,8 +543,8 @@ CAVE2(XW) static u32 locate(u32 k, u32 last, u32 stride, s32 *x, int end)
 #endif
 
 #ifdef PAGE
-/* Where the sampling page sends a track's takes (struct recbox): a stereo sample
- * from 0, or DEST_SMPL, which is also the answer while the box is not set up. */
+/* Where the sampling page sends a track's takes (struct recbox): a stereo sample from 0, or DEST_SMPL, which is also
+ * the answer while the box is not set up. */
 CAVE2(ZY) static u32 dest_of(u32 track)
 {
     const volatile struct recbox *b = REC_AUDIO;
@@ -669,8 +659,7 @@ CAVE(v) static void live(struct st *s, const u8 *p)
     s32 from = rev ? b : a;                         /* where the knobs have a pass begin now */
     s32 span = b - a;
     s32 began = rev ? s->pb : s->pa;                /* where this pass began */
-    s32 end = rev ? began - span : b == total ? total : began + span;       /* and where it ends: as far on as the knobs
-                                                     * have the region long, or at the sample's end when they have it go there */
+    s32 end = rev ? began - span : b == total ? total : began + span;       /* and where it ends: as far on as the knobs * have the region long, or at the sample's end when they have it go there */
     s32 at = s->pos >> 12;
     int caught;
 
@@ -734,8 +723,8 @@ CAVE(e) static u32 blend_key(const struct st *s, const struct xf *x)
 }
 #endif
 
-/* The seam a loop has now: its wall and the place it leads to, as positions. If they are not the ones the blend
- * was begun for, it is begun again; and eight frames more of it are written, until it is all there. */
+/* The seam a loop has now: its wall and the place it leads to, as positions. If they are not the ones the blend was
+ * begun for, it is begun again; and eight frames more of it are written, until it is all there. */
 CAVE2(XK) static void xset(struct st *s, struct xf *x, s32 w, s32 c)
 {
 #ifdef TRIM
@@ -771,9 +760,9 @@ CAVE2(XK) static void xset(struct st *s, struct xf *x, s32 w, s32 c)
 #endif
 }
 
-/* Once a block, after the knobs, while a loop plays: where its seam is, and more of its blend. See sampler.h.
- * With the blend all written, or nothing found to blend with, and neither the pass nor the knobs moved since
- * (xnew: pass and walls say so), there is nothing to work out. */
+/* Once a block, after the knobs, while a loop plays: where its seam is, and more of its blend. See sampler.h. With
+ * the blend all written, or nothing found to blend with, and neither the pass nor the knobs moved since (xnew: pass
+ * and walls say so), there is nothing to work out. */
 CAVE2(XT) static void xstep(struct st *s)
 {
     s32 c = s->pc, before = c, wall = s->pb, after = s->frames - wall, e = XF_W;
@@ -784,8 +773,7 @@ CAVE2(XT) static void xstep(struct st *s)
         s->xnew = 1;
         goto none;
     }
-    if (s->fstep || (!s->xnew && (!s->xn || s->xn == XF_N)))    /* not in the blocks of a fade, which are work enough; and
-                                                     * not when nothing has moved and no blend is half written */
+    if (s->fstep || (!s->xnew && (!s->xn || s->xn == XF_N)))    /* not in the blocks of a fade, which are work enough; and * not when nothing has moved and no blend is half written */
         return;
     s->xnew = 0;
     if (s->dir0 < 0) {                              /* played backwards: before its start is above it */
@@ -805,7 +793,8 @@ none:
 #endif
 
 #ifdef RECLOCK
-/* Is the track in record, by the knobs at p: the step's own REC if it has one, or the track's. In the third run: the first is full. */
+/* Is the track in record, by the knobs at p: the step's own REC if it has one, or the track's. In the third run: the
+ * first is full. */
 CAVE2(ZY) static u32 rec_on(const u8 *p)
 {
     return REC_ON(p[2 * K_MODE], p[2 * K_REC]);
@@ -813,8 +802,9 @@ CAVE2(ZY) static u32 rec_on(const u8 *p)
 #endif
 
 #ifdef SLICE
-/* The slice image: the region of a note on a track whose keys play slices, as the slice and STRT and LEN have it.
- * -> 0 when the note is not one (a plain note: the caller works it out). In SY TOY's and SY BITS's run. See sampler.h, SLICE. */
+/* The slice image: the region of a note on a track whose keys play slices, as the slice and STRT and LEN have it. ->
+ * 0 when the note is not one (a plain note: the caller works it out). In SY TOY's and SY BITS's run. See sampler.h,
+ * SLICE. */
 CAVE(e) static int slice_cut(const struct st *s, u32 k, s32 total, u32 len16, const u8 *p, s32 *pa, s32 *pb)
 {
     const struct slc *c = SLC(((u32)s - (u32)ST(VOICE(0))) / 1800u);
@@ -839,8 +829,7 @@ CAVE(e) static int slice_cut(const struct st *s, u32 k, s32 total, u32 len16, co
     *pa = o;
 #ifdef RING
     /* The ring image: LEN is the share of what is left from the slice's start to the sample's end, as on a whole
-     * sample, so a slice can ring on past the next one (
-     * ). STRT stays inside the slice. */
+     * sample, so a slice can ring on past the next one ( ). STRT stays inside the slice. */
     *pb = len16 >= 127 << 8 ? total : o + (s32)scale(total - o, len16);
 #else
     *pb = len16 >= 127 << 8 ? e : o + (s32)scale(e - o, len16);
@@ -1141,8 +1130,7 @@ CAVE_STR static void str_update(s32 *voice, struct st *s, const u8 *p, u32 t)
     if (!g->on)
         return;
 #ifdef SCRUB
-    if (s->duck) {                          /* the scrub image: live() waits for play()'s fade to reach nothing, which a
-                                             * stretched note never runs; its heads are its fade, so it goes on next block */
+    if (s->duck) {                          /* the scrub image: live() waits for play()'s fade to reach nothing, which a * stretched note never runs; its heads are its fade, so it goes on next block */
         s->fade = 0;
         g->tail = 1;                        /* and a one-shot it stops goes down over a block, as at its end */
     }
@@ -1342,9 +1330,9 @@ CAVE_STR static void grain_step(const struct st *s, const struct str *g, struct 
     }
 }
 
-/* Head h starts again (str_birth's place): where the look has it so far (a look cut short by the birth, its best yet),
- * moved as far as the other head is from where it was foreseen; with no look, or the place gone elsewhere since (a
- * wrap, a knob), at the place. Where SRR's code is, past section 7's end (cave d). */
+/* Head h starts again (str_birth's place): where the look has it so far (a look cut short by the birth, its best
+ * yet), moved as far as the other head is from where it was foreseen; with no look, or the place gone elsewhere since
+ * (a wrap, a knob), at the place. Where SRR's code is, past section 7's end (cave d). */
 __attribute__((section(".cave.d"), noinline)) static void grain_born(const struct st *s, struct str *g, struct grn *c, struct grs *k, u32 h)
 {
     s32 at = s->pos >> 12, dq = (g->hpos[h ^ 1] >> 12) - k->q, da = at - k->at, best = at;
@@ -1357,10 +1345,10 @@ __attribute__((section(".cave.d"), noinline)) static void grain_born(const struc
     g->hdir[h] = s->dir;
 }
 #else
-/* A head h starts again (str_birth's place). The wide look, STR_WIDE a block for all tracks: STR_GW frames either side
- * of the place every STR_GS on frames summed four STR_K apart (a low-pass), STR_GN of them; then STR_GF either side
- * of its best (or of the place, past STR_WIDE) a frame at a time. Going forward, no head starts before c->floor, nor
- * where it would read up to the next lock point (c->lim) before the place reaches it. */
+/* A head h starts again (str_birth's place). The wide look, STR_WIDE a block for all tracks: STR_GW frames either
+ * side of the place every STR_GS on frames summed four STR_K apart (a low-pass), STR_GN of them; then STR_GF either
+ * side of its best (or of the place, past STR_WIDE) a frame at a time. Going forward, no head starts before c->floor,
+ * nor where it would read up to the next lock point (c->lim) before the place reaches it. */
 CAVE_STR static void grain_birth(const struct st *s, struct str *g, struct grn *c, u32 h)
 {
     s32 at = s->pos >> 12, q = g->hpos[h ^ 1] >> 12, f = s->frames, d = s->dir > 0 ? 1 : -1;
@@ -1504,8 +1492,8 @@ CAVE_GRN static int grain_look(const struct st *s, const struct str *g, struct g
     return 1;
 }
 
-/* A lock's block: the two heads go down to nothing and the new one comes up from it; then it is head 0, alone at
- * the top of its triangle for STR_HOLD frames, and head 1 waits. */
+/* A lock's block: the two heads go down to nothing and the new one comes up from it; then it is head 0, alone at the
+ * top of its triangle for STR_HOLD frames, and head 1 waits. */
 CAVE_GRN static void grain_add(const s16 *x, s32 f, s32 p, s32 d, s32 *o)
 {
     s32 n;
@@ -1535,10 +1523,10 @@ CAVE_GRN static void grain_lock(const struct st *s, struct str *g, struct grn *c
 }
 #endif
 
-/* 32 frames of a stretched note: what play() makes of a note that is not. A head starts again only at a block's
- * start (STR_G, its half and every track's skew are whole blocks), so in a block each head's weight is a straight
- * line, up or down by one a frame; and it is known at the block's start whether both heads stay inside the slot,
- * so the frames are made without a test of their own. */
+/* 32 frames of a stretched note: what play() makes of a note that is not. A head starts again only at a block's start
+ * (STR_G, its half and every track's skew are whole blocks), so in a block each head's weight is a straight line, up
+ * or down by one a frame; and it is known at the block's start whether both heads stay inside the slot, so the frames
+ * are made without a test of their own. */
 static inline __attribute__((always_inline)) s32 str_two(const s16 *x, s32 p)
 {
     s32 i = p >> 12, f = p & 0xfff;
@@ -1892,10 +1880,9 @@ CAVE_UR void sampler_render(s32 *out, s32 *voice)
 }
 
 #ifdef RECORDER
-/* One block of a running take (note_on starts it). Blocks are taken from the
- * main CPU's ring in order; if it got more than a ring ahead, the take ends
- * rather than skip. A note-off ends it after this block, and so does REC_MAX.
- * The slot table follows the take as it grows. */
+/* One block of a running take (note_on starts it). Blocks are taken from the main CPU's ring in order; if it got more
+ * than a ring ahead, the take ends rather than skip. A note-off ends it after this block, and so does REC_MAX. The
+ * slot table follows the take as it grows. */
 #ifdef PACK
 void rec_step(struct st *s, u32 release);       /* the pack image's, which knows a single slot's take: engine/stub.S */
 #else
@@ -1937,9 +1924,8 @@ CAVE2(ZR) static void rec_step(struct st *s, u32 release)
 #endif
 
 #ifdef KEEP
-/* The main CPU's side of this is engine/keeptakes.c. One request a block at the
- * most. A slot counts while the table points at its take buffer and its mark
- * does not say the drive has this take. With LOAD a request can also bring a
+/* The main CPU's side of this is engine/keeptakes.c. One request a block at the most. A slot counts while the table
+ * points at its take buffer and its mark does not say the drive has this take. With LOAD a request can also bring a
  * slot's samples the other way. */
 #ifdef LOAD
 /* The drive's samples for a slot, from the main CPU: see KEEP_PUT. */
@@ -2015,8 +2001,8 @@ CAVE2(ZQ) static void keep_step(void)
 #endif
 
 #ifdef ONETRACK
-/* One-track stereo: engine/sampler.h. Four more runs of code nothing reaches (tools/audiomap.py, ONE_CAVES),
- * and the room the step after the voice loop left when it stopped lending the next track. */
+/* One-track stereo: engine/sampler.h. Four more runs of code nothing reaches (tools/audiomap.py, ONE_CAVES), and the
+ * room the step after the voice loop left when it stopped lending the next track. */
 #ifdef LEAN
 /* The three that only move longs are in engine/stub.S: more of them a turn. */
 void longs(u32 *to, const u32 *from, u32 n);
@@ -2054,9 +2040,9 @@ CAVE2(YP) static void swap_filters(void)
     swap(FILT_C, FILT_C_LONGS);
 }
 
-/* Track t's right channel comes on: its two filters start from what the left's hold now. A track's part of
- * the three stretches is two flags and seven runs of longs: where each begins, in longs from FILT_A, and how
- * many a track (engine/stub.S). */
+/* Track t's right channel comes on: its two filters start from what the left's hold now. A track's part of the three
+ * stretches is two flags and seven runs of longs: where each begins, in longs from FILT_A, and how many a track
+ * (engine/stub.S). */
 extern const u8 seed_runs[];
 #define SEED_RUNS 7
 CAVE(a) static void seed(u32 t)
@@ -2149,13 +2135,12 @@ CAVE(h) static void right_pass(u8 *params, u32 trig, u32 release, u32 flags, u32
 
 #ifdef HITS
 #ifndef HITSCAN                         /* the scan image: its own scan, below */
-/* The hits image: see sampler.h. How loud a window's loudest p is: how many of 15 steps it is past, the first at
- * 181 (-45 dB) and each 1.414 times the one before (3 dB), the last at 22,938 (-3 dB). */
+/* The hits image: see sampler.h. How loud a window's loudest p is: how many of 15 steps it is past, the first at 181
+ * (-45 dB) and each 1.414 times the one before (3 dB), the last at 22,938 (-3 dB). */
 #ifdef HITPEAK
 /* The switch image: how loud a window's loudest p is, from the slot's own loudest frame: 1 past 31 dB under it, each
  * step 2 dB, 15 past 3 dB under it. The trig image's steps were the same but from full scale, and a take that sits
- * low triggered next to nothing (
- * ). Under -45 dB of full scale nothing is a hit. */
+ * low triggered next to nothing ( ). Under -45 dB of full scale nothing is a hit. */
 #define LOUD(p) loud(p, h->peak)
 CAVE(e) static u32 loud(u32 p, u32 peak)
 {
@@ -2171,10 +2156,9 @@ CAVE(e) static u32 loud(u32 p, u32 peak)
     return s;
 }
 #elif defined(HITCURVE)
-/* The trig image: the steps finer. 1 is past 925 (-31 dB) and each after it 1.258 times the one before (2 dB), the last
- * at 22,889 (-3 dB, as before). DEL goes over the fifteen as it did, so a knob's step is 2 dB of a hit where it was 3;
- * a hit under -31 dB is no hit (it was -45). The run has no room for steps of two sizes. 
- * */
+/* The trig image: the steps finer. 1 is past 925 (-31 dB) and each after it 1.258 times the one before (2 dB), the
+ * last at 22,889 (-3 dB, as before). DEL goes over the fifteen as it did, so a knob's step is 2 dB of a hit where it
+ * was 3; a hit under -31 dB is no hit (it was -45). The run has no room for steps of two sizes. */
 CAVE(e) static u32 loud(u32 p)
 {
     u32 s = 0, t = 925;
@@ -2224,8 +2208,8 @@ CAVE(e) static u32 hit_bin(u32 r)
     return 4 * e - 4 + (r >> (e - 2) & 3);
 }
 
-/* The scan image: each hit's step, its place among the slot's by how sharp it is: the sharpest fifteenth 15, down to 1.
- * In SY TOY's and SY BITS's run, for SD BASIC's room. */
+/* The scan image: each hit's step, its place among the slot's by how sharp it is: the sharpest fifteenth 15, down to
+ * 1. In SY TOY's and SY BITS's run, for SD BASIC's room. */
 CAVE(e) static void hit_rank(struct hits *h, const struct hitx *q)
 {
     u8 above[64];
@@ -2375,7 +2359,8 @@ CAVE(g) static u32 hit_scan(u32 k)
     return end == frames;
 }
 #else
-/* Slot k gone over: its next HIT_SCAN frames, from its start if it is not as it was. -> 1 when it is gone over to its end. */
+/* Slot k gone over: its next HIT_SCAN frames, from its start if it is not as it was. -> 1 when it is gone over to its
+ * end. */
 CAVE(e) static u32 hit_scan(u32 k)
 {
     const struct slot *sl = SLOT + k;
@@ -2545,11 +2530,11 @@ static u32 hit_pass(const struct st *s, struct hitv *v, int start, u32 *want)
 }
 
 #ifdef NORM
-/* The norm image (sampler.h, NORM): a take is normalized, to -1 dB, once it ends. Its loudest frame is followed while it
- * runs, from the block rec_all has just written; at its end its slot (and a stereo take's next one) is scaled up, NORM_STEP
- * frames a block from its start. A request of the keep box for a part not yet scaled waits (norm_keep), so the drive is
- * given the take as it will stay. One take at a time; one that ends meanwhile waits its turn, and is said not to be on the
- * drive once it is scaled, so the next save writes it again. */
+/* The norm image (sampler.h, NORM): a take is normalized, to -1 dB, once it ends. Its loudest frame is followed while
+ * it runs, from the block rec_all has just written; at its end its slot (and a stereo take's next one) is scaled up,
+ * NORM_STEP frames a block from its start. A request of the keep box for a part not yet scaled waits (norm_keep), so
+ * the drive is given the take as it will stay. One take at a time; one that ends meanwhile waits its turn, and is
+ * said not to be on the drive once it is scaled, so the next save writes it again. */
 #ifndef LETGO
 /* Each running take's loudest frame, from the block just written. -> a bit a track whose take runs. In the first run
  * (CAVES x), for room. */
@@ -2769,8 +2754,8 @@ CAVE(e) static void norm_block(void)
 }
 #endif
 
-/* The keep box's step, but for a request of a part of the take being scaled that is not yet: no answer this block. The
- * main CPU asks again till it has one (engine/keeptakes.c, ask: PATIENCE). */
+/* The keep box's step, but for a request of a part of the take being scaled that is not yet: no answer this block.
+ * The main CPU asks again till it has one (engine/keeptakes.c, ask: PATIENCE). */
 CAVE(g) static void norm_keep(void)
 {
     const struct norm *n = NORM_AT;
@@ -2833,13 +2818,11 @@ CAVE(c) void sampler_amp(s32 *out, u8 *params, u32 trig, u32 release, u32 flags)
 }
 #endif
 
-/* After the voice loop. For every track whose knobs say "this sampler, stereo":
- * the next track carries the right channel, and its filter, drive and amp stages
- * are made to copy this track's, trigs included.
+/* After the voice loop. For every track whose knobs say "this sampler, stereo": the next track carries the right
+ * channel, and its filter, drive and amp stages are made to copy this track's, trigs included.
  *
- * The link follows the knobs, not the voice: the stages act on a trig in the
- * block before the note starts, and before a newly chosen machine is running.
- * In such a block there is no right channel yet, so the next track is silenced. */
+ * The link follows the knobs, not the voice: the stages act on a trig in the block before the note starts, and before
+ * a newly chosen machine is running. In such a block there is no right channel yet, so the next track is silenced. */
 CAVE2(YP) void sampler_post(s32 *out, u8 *params, u32 *masks)
 {
     u32 i, k;

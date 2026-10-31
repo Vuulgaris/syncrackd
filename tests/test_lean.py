@@ -1,20 +1,4 @@
-"""The stereo image's third build: the same sound for less of a block (LEAN), and the sum of twelve (TWELVE).
-
-The unit, through the time image, 2026-10-11: eight stereo samples at their own pitch read 72 hundredths of a
-block, the same pitched 99 and "peaks ovewr a 100 at times", seven SY SWARMs and a sampler 81. So the second
-build's eight pitched stereo tracks, which matched stock's heaviest interrupt by count, are past it in time.
-
-LEAN changes no frame:
-  - a voice's level and gain went through two of stock's routines a channel. They are one pass for both
-    channels here (voice_out), held to those two routines themselves, bit for bit, on whatever a voice holds;
-  - the right channels' copies move more longs a turn (longs, send, swap), held to what they have to move.
-The engine as a whole is still held to the reference model and to the pitch image's engine by tests/test_quick.py
-and to stock's stages by tests/test_stereo.py: all of that runs on this build.
-
-TWELVE is another sound, a little: a frame between two is summed from twelve frames, not sixteen. It is held to
-the same model with the table of twelve, and what it gives up is measured. It is built as its own file beside
-the other (the time12 image) for a person to hear and to read: nothing is decided here.
-"""
+"""The stereo image."""
 import shutil
 
 import numpy as np
@@ -36,9 +20,9 @@ pytestmark = pytest.mark.skipif(not shutil.which("m68k-elf-gcc"), reason="no Col
 
 STOCK_AMP, STOCK_MIX = 0x400045a0, 0x400049f4
 SCRATCH_L, SCRATCH_R = 0x80008c60, 0x80008d84
-OUT, RIGHT, LAYERS = 0x44070000, 0x44070100, 0x44070200          # free memory for a test's two buffers and stock's two indexes
+OUT, RIGHT, LAYERS = 0x44070000, 0x44070100, 0x44070200  # free memory for a test's two buffers and stock's two indexes
 V = dict(gain=8, gain2=12, cur=24, cur2=28, trig=52, start=56, target=976, level=980, attack=1000)
-FULL = 0x80000000                                                 # a level: all of it. And "no attack"
+FULL = 0x80000000  # a level: all of it. And "no attack"
 
 
 @pytest.fixture(scope="module")
@@ -74,7 +58,8 @@ def folded(monkeypatch):
 # ---- a voice's level and gain: one pass, stock's two routines to the bit -------------------------------------
 
 class Voice:
-    """A voice's memory and Twinshot's two scratch buffers, set by the test; stock's two routines and ours run on them."""
+    """A voice's memory and Twinshot's two scratch buffers, set by the test; stock's two routines and ours run on them.
+    """
 
     def __init__(self, built):
         self.e = P.engine(built)
@@ -98,7 +83,6 @@ class Voice:
         return buf(OUT), buf(RIGHT), {k: mc.r32(self.at + o) for k, o in V.items()}, list(mc.emac.acc), mc.emac.macsr & 0xf0
 
     def stock(self, fields, left, right, stereo):
-        """As the sampler called them up to the second build: a channel at a time, the right from where the left began."""
         self.set(fields, left, right)
         mc, v = self.mc, self.at
         level, cur = mc.r32(v + V["level"]), mc.r32(v + V["cur"])
@@ -145,9 +129,10 @@ def test_a_steady_level_and_gain_are_stocks_to_the_bit(lean, stereo):
 
 @pytest.mark.parametrize("seed", range(40))
 def test_any_ramp_of_either_is_stocks_to_the_bit(lean, seed):
-    """Where the level and the gain are, where they are going, a trig in the block, a note starting in it with an
-    attack or without: whatever a voice holds, both channels come out as stock's two routines make them, the voice
-    is left as they leave it, and the accumulators as they leave them."""
+    """Where the level and the gain are, where they are going, a trig in the block, a note starting in it with an attack
+    or without: whatever a voice holds, both channels come out as stock's two routines make them, the voice is left as
+    they leave it, and the accumulators as they leave them.
+    """
     rng = np.random.default_rng(seed)
     v = Voice(lean)
     for n in range(12):
@@ -155,18 +140,19 @@ def test_any_ramp_of_either_is_stocks_to_the_bit(lean, seed):
                  trig=int(rng.integers(0, 2)), start=int(rng.integers(0, 2)),
                  target=int(rng.choice([FULL, 0, int(rng.integers(0, 1 << 32))])), level=int(rng.integers(0, 1 << 32)),
                  attack=int(rng.choice([FULL, 0x1000, int(rng.integers(0, 1 << 32))])))
-        if n % 3 == 0:                                              # as the sampler has them: a gain that is where it is going
+        if n % 3 == 0:  # as the sampler has them: a gain that is where it is going
             f["cur"] = f["gain"] = int(rng.choice([0x7fffffff, 0x40000000]))
         agree(v, f, frames(rng, n % 2 == 0), frames(rng, n % 4 == 0), stereo=bool(n % 5))
 
 
 @pytest.mark.parametrize("stereo", [True, False])
 def test_with_twinshots_second_layer_not_at_nothing_stocks_own_two_are_called(lean, stereo):
-    """The sampler keeps that layer's gain at 0, and where it has got to at 0 from a note's start. Before a
-    voice's first note it may hold what another machine left: then nothing is assumed."""
+    """The sampler keeps that layer's gain at 0, and where it has got to at 0 from a note's start. Before a voice's first
+    note it may hold what another machine left: then nothing is assumed.
+    """
     v, rng = Voice(lean), np.random.default_rng(9)
     seen = []
-    v.mc.uc.hook_add(1 << 2, lambda uc, a, s, u: seen.append(a), None, STOCK_MIX, STOCK_MIX)       # UC_HOOK_CODE
+    v.mc.uc.hook_add(1 << 2, lambda uc, a, s, u: seen.append(a), None, STOCK_MIX, STOCK_MIX)  # UC_HOOK_CODE
     v.mc.uc.ctl_flush_tb()
     for gain2, cur2 in ((0, 0x1234), (0x40000000, 0), (0x7fffffff, 0x10000000)):
         f = dict(gain=0x7fffffff, cur=0x20000000, gain2=gain2, cur2=cur2, trig=0, start=1, target=0xa0000000, level=0xf0000000, attack=FULL)
@@ -211,7 +197,8 @@ def test_longs_moves_n_longs_and_no_more(lean):
 
 def test_swap_exchanges_n_longs_with_the_copy_of_their_shape(lean):
     """Stock's memory of the two filters and its copy in free memory, 0xc4048000 on: the three stretches the right
-    channels' pass exchanges, and any other length."""
+    channels' pass exchanges, and any other length.
+    """
     e = P.engine(lean)
     mc, rng = e.mc, np.random.default_rng(3)
     shadow = lambda a: a + m.R_SHADOW & 0xffffffff
@@ -252,15 +239,15 @@ def test_send_puts_the_masks_tracks_in_their_halves_of_the_window_and_touches_no
 
 # ---- a fade, and a note's start: the blocks that stood out ----------------------------------------------------
 #
-# 
-# The bench has it: a block is not always what a steady one is. The block a note starts in wrote
-# out the frames around its slot's ends a word at a time with a question for each, and every frame of a fade
-# was made alone, at more than twice the work of a frame in a run. Eight tracks trigged on one step do both
-# together, and the meter's P holds the most of ten seconds.
+# The bench has it: a block is not always what a steady one is. The block a note starts in wrote out the frames around
+# its slot's ends a word at a time with a question for each, and every frame of a fade was made alone, at more than
+# twice the work of a frame in a run. Eight tracks trigged on one step do both together, and the meter's P holds the
+# most of ten seconds.
 
 def test_a_run_under_a_fade_is_the_frames_one_at_a_time(lean):
-    """fade_run against the two routines it is a run of, faded and fade_move, which the engine still has for the
-    frame at a wall: any gain, a fade in to its end and past it, a fade out to nothing and on, one channel or two."""
+    """fade_run against the two routines it is a run of, faded and fade_move, which the engine still has for the frame at
+    a wall: any gain, a fade in to its end and past it, a fade out to nothing and on, one channel or two.
+    """
     e = P.engine(lean)
     mc, syms, rng = e.mc, lean[1], np.random.default_rng(6)
     note = OUT + 0x400
@@ -287,7 +274,7 @@ def test_a_run_under_a_fade_is_the_frames_one_at_a_time(lean):
                 buf[k] = ((v - (1 << 32) if v & 0x80000000 else v) << 4 + 32) >> 32 if False else (((v << 4) & 0xffffffff) ^ 0x80000000) - 0x80000000
             if int.from_bytes(mc.read(note + 62, 2), "big", signed=True):
                 mc.call(syms["fade_move"], note)
-            else:                                                   # (a step of 0 is not a fade: play does not ask for a run of it)
+            else:  # (a step of 0 is not a fade: play does not ask for a run of it)
                 pass
         assert list(got_l) == want_l and list(got_r) == want_r, (trial, g, step, n, end)
         if step:
@@ -297,8 +284,9 @@ def test_a_run_under_a_fade_is_the_frames_one_at_a_time(lean):
 @pytest.mark.parametrize("n", [1, 2, 3, 7, 8, 14, 15, 16, 17, 22, 23, 44, 45, 46, 300])
 @pytest.mark.parametrize("voice", [0, 5])
 def test_a_notes_start_writes_out_the_frames_around_its_slots_ends_as_it_did(lean, n, voice):
-    """The same 45 words a side as the pitch image's routine (tests/test_pitch.py), for a slot of any length:
-    frames -7 to 14, then n - 15 to n + 7, the end frame standing in for what is past it."""
+    """The same 45 words a side as the pitch image's routine (tests/test_pitch.py), for a slot of any length: frames -7
+    to 14, then n - 15 to n + 7, the end frame standing in for what is past it.
+    """
     rng = np.random.default_rng(n)
     left, right = rng.integers(-30000, 30000, n).astype(np.int16), rng.integers(-30000, 30000, n).astype(np.int16)
     e = P.engine(lean)
@@ -306,7 +294,7 @@ def test_a_notes_start_writes_out_the_frames_around_its_slots_ends_as_it_did(lea
     at = m.HQ_PADS + m.HQ_PAD_BYTES * voice
     st = e.voice(voice) + 1712
     want = lambda x: [int(x[min(max(j, 0), n - 1)]) for j in list(range(-7, 15)) + list(range(n - 15, n + 8))]
-    a, b = OUT + 0x1000, OUT + 0x2000                           # the two slots, with room for the longest
+    a, b = OUT + 0x1000, OUT + 0x2000  # the two slots, with room for the longest
     for stereo in (True, False):
         mc.write(a, left.astype(">i2").tobytes())
         mc.write(b, right.astype(">i2").tobytes())
@@ -324,7 +312,8 @@ def test_a_notes_start_writes_out_the_frames_around_its_slots_ends_as_it_did(lea
 
 def blocks_of(image, factory, note, **knobs):
     """Eight stereo tracks trigged together every twelve blocks, once the first notes are past: -> instructions of a
-    steady block, of the block the trig is in, of the one the notes start in, and of the one after."""
+    steady block, of the block the trig is in, of the one the notes start in, and of the one after.
+    """
     from stereo_rig import Rig
     r = Rig(image)
     rng = np.random.default_rng(11)
@@ -345,10 +334,11 @@ def blocks_of(image, factory, note, **knobs):
 
 
 def test_the_blocks_that_stood_out_stand_out_less(lean, twelve, factory):
-    """Instructions. With the first step of this build a note's first block was 14,800 over a steady one for eight
-    stereo tracks, and with a cut start, where a fade in begins, 21,000 and then 6,300 more: it is 5,300, and 11,300
-    and then 6,300. (The very first note of a voice after a start is 8,900 more again, once: stock resets the voice
-    and the table is made.)"""
+    """Instructions. With the first step of this build a note's first block was 14,800 over a steady one for eight stereo
+    tracks, and with a cut start, where a fade in begins, 21,000 and then 6,300 more: it is 5,300, and 11,300 and then
+    6,300. (The very first note of a voice after a start is 8,900 more again, once: stock resets the voice and the
+    table is made.)
+    """
     steady, trig, start, after = blocks_of(lean[0], factory, 55.25)
     assert abs(steady - 108720) < 100 and 3000 < trig - steady < 3700 and 4800 < start - steady < 5800 and abs(after - steady) < 100
     steady, trig, start, after = blocks_of(lean[0], factory, 55.25, start=20, length=60)
@@ -366,9 +356,9 @@ COST12 = dict(own=76674, eight=102615, mono=61815)
 
 
 def test_what_the_third_build_takes_off_an_interrupt(lean, twelve, factory):
-    """Instructions, eight sampler tracks looping. The second build: 84,579 at their own pitch in stereo, 116,679
-    pitched, which the unit's meter read as 72 and 99 hundredths of a block. 7,905 fewer either way here, and
-    6,144 fewer again pitched with the sum of twelve. What that is in time is the unit's to say."""
+    """Instructions, eight sampler tracks looping. 7,905 fewer either way here, and 6,144 fewer again pitched with the
+    sum of twelve. What that is in time is the unit's to say.
+    """
     image = lean[0]
     got = dict(own=whole(image, factory, 8, 60)[3], one=whole(image, factory, 1, 55.25)[3], four=whole(image, factory, 4, 55.25)[3],
                eight=whole(image, factory, 8, 55.25)[3], mono=whole(image, factory, 8, 55.25, mode=0)[3],
@@ -383,15 +373,16 @@ def test_what_the_third_build_takes_off_an_interrupt(lean, twelve, factory):
 
 
 def test_where_it_is(stock, lean, twelve, pitch):
-    """Twinshot's other run, its player and filter, holds the pass of the level and the gain: both of Twinshot's
-    runs are used now. The three that move longs are in the room the sums left and in the right channels' own."""
+    """Twinshot's other run, its player and filter, holds the pass of the level and the gain: both of Twinshot's runs are
+    used now. The three that move longs are in the room the sums left and in the right channels' own.
+    """
     image, syms = lean
     lo, hi = m.LEAN_CAVES["m"]
     assert (lo, hi) == m.TWIN_ROOM["player and filter"] and pitch[0][m.off(lo):m.off(hi)] == stock[m.off(lo):m.off(hi)]
     assert lo == syms["voice_out"] and image[m.off(lo):m.off(hi)] != stock[m.off(lo):m.off(hi)]
     assert m.QUICK_CAVES["k"][0] <= syms["longs"] < m.QUICK_CAVES["k"][1]
     assert m.ONE_CAVES["b"][0] <= syms["send"] < m.ONE_CAVES["b"][1] and m.CAVES["x"][0] <= syms["swap"] < m.CAVES["x"][1]
-    assert lo < syms["fade_run"] < hi and m.PITCH_CAVES["s"][0] == syms["hq_pads"]         # the run under a fade; a note's start
+    assert lo < syms["fade_run"] < hi and m.PITCH_CAVES["s"][0] == syms["hq_pads"]  # the run under a fade; a note's start
     # stock's two routines are still there and still called, from the one place that may need them
     ours = list(dict(m.CAVES, **m.REC_CAVES, **m.FADE_CAVES, **m.LIVE_CAVES, **m.PITCH_CAVES, **m.ONE_CAVES, **m.QUICK_CAVES, **m.LEAN_CAVES).values())
     for a in (STOCK_AMP, STOCK_MIX):
@@ -400,8 +391,8 @@ def test_where_it_is(stock, lean, twelve, pitch):
         assert len(mine) == 1 and lo <= mine[0] < hi
     assert image[m.off(STOCK_AMP):m.off(STOCK_AMP) + 0x68] == stock[m.off(STOCK_AMP):m.off(STOCK_AMP) + 0x68]
     assert image[m.off(STOCK_MIX):m.off(STOCK_MIX) + 0x76] == stock[m.off(STOCK_MIX):m.off(STOCK_MIX) + 0x76]
-    # the sum of twelve is the same program with a shorter sum and another table: every difference is in our own
-    # runs, and nothing outside the run of the sums has moved
+    # the sum of twelve is the same program with a shorter sum and another table: every difference is in our own runs,
+    # and nothing outside the run of the sums has moved
     other, osyms = twelve
     diff = [m.BASE + k for k in range(len(image)) if image[k] != other[k]]
     assert diff and all(any(x <= d < y for x, y in ours) for d in diff)
@@ -419,7 +410,7 @@ def test_the_table_of_twelve_is_a_sinc_of_twelve_in_the_shape_of_the_one_of_sixt
     assert len(ROWS12) == 33 and all(len(r) == 16 and r[:2] == r[-2:] == [0, 0] and sum(r) == sinctable.ONE for r in ROWS12)
     assert ROWS12[0] == [0] * 7 + [sinctable.ONE] + [0] * 8 and ROWS12[32] == [0] * 8 + [sinctable.ONE] + [0] * 7
     assert all(ROWS12[32 - r] == ROWS12[r][::-1] for r in range(16))
-    assert max(sum(abs(c) for c in r) for r in ROWS12) * 32768 < 2 ** 31            # a sum of them is under 32 bits at every step, as with sixteen
+    assert max(sum(abs(c) for c in r) for r in ROWS12) * 32768 < 2 ** 31  # a sum of them is under 32 bits at every step, as with sixteen
     assert sinctable.magic(True) != sinctable.magic() and sinctable.stored(True) == ROWS12[:17]
 
 
@@ -471,9 +462,10 @@ def test_at_its_own_pitch_twelve_and_sixteen_are_the_same_sound(lean, twelve):
 
 @pytest.mark.parametrize("hz, sixteen, least", [(1000, 85, 85), (3000, 80, 78), (6000, 80, 76), (10000, 75, 72), (14000, 72, 66)])
 def test_what_twelve_gives_up(lean, twelve, hz, sixteen, least):
-    """A tone two octaves down, the engine's own output, everything else against the tone in dB. Sixteen frames:
-    the pitch image's figures. Twelve: within about 8 dB of them, and 40 and more over the line between two
-    frames that the pitch image replaced (33 dB at 6 kHz, 16 at 14)."""
+    """A tone two octaves down, the engine's own output, everything else against the tone in dB. Sixteen frames: the
+    pitch image's figures. Twelve: within about 8 dB of them, and 40 and more over the line between two frames that
+    the pitch image replaced (33 dB at 6 kHz, 16 at 14).
+    """
     pool = TP.tone_pool(hz)
     with16 = TP.clean(*TP.played(lean, pool, 36, 620), hz=hz)
     with12 = TP.clean(*TP.played(twelve, pool, 36, 620), hz=hz)

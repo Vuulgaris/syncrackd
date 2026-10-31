@@ -1,15 +1,4 @@
-"""The phone image: the six image's main CPU with the unit asking the phone at LOAD PROJECT.
-
-
-engine/phone.c: before stock's load the unit points the drive routines at the project's bank, asks the phone
-(a frame of ours through the unit's own SysEx sink), waits on the kernel's wait with a timer's callback as the timeout,
-puts the bank back, and calls the load; a frame of the phone's through the SysEx entry's one jump gives the wait and
-carries the slots it wrote, which the loader (engine/keeptakes.c, PHONE) loads whether or not the audio CPU holds a take.
-
-Stand-ins for what emulation does not run, as tests/test_hitui.py has them: the kernel's wait and give, the timer
-table, the SysEx sink's vtable, the store's reads and the load itself. They prove the routines around them; whether
-the MIDI task runs while the job waits, and how long the first timer's count is, only the unit shows.
-"""
+"""The phone image: the six image's main CPU with the unit asking the phone at LOAD PROJECT."""
 import hashlib
 import shutil
 
@@ -112,9 +101,9 @@ def test_the_load_asks_the_phone_waits_and_loads_with_the_bank_put_back(phone):
     assert r.mc.call(r.syms["phone_load"], 0x1234, 5, 0x5678) == 7
     kinds = [e[0] for e in r.log]
     assert kinds == ["scan", "write", "commit", "timer", "wait", "cancel", "scan", "load"]
-    assert r.log[0] == ("scan", 2)                  # the drive routines are pointed at the project's bank while the phone works
+    assert r.log[0] == ("scan", 2)  # the drive routines are pointed at the project's bank while the phone works
     assert r.log[4] == ("wait", 2)
-    assert r.log[6] == ("scan", 0)                  # and back before stock's load
+    assert r.log[6] == ("scan", 0)  # and back before stock's load
     assert r.log[7] == ("load", 0, 0x1234, 5, 0x5678)
     assert r.log[3] == ("timer", r.syms["tick"] if "tick" in r.syms else r.log[3][1], 0x20)
     data = r.log[1][1]
@@ -129,7 +118,7 @@ def test_a_project_on_the_loaded_bank_switches_nothing(phone):
 
 def test_a_project_the_mark_does_not_know_is_on_bank_0(phone):
     r = Rig(phone, project_bank=2, now=1)
-    r.mc.call(r.syms["phone_load"], 1, 6, 0)           # project 6's byte is 0xff
+    r.mc.call(r.syms["phone_load"], 1, 6, 0)  # project 6's byte is 0xff
     assert r.log[1][1][15] == 0 and r.log[0] == ("scan", 0)
 
 
@@ -189,7 +178,7 @@ def test_the_image(official_path, official, phone):
     quiet = lambda s: None
     raw, _, built, _, syms = build.build(official_path, log=quiet, xfade=22, prof=True)
     was_raw, _, was, _, _ = build.build(official_path, log=quiet, xfade=20, prof=True)
-    assert hashlib.sha256(was_raw).hexdigest().startswith("d7bd3348")      # the six image, as it is
+    assert hashlib.sha256(was_raw).hexdigest().startswith("d7bd3348")  # the six image, as it is
     new, old = built.section(3), was.section(3)
     assert new == phone[0]
     spans = [mm.CAVE_PHONE, mm.CAVE_PHONE2, (mm.SYSEX_IN_JMP + 2, mm.SYSEX_IN_JMP + 6),

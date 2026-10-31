@@ -1,26 +1,25 @@
-/* The mirror image (-DMIRROR): the screen to a viewer over USB, as SysEx, for video. 
- * (the screen's
- * frames streamed off the unit, drawn big by a viewer, the viewer's window put over the camera).
+/* The mirror image (-DMIRROR): the screen to a viewer over USB, as SysEx, for video. (the screen's frames streamed
+ * off the unit, drawn big by a viewer, the viewer's window put over the camera).
  *
  * The panel (READ, docs/FINDINGS.md, "The mirror image"): the UI draws onto a surface over a 1,024-byte buffer, a
  * column of 64 dots in 8 bytes, 128 columns; 0x4011391a sends the panel the bytes of *0x402d7110 that changed from
  * *0x402d7114, swaps the two pointers (after it 0x402d7114 is the frame on the panel, 0x402d7110 the other) and hands
  * back the other, the buffer to draw the next one in. Stock's own getter of the panel's frame reads 0x402d7114
- * (0x40113a20). The mirror image's first build sent *0x402d7110: the next frame's buffer, not the panel's. The UI's routine at 0x4000a1xx asks 0x4010095c whether anything is to be drawn, and draws
- * and sends only then, through a4, loaded at 0x4000a22c.
+ * (0x40113a20). The UI's routine at 0x4000a1xx asks 0x4010095c whether anything is to be drawn, and draws and sends
+ * only then, through a4, loaded at 0x4000a22c.
  *
  * Here: the send goes through mirror_paint, which marks a frame as new; the asking goes through mirror_tick, which
  * sends the frame shown when one is new, the viewer has asked, and a frame's time has passed since the last. So the
  * last frame of a fast turn goes too, at the next asking. A frame is sent only while the viewer's last 0x67 is less
  * than 3 s old (engine/phone.c, MIRROR): a viewer that goes away stops it.
  *
- *   viewer to unit  0x67  on, renewed: a byte, frames a second (0: 15)
- *   viewer to unit  0x68  off
- *   unit to viewer  0x69  a frame: f0 00 20 3c 10 00, 00 00 01 00 00, 69, a count (7 bits), the 1,024 bytes 7 to a
- *                         group (a byte of their high bits, bit 6 the first's, then their low 7 bits; the last group 2),
- *                         f7: 1,185 bytes. Byte 8 c + p is column c's dots 8 p up to 8 p + 7, most significant bit
- *                         first: dot y (0 the panel's bottom row) is bit 7 - y % 8 of byte 8 c + y / 8, as emu/screen.py
- *                         reads the surface.
+ * viewer to unit  0x67  on, renewed: a byte, frames a second (0: 15)
+ * viewer to unit  0x68  off
+ * unit to viewer  0x69  a frame: f0 00 20 3c 10 00, 00 00 01 00 00, 69, a count (7 bits), the 1,024 bytes 7 to a
+ * group (a byte of their high bits, bit 6 the first's, then their low 7 bits; the last group 2),
+ * f7: 1,185 bytes. Byte 8 c + p is column c's dots 8 p up to 8 p + 7, most significant bit
+ * first: dot y (0 the panel's bottom row) is bit 7 - y % 8 of byte 8 c + y / 8, as emu/screen.py
+ * reads the surface.
  *
  * The frame is written into the unit's own SysEx sink as stock's answers are (engine/phone.c, ask): from the UI's
  * task, so a frame and an answer of the MIDI task's can mix if both run at once. The viewer does no file transfers
@@ -80,8 +79,7 @@ OAVE static u32 mirror_pack(u8 *b, const u8 *f, u32 i)
 #ifdef PIECES
 /* The sink image (-DPIECES): stock's put (0x40105f24) copies into the sink's 144 bytes (+ 20, its size at + 532, how
  * many it has at + 8) and sends them when they are full (+ 12: 0x40105eb4), but copies what is left of that call from
- * the call's start again, not from where it was. The first build's 64-byte writes crossed a send at the stream's byte
- * 144, 288 and so on: the rest of that piece came out as its own start again. So a write here never crosses one. */
+ * the call's start again, not from where it was. So a write here never crosses one. */
 #define SINK_HAS (*(volatile u32 *)((u8 *)SINK + 8))
 #define SINK_SIZE (*(volatile u32 *)((u8 *)SINK + 532))
 
@@ -135,12 +133,11 @@ NAVE static void mirror_send(const u8 *f)
 #endif
 
 #ifdef SHADOW
-/* The shadow image (-DSHADOW): the frame sent is what reached the panel. On the unit the second build's frames
- * (*0x402d7114 at the asking) still had strokes at the dials where the panel was clean, so the buffers are not taken
- * at their word. Every 8 bytes stock's column sender (0x4011384c, the panel's only way in: the send, the whole frame
- * and the clear call it) is given are copied into a frame of ours, mirror_frame, from 1,024 bytes of stock's heap
- * taken at the viewer's first asking; then every byte of the frame paint compares against is turned over and a
- * draw asked for, so the next send rewrites the whole panel and the copy is whole from there on. */
+/* The shadow image (-DSHADOW): the frame sent is what reached the panel. Every 8 bytes stock's column sender
+ * (0x4011384c, the panel's only way in: the send, the whole frame and the clear call it) is given are copied into a
+ * frame of ours, mirror_frame, from 1,024 bytes of stock's heap taken at the viewer's first asking; then every byte
+ * of the frame paint compares against is turned over and a draw asked for, so the next send rewrites the whole panel
+ * and the copy is whole from there on. */
 #define ALLOC ((u8 *(*)(u32))0x40103952)                 /* stock's: the heap, where the UI's surfaces take theirs */
 
 __asm__(".section .cave.o,\"ax\"\n"

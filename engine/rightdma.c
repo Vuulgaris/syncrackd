@@ -1,34 +1,28 @@
-/* Main CPU (section 3, OS 1.42 only): the right side of the eight digital tracks, moved out of the
- * window by the transfer controller. The dma image; it takes the place of engine/rightfill.c, which
- * the images before it keep.
+/* Main CPU (section 3, OS 1.42 only): the right side of the eight digital tracks, moved out of the window by the
+ * transfer controller. The dma image; it takes the place of engine/rightfill.c, which the images before it keep.
  *
- * What was wrong: a stereo track's right channel was read out of the window by the CPU, 64 slow bus
- * cycles a track a block, inside the per-block interrupt. With stereo samples playing the screen and
- * the knobs lagged; with mono ones they did not (the maintainer's comparison, docs/FINDINGS.md).
+ * What was wrong: a stereo track's right channel was read out of the window by the CPU, 64 slow bus cycles a track a
+ * block, inside the per-block interrupt.
  *
- * Stock moves its own eight buffers with channel 47 of the controller: sixteen bytes a turn, a turn
- * linked to the next by the channel's own number, started by a write of that number, and done when
- * bit 7 of the channel's last word is set. Two channels of ours are set as stock sets its own and
- * move the window's two stretches of right channels the same way. They are of group 0, which every
- * other group goes before: a transfer of stock's waits for a turn of ours at most.
+ * Stock moves its own eight buffers with channel 47 of the controller: sixteen bytes a turn, a turn linked to the
+ * next by the channel's own number, started by a write of that number, and done when bit 7 of the channel's last word
+ * is set. Two channels of ours are set as stock sets its own and move the window's two stretches of right channels
+ * the same way. They are of group 0, which every other group goes before: a transfer of stock's waits for a turn of
+ * ours at most.
  *
- * A transfer may not land in the program's memory by its cached address, so the second set of
- * buffers is in on-chip memory here, after what the startup copies to its first half: cleared at
- * every start, named by nothing in the file.
+ * A transfer may not land in the program's memory by its cached address, so the second set of buffers is in on-chip
+ * memory here, after what the startup copies to its first half: cleared at every start, named by nothing in the file.
  *
- * Three places. The per-block routine's first call: the long that says which tracks have a right
- * channel is read and the transfers are started, as early as a block allows. The audio CPU wrote
- * them at the end of the block before and is a block's work from writing the next. The last call
- * before the mixer's: the transfers are waited for, and every track without a right channel is
- * given a copy of its left, which stock's own transfer has brought by then. And between the two,
- * where the images before read the right channels: nothing, unless the transfers were given up.
+ * Three places. The per-block routine's first call: the long that says which tracks have a right channel is read and
+ * the transfers are started, as early as a block allows. The audio CPU wrote them at the end of the block before and
+ * is a block's work from writing the next. The last call before the mixer's: the transfers are waited for, and every
+ * track without a right channel is given a copy of its left, which stock's own transfer has brought by then. And
+ * between the two, where the images before read the right channels: nothing, unless the transfers were given up.
  *
- * Nothing here can be run before it is on the unit: emulation has no transfer controller. So the
- * routine does not believe its transfers until it has seen them. From a start, for GOOD_BLOCKS
- * blocks, the CPU reads all sixteen halves too and the two are compared; the sound is the CPU's.
- * After that the transfers alone are used. BAD_BLOCKS blocks that differ, or a wait that does not
- * end, and they are given up until the next start: the CPU reads, where and as rightfill.c does.
- * Which of the three it is, the sampling page says (engine/recpage.c, DMA). */
+ * So the routine does not believe its transfers until it has seen them. From a start, for GOOD_BLOCKS blocks, the CPU
+ * reads all sixteen halves too and the two are compared; the sound is the CPU's. After that the transfers alone are
+ * used. BAD_BLOCKS blocks that differ, or a wait that does not end, and they are given up until the next start: the
+ * CPU reads, where and as rightfill.c does. Which of the three it is, the sampling page says (engine/recpage.c, DMA). */
 #include "sampler.h"
 
 #define DMA_WAIT ((void (*)(void))0x400a20ae)   /* stock: until the transfer it started is over */
@@ -57,8 +51,8 @@ enum { CHECK, TRUSTED, DEAD };
 #ifdef LAP
 /* The lap image, a tool: five more readings of the profile's timer (engine/prof.S), in the record's places for the
  * first five longs of the stopped stack, which the interrupt's start has filled by then: at the per-block routine's
- * first call, on either side of stock's wait for the audio CPU's buffers, and on either side of our last call
- * before the mixer. tools/prof_read.py sees them for what they are. */
+ * first call, on either side of stock's wait for the audio CPU's buffers, and on either side of our last call before
+ * the mixer. tools/prof_read.py sees them for what they are. */
 #define LAP_AT(k) (*(volatile u32 *)(PROF_AT + 36u + 4u * (k)) = *(volatile u32 *)0xfc07000cu)
 #define LAP_STR2(x) #x
 #define LAP_STR(x) LAP_STR2(x)
@@ -122,9 +116,9 @@ CAVE __attribute__((noinline)) static void by_cpu(u32 mask)
         }
 }
 
-/* A channel's standing words, as stock writes channel 47's and in its order: nothing added to either
- * address after the last turn, sixteen bytes a turn read and written as sixteen, both addresses
- * sixteen on a turn, and nothing asked for at the end. First: no request line starts it. */
+/* A channel's standing words, as stock writes channel 47's and in its order: nothing added to either address after
+ * the last turn, sixteen bytes a turn read and written as sixteen, both addresses sixteen on a turn, and nothing
+ * asked for at the end. First: no request line starts it. */
 CAVE __attribute__((noinline)) static void set_up(u32 ch)
 {
     u32 t = TCD(ch);
@@ -139,10 +133,10 @@ CAVE __attribute__((noinline)) static void set_up(u32 ch)
     W(t + 0x1e) = 0;
 }
 
-/* A transfer, as stock starts one: to, from, the turns twice with the link to itself, the start. Before
- * them the last word is written 0 again, as it was when the channel was set: the controller takes "done"
- * away when the channel's turn comes, which for a channel of the lowest group may be after stock's, and
- * the wait is not to find the "done" of the block before. */
+/* A transfer, as stock starts one: to, from, the turns twice with the link to itself, the start. Before them the last
+ * word is written 0 again, as it was when the channel was set: the controller takes "done" away when the channel's
+ * turn comes, which for a channel of the lowest group may be after stock's, and the wait is not to find the "done" of
+ * the block before. */
 CAVE __attribute__((noinline)) static void start(u32 ch, u32 from, u32 *to, u32 turns)
 {
     u32 t = TCD(ch), n = 0x8000u | ch << 9 | turns;
@@ -192,9 +186,9 @@ CAVE void right_begin(void)
     st[S_ARMED] = armed;
 }
 
-/* Where stock waits for the left buffers, before it sends the next block's knobs: stock's wait, and the
- * answer to what stock tested there, as in the images before (engine/rightfill.c). And with the transfers
- * given up, the long and the right channels by the CPU, here, where those images read them. */
+/* Where stock waits for the left buffers, before it sends the next block's knobs: stock's wait, and the answer to
+ * what stock tested there, as in the images before (engine/rightfill.c). And with the transfers given up, the long
+ * and the right channels by the CPU, here, where those images read them. */
 __attribute__((section(".cave.p"))) u32 right_mid(void)
 {
     u32 *st = STATE;
@@ -215,9 +209,8 @@ __attribute__((section(".cave.p"))) u32 right_mid(void)
 
 #ifdef MOVEM
 /* The copy image: every track with no right channel is given a copy of its left by eight longs a move (movem), four
- * moves each way a track, where take() moved one long at a time in a loop (32 loads, 32 stores and the loop's own: about
- * 90 instructions a track, about 750 a block with eight mono tracks). 
- * In a run of its own: (mask, left, to). */
+ * moves each way a track, where take() moved one long at a time in a loop (32 loads, 32 stores and the loop's own:
+ * about 90 instructions a track, about 750 a block with eight mono tracks). In a run of its own: (mask, left, to). */
 void mono_copy(u32 mask, const u32 *left, u32 *to);
 __asm__(".section .cave.c,\"ax\",@progbits\n"
         "    .globl mono_copy\n"

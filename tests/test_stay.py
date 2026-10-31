@@ -1,24 +1,4 @@
-"""The stay image: the gear image with a ONCE, a step's or the track's, used up only where the sequencer plays a step.
-
-
-
-
-The routine of stock's that plays a step has two callers. The sequencer's hands it 0 for the event's place. The other
-plays the step the sequencer is on, for one track or all, with a place for the event, and stock runs it whenever a
-track of the pattern is changed, so a held parameter is up to date. With the sequencer stopped that step is the
-first: a lock made at ONCE on it was spent by the change that made it, and the main task took it off. And a track's
-own ONCE was used up by any change to the track. Here nothing of ours is done for that caller.
-
-And one thing of the srr image's, found on the way: the eight bytes that say a track's old locks of MODE are to go
-were looked at only after a ONCE had been spent. They are looked at every time the main task has a message.
-
-Held here: a ONCE on the step, and a track's ONCE, as the sequencer's caller and as the other finds them; registers
-and stack kept; the old locks of MODE taken off with no ONCE spent; and the main program differing from the gear
-image's only in the two runs and three operands.
-
-Not held: which of the two callers plays the first step when the sequencer is started. If it is the other one, a
-ONCE on the first step records at the start and is spent a pattern later: twice. For the unit.
-"""
+"""The stay image: the gear image with a ONCE, a step's or the track's, used up only where the sequencer plays a step."""
 import hashlib
 import shutil
 
@@ -31,7 +11,7 @@ from tools import mainmap as mm
 
 pytestmark = pytest.mark.skipif(not shutil.which("m68k-elf-gcc"), reason="no ColdFire cross-compiler")
 
-PLACE = 0x444e1234                      # a place for the event, as the routine that brings a track up to date hands one
+PLACE = 0x444e1234  # a place for the event, as the routine that brings a track up to date hands one
 MODE = mm.MODE_SLOT
 
 
@@ -47,8 +27,9 @@ def main(stock3):
 
 
 def play(r, step, place, track=None):
-    """The step routine from its test of the event on, as one of its two callers has it: `place` is its fifth
-    argument, 0 from the sequencer. -> the event's locks, [(slot, value)]."""
+    """The step routine from its test of the event on, as one of its two callers has it: `place` is its fifth argument, 0
+    from the sequencer. -> the event's locks, [(slot, value)].
+    """
     mc, track = r.mc, r.track if track is None else track
     sp = O.STACK[1] - 0x800
     mc.write(O.LOCKS, b"\x77" * 0x400)
@@ -72,11 +53,11 @@ def test_a_once_stays_where_a_step_is_only_brought_up_to_date_and_goes_where_the
     r = O.page(main, track=track)
     r.lay(step, ONCE)
     was = r.table()
-    for _ in range(3):                                          # a change to the track, and another: the lock is as it was made
-        assert play(r, step, PLACE) == [(SLOT, ONCE)]           # (the event has it: stock's gathering is not touched)
+    for _ in range(3):  # a change to the track, and another: the lock is as it was made
+        assert play(r, step, PLACE) == [(SLOT, ONCE)]  # (the event has it: stock's gathering is not touched)
         assert r.table() == was and r.dirty == r.arm == [0] * 8
         assert r.wait() == MSG and r.lock_at(step) == ONCE
-    assert play(r, step, 0) == [(SLOT, ONCE)]                   # the sequencer: played as a step locked on, and spent
+    assert play(r, step, 0) == [(SLOT, ONCE)]  # the sequencer: played as a step locked on, and spent
     assert r.lock_at(step) == SPENT and r.dirty == [int(t == track) for t in range(8)]
     assert r.wait() == MSG and r.lock_at(step) == NONE and r.dirty == [0] * 8
 
@@ -93,16 +74,16 @@ def test_a_step_locked_on_or_off_is_as_it_was_either_way(main):
 def test_a_tracks_own_once_waits_for_the_sequencer(main):
     track = 4
     r = O.page(main, track=track)
-    r.lay(6, 0x4000, slot=20)                                   # a step with a lock of its own, and step 2 with none
+    r.lay(6, 0x4000, slot=20)  # a step with a lock of its own, and step 2 with none
     r.mc.write(mm.ONCE_ARM + track, b"\x01")
     armed = [int(t == track) for t in range(8)]
     for _ in range(2):
-        assert play(r, 2, PLACE) == [] and r.arm == armed       # brought up to date: nothing added, the track still waits
+        assert play(r, 2, PLACE) == [] and r.arm == armed  # brought up to date: nothing added, the track still waits
         assert play(r, 6, PLACE) == [(20, 0x4000)] and r.arm == armed
-    assert play(r, 6, 0) == [(20, 0x4000), (SLOT, ON)] and r.arm == [0] * 8      # the sequencer: this step records, once
+    assert play(r, 6, 0) == [(20, 0x4000), (SLOT, ON)] and r.arm == [0] * 8  # the sequencer: this step records, once
     assert play(r, 2, 0) == [] and play(r, 6, 0) == [(20, 0x4000)]
     r.mc.write(mm.ONCE_ARM + track, b"\x01")
-    assert play(r, 2, 0) == [(SLOT, ON)] and r.arm == [0] * 8                    # and a step with no locks the same
+    assert play(r, 2, 0) == [(SLOT, ON)] and r.arm == [0] * 8  # and a step with no locks the same
 
 
 def test_old_locks_of_mode_go_at_the_next_message_with_no_once_spent(main):
@@ -111,14 +92,14 @@ def test_old_locks_of_mode_go_at_the_next_message_with_no_once_spent(main):
     r = O.page(main, track=track)
     r.lay(3, 0x1f00, slot=MODE), r.lay(40, 0x0300, slot=MODE), r.lay(3, ON), r.lay(3, 0x4000, slot=20)
     r.lay(3, 0x1f00, slot=MODE, track=6)
-    assert r.wait() == MSG and r.lock_at(3, MODE) == 0x1f00      # nothing says so yet: nothing is done
+    assert r.wait() == MSG and r.lock_at(3, MODE) == 0x1f00  # nothing says so yet: nothing is done
     r.mc.write(mm.SRR_DIRTY + track, b"\x01")
-    assert r.dirty == [0] * 8                                    # no ONCE was spent
+    assert r.dirty == [0] * 8  # no ONCE was spent
     assert r.wait() == MSG
-    assert r.lock_at(3, MODE) == NONE and r.lock_at(40, MODE) == NONE            # the track's locks of MODE: gone
+    assert r.lock_at(3, MODE) == NONE and r.lock_at(40, MODE) == NONE  # the track's locks of MODE: gone
     assert r.lock_at(3) == ON and r.lock_at(3, 20) == 0x4000 and r.lock_at(3, MODE, track=6) == 0x1f00
     assert bytes(r.mc.read(mm.SRR_DIRTY, 8)) == bytes(8)
-    r.lay(8, 0x2000, slot=MODE)                                  # a lock of the reduction made after: it stays
+    r.lay(8, 0x2000, slot=MODE)  # a lock of the reduction made after: it stays
     assert r.wait() == MSG and r.lock_at(8, MODE) == 0x2000
 
 
@@ -126,7 +107,7 @@ def test_the_image(official_path, official, main):
     quiet = lambda s: None
     raw, _, built, _, syms = build.build(official_path, log=quiet, xfade=10)
     was_raw, _, was, _, _ = build.build(official_path, log=quiet, xfade=9)
-    assert hashlib.sha256(was_raw).hexdigest().startswith("5ef3a04c")      # the gear image's second build, as it is
+    assert hashlib.sha256(was_raw).hexdigest().startswith("5ef3a04c")
     new, old = built.section(3), was.section(3)
     assert new == main[0] != old and len(new) == len(old)
     spans = [mm.CAVE_ONCE, mm.CAVE_STAY, (mm.STEP_LOCKS_PUSH, mm.STEP_LOCKS_PUSH + 6), (mm.STEP_NO_LOCKS, mm.STEP_NO_LOCKS + 4),

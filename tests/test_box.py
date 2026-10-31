@@ -1,15 +1,4 @@
-"""The box image: the switch image with the dotted boxes around SOLO and REC on the TRIG page wiped, and REC only OFF
-or ONCE.
-
-
-
-
-The box is stock's picture for a place with no record (0x444e00b4, 17 x 17, its bits at 0x402e9eb8 and its mask at
-0x402e9e74, built at 0x4014925a), drawn by the TRIG page's own draw at x 25 + 26 a column, y 7 on the lower row. The
-blit (0x400f8f70) is a masked copy, so a picture of 0 bits under that mask wipes it: ours is 28 bytes, its rows read
-from one row (a stride of 0). REC: right is ONCE and left is OFF, on the TRIG page and the sampling page; the switch is
-on at ONCE. Held here with stock's blit run as it is on a surface of the test's; not held: how it looks.
-"""
+"""The box image: the switch image with the dotted boxes around SOLO and REC on the TRIG page wiped, and REC only OFF"""
 import shutil
 
 import numpy as np
@@ -26,9 +15,9 @@ pytestmark = pytest.mark.skipif(not shutil.which("m68k-elf-gcc"), reason="no Col
 
 SWITCH, BLIT = 0x400703da, 0x400f8f70
 DOTS, MASK = 0x402e9eb8, mm.DOTTED_MASK
-BITS, DOTTED = HEAP + 0x9000, HEAP + 0x9800       # the surface's bits; a dotted box object
-ROWS, STRIDE = 128, 4                             # the blit's third argument is a row of the surface (times its stride), the
-COLS = 32 * STRIDE                                # fourth a bit across it: stock's "x 25, y 7" is rows 25 to 41, bits 7 to 23
+BITS, DOTTED = HEAP + 0x9000, HEAP + 0x9800  # the surface's bits; a dotted box object
+ROWS, STRIDE = 128, 4  # the blit's third argument is a row of the surface (times its stride), the
+COLS = 32 * STRIDE  # fourth a bit across it: stock's "x 25, y 7" is rows 25 to 41, bits 7 to 23
 
 
 @pytest.fixture(scope="module")
@@ -71,18 +60,18 @@ def area(dots, row, bit):
 def test_the_dotted_boxes_of_e_and_f_are_wiped_and_nothing_else(main, track):
     r = rig(main, track)
     rng = np.random.default_rng(track)
-    r.mc.write(BITS, rng.integers(0, 256, 4 * STRIDE * ROWS, dtype=np.uint8).tobytes())   # whatever else is drawn
+    r.mc.write(BITS, rng.integers(0, 256, 4 * STRIDE * ROWS, dtype=np.uint8).tobytes())  # whatever else is drawn
     for x in (25, 51, 77):
-        box(r, x, 7)                                            # stock's boxes at E, F and G
+        box(r, x, 7)  # stock's boxes at E, F and G
     before = screen(r).copy()
     dots = np.unpackbits(np.frombuffer(bytes(r.mc.read(DOTS, 68)), dtype=np.uint8)).reshape(17, 32)[:, :17]
-    assert (area(before, 25, 7) == dots).all() and dots.sum() > 0                    # stock's box, as stock blits it
+    assert (area(before, 25, 7) == dots).all() and dots.sum() > 0  # stock's box, as stock blits it
     r.show()
     after = screen(r)
     assert not area(after, 25, 7).any() and not area(after, 51, 7).any()
     keep = np.ones((ROWS, COLS), bool)
     keep[25:42, 7:24] = keep[51:68, 7:24] = False
-    assert (after[keep] == before[keep]).all()                  # G's box and every other dot as they were
+    assert (after[keep] == before[keep]).all()  # G's box and every other dot as they were
     assert r.switches == [(0, 24, 7), (0, 50, 7)]
 
 
@@ -104,7 +93,7 @@ def test_rec_on_the_trig_page_is_off_or_once(main):
         r.switches = []
         r.show()
         seen.append((r.mc.read(mm.ONCE_ARM + track, 1)[0], G.own(r, track) & 1, r.switches[-1][0]))
-    assert seen == [(1, 0, 1), (1, 0, 1), (1, 0, 1), (0, 0, 0), (0, 0, 0)]     # ONCE and the switch on; never ON
+    assert seen == [(1, 0, 1), (1, 0, 1), (1, 0, 1), (0, 0, 0), (0, 0, 0)]  # ONCE and the switch on; never ON
 
 
 def test_rec_on_the_sampling_page_is_off_or_once(main):
@@ -119,7 +108,8 @@ def test_rec_on_the_sampling_page_is_off_or_once(main):
 
 
 def test_a_held_step_locks_once_or_off(main):
-    """With a step held, right locks the step to ONCE and left takes the lock off (the track's own is OFF): never ON."""
+    """With a step held, right locks the step to ONCE and left takes the lock off (the track's own is OFF): never ON.
+    """
     track = 1
     r = rig(main, track)
     G.geared(r, [256, 256, -256])

@@ -1,16 +1,4 @@
-"""The allright image: the nodiv image with the audio CPU sending every track's right half, so the main CPU copies none.
-
-
-
-
-engine/stub.S, send_all (ALLRIGHT): at the end of every
-interrupt every track's right half goes to the window, a stereo track's right channel as before and every other track's
-own buffer (at 0x80003840, where stock's last stage leaves it and its transfer takes it), and the long says all eight.
-The main CPU's code is the nodiv image's: with all eight said it starts both transfers and copies nothing.
-
-Held here by running the audio CPU's whole interrupt (tests/stereo_rig.py); not held: the transfers on the unit, the
-lag.
-"""
+"""The allright image: the nodiv image with the audio CPU sending every track's right half, so the main CPU copies none."""
 import hashlib
 import shutil
 
@@ -51,7 +39,7 @@ def test_with_no_stereo_note_every_track_s_right_half_is_its_own_buffer_and_all_
         assert np.array_equal(r.right(t), left[t]), t
     o = SR.Rig(ring[0])
     _, _, left0 = o.block(feed=feed(seed))
-    assert np.array_equal(left, left0) and o.mask() == 0          # the left the same as before; the ring image said none
+    assert np.array_equal(left, left0) and o.mask() == 0  # the left the same as before; the ring image said none
 
 
 def test_a_stereo_track_s_right_half_is_its_right_channel_and_the_rest_their_own(engine):
@@ -79,7 +67,7 @@ def test_the_image(official_path):
     quiet = lambda s: None
     raw, _, built, _, _ = build.build(official_path, log=quiet, xfade=39, prof=True)
     was_raw, _, was, _, _ = build.build(official_path, log=quiet, xfade=38, prof=True)
-    assert hashlib.sha256(was_raw).hexdigest().startswith("13474a00")      # the nodiv image, as it is
+    assert hashlib.sha256(was_raw).hexdigest().startswith("13474a00")  # the nodiv image, as it is
     assert built.section(3) == was.section(3)
     a7, b7 = built.section(7), was.section(7)
     runs = [r for d in (m.CAVES, m.REC_CAVES, m.PITCH_CAVES, m.FADE_CAVES, m.LIVE_CAVES, m.ONE_CAVES, m.QUICK_CAVES, m.LEAN_CAVES,

@@ -1,9 +1,4 @@
-"""The kind image (engine/recpage.c, SKIND): the pbank image with SMPL stopping only at samples of the track's KIND.
-
-On a STER track SMPL stops at the
-stereo places that hold a sample and the lowest free one; on a MONO track at the single slots that hold one and the
-highest free one. A value of the other kind (a pattern's, a lock's) turns to the nearest stop of the track's. Main CPU
-only; section 7 the spread image's. Emulation only."""
+"""The kind image (engine/recpage.c, SKIND): the pbank image with SMPL stopping only at samples of the track's KIND."""
 
 import hashlib
 import shutil
@@ -57,17 +52,17 @@ def test_the_knob_stops_only_at_the_tracks_kind(main, name, mono):
 def test_kind_flipped_changes_the_stops(main):
     frames = S.bank(stereo=(1, 2), mono=(64, 63))
     r = page(main, frames, False)
-    assert walk(r, 63, 1) == [64 + n - 1 for n in (1, 2, 3)]               # 1, 2 and the free place 3
+    assert walk(r, 63, 1) == [64 + n - 1 for n in (1, 2, 3)]  # 1, 2 and the free place 3
     r = page(main, frames, True)
-    assert walk(r, 63, 1) == [64 + n - 1 for n in (62, 63, 64)]            # the free slot 62, then 63 and 64
+    assert walk(r, 63, 1) == [64 + n - 1 for n in (62, 63, 64)]  # the free slot 62, then 63 and 64
 
 
 def test_a_value_of_the_other_kind_turns_to_the_nearest_of_the_tracks(main):
     frames = S.bank(stereo=(1, 2), mono=(64, 63))
-    r = page(main, frames, False, smpl=64 + 63 - 1)                         # on mono 63, a STER track
+    r = page(main, frames, False, smpl=64 + 63 - 1)  # on mono 63, a STER track
     r.answers[:] = [-256]
-    assert r.turn_smpl(-1) == 64 + 3 - 1                                    # down to the free stereo place 3
-    r = page(main, frames, True, smpl=64 + 1 - 1)                           # on stereo 1, a MONO track
+    assert r.turn_smpl(-1) == 64 + 3 - 1  # down to the free stereo place 3
+    r = page(main, frames, True, smpl=64 + 1 - 1)  # on stereo 1, a MONO track
     r.answers[:] = [256]
     assert r.turn_smpl(1) == 64 + 62 - 1
 

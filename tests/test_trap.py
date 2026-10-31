@@ -1,12 +1,4 @@
-"""The trap image (engine/sampler.h, TRAP): the spread image with a stretched note for less.
-
-
-Here:
-  - the heaviest blocks with one and eight stretched tracks, against the spread image's;
-  - a low tone no less steady than on the spread image; bursts once and on time; at its own speed the note;
-  - a note not stretched the spread image's to the bit;
-  - the image: the main CPU the mirror image's, section 7 the spread image's but for the runs and engine 2's entries.
-Emulation only."""
+"""The trap image (engine/sampler.h, TRAP): the spread image with a stretched note for less."""
 
 import hashlib
 import shutil
@@ -92,16 +84,16 @@ def test_the_image(official_path, official, engine, spread):
     quiet = lambda s: None
     raw, _, built, _, _ = build.build(official_path, log=quiet, xfade=65, prof=True)
     was = build.build(official_path, log=quiet, xfade=64, prof=True)[2]
-    assert built.section(3) == was.section(3)                   # the mirror image's main CPU
+    assert built.section(3) == was.section(3)  # the mirror image's main CPU
     a7, b7, n7 = built.section(7), spread[0], len(official.section(7))
     assert a7 == engine[0] and len(a7) == len(b7)
     runs = [r for n, v in vars(m).items() if n.endswith("CAVES") for r in v.values() if r[1] <= m.BASE + n7]
     table = [t + 4 * m.ALLOY_ENGINE for t in (m.UPDATE_TABLE, m.RENDER_TABLE)]
     stray = [hex(m.BASE + k) for k in range(n7) if a7[k] != b7[k]
              and not any(m.off(lo) <= k < m.off(hi) for lo, hi in runs + [(t, t + 4) for t in table])]
-    assert stray == []                                          # our runs (CY ALLOY's among them) and engine 2's entries
+    assert stray == []  # our runs (CY ALLOY's among them) and engine 2's entries
     lo, hi = m.TRAP_CAVES["al"]
     assert a7[m.off(lo):m.off(hi)] != b7[m.off(lo):m.off(hi)]
-    syms = engine[1]                                            # a track on CY ALLOY is handed SWARM's stand-ins
+    syms = engine[1]  # a track on CY ALLOY is handed SWARM's stand-ins
     assert [m.u32(a7, t) for t in table] == [syms["swarm_update"], syms["swarm_render"]]
     print("trap image", hashlib.sha256(raw).hexdigest())

@@ -1,14 +1,4 @@
-"""The stretch image (engine/sampler.h, STRETCH): the back image with a note's speed apart from its pitch.
-
-
-the way back is the back image (git tag
-pre-stretch), and a note on CHRO or SLCE plays as on the back image, to the bit. Here:
-  - KEYS off: the back image's sound and hits to the bit;
-  - stretched at its own speed and pitch: the note as it plays unstretched, near enough;
-  - SPD 32, 96: twice and half as long; up an octave at SPD 64: as long, and twice the crossings;
-  - what eight stretched stereo voices cost;
-  - the main CPU: KEYS's four settings, REC and SRC leaving them, the bit and SPD sent.
-Emulation only."""
+"""The stretch image (engine/sampler.h, STRETCH): the back image with a note's speed apart from its pitch."""
 
 import shutil
 
@@ -30,7 +20,7 @@ from tools import mainmap as mm
 
 pytestmark = pytest.mark.skipif(not shutil.which("m68k-elf-gcc"), reason="no ColdFire cross-compiler")
 
-STR_ON = 0x40 / 256                     # slot 24 as the main CPU sends it: no REC mark, source 0, stretched
+STR_ON = 0x40 / 256  # slot 24 as the main CPU sends it: no REC mark, source 0, stretched
 SPEED = 52
 
 
@@ -105,7 +95,8 @@ def test_at_its_own_speed_and_pitch_it_is_the_note(engine):
 
 def packed(image, factory, x, word, blocks):
     """Track 0 through the block the main CPU packs (only what crosses reaches the audio CPU). -> the frame its note
-    stops at (the place's last block), or None."""
+    stops at (the place's last block), or None.
+    """
     r = Rig(image[0])
     r.load_pool({k: x for k in range(8)})
     S.T.samplers(r, factory, loop=0)
@@ -164,17 +155,18 @@ def test_what_eight_stretched_stereo_voices_cost(back, engine, official):
             cost.append(sum(r.cost.values()))
         worst.append(max(cost))
     print("eight stereo voices, the heaviest block: back %d, stretched %d (SWARM's eight 117,348)" % tuple(worst))
-    assert worst[1] <= worst[0] + 2000 and worst[1] < 117348      # about what the back image asks, and under SWARM's eight
+    assert worst[1] <= worst[0] + 2000 and worst[1] < 117348  # about what the back image asks, and under SWARM's eight
 
 
-# ---- the main CPU ---------------------------------------------------------------------------------------------------
+# ---- the main CPU
+# ---------------------------------------------------------------------------------------------------
 
 def test_stretch_reaches_the_audio_cpu_as_bit_6_and_spd_in_the_marks_place(main):
     w = R.Word(*main)
     for rec in (1, 0):
         for keys in (0, 2, 8, 10):
             got = w.run(3, R.signed(9, rec) | keys)
-            spd = w.mc.read(R.KIT + mm.KIT_TRACK * 3 + mm.KIT_WORDS + 104, 1)[0]     # the track's own SPD, as the rig left it
+            spd = w.mc.read(R.KIT + mm.KIT_TRACK * 3 + mm.KIT_WORDS + 104, 1)[0]  # the track's own SPD, as the rig left it
             mark = 0x80 | spd & 0x7f if keys & 8 and not rec else R.ON if rec else R.OFF
             assert got["sent"] == mark << 8 | (0x80 if keys & 2 else 0) | (0x40 if keys & 8 else 0) | 9
             assert got["own"] == R.signed(9, rec) | keys
@@ -193,13 +185,13 @@ def test_h_turns_keys_through_its_four_settings(main):
     says = lambda: [s for _, _, s in r.show()]
     assert "CHRO" in says()
     spd = G.KIT + mm.KIT_TRACK * t + mm.KIT_WORDS + 104
-    r.mc.write(spd, (39 << 8).to_bytes(2, "big"))     # PTIM as stock leaves it
+    r.mc.write(spd, (39 << 8).to_bytes(2, "big"))  # PTIM as stock leaves it
     for bits, name, want in ((2, "SLCE", 39), (8, "CHST", 64), (10, "SLST", 80), (10, "SLST", 80)):
         if name == "SLST":
-            r.mc.write(spd, (80 << 8).to_bytes(2, "big"))     # turned since: within a stretch it is left alone
+            r.mc.write(spd, (80 << 8).to_bytes(2, "big"))  # turned since: within a stretch it is left alone
         G.twist(r, 8, 1)
         assert G.own(r, t) == R.signed(4, 0) | bits and name in says()
-        assert r.mc.read(spd, 2)[0] == want             # into a stretch: SPD at 64
+        assert r.mc.read(spd, 2)[0] == want  # into a stretch: SPD at 64
     for bits, name in ((8, "CHST"), (2, "SLCE"), (0, "CHRO"), (0, "CHRO")):
         G.twist(r, 8, -1)
         assert G.own(r, t) == R.signed(4, 0) | bits and name in says()
@@ -209,9 +201,9 @@ def test_rec_and_src_leave_keys_as_it_is(main):
     t = 5
     r = keyed(main, t)
     for _ in range(3):
-        G.twist(r, 8, 1)                        # SLST
-    G.twist(r, 3, 1)                            # REC
-    G.twist(r, 1, 1)                            # SRC
+        G.twist(r, 8, 1)  # SLST
+    G.twist(r, 3, 1)  # REC
+    G.twist(r, 1, 1)  # SRC
     assert G.own(r, t) & 10 == 10 and G.own(r, t) != R.signed(4, 0) | 10
 
 

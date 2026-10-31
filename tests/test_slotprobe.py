@@ -1,10 +1,4 @@
-"""The slotprobe image, a tool: the spread image with locks on knob slots 0, 55 and 70 made and shown.
-
-
-). With a step held, knob G of the sampling page makes a lock on each (1080,
-1180, 1280) and takes them off; D, F and G show the held step's three, or with none held the block's words at their
-places (0x800021b0). Only the unit can show that a lock there is kept, saved, copied and cleared, and heard as nothing.
-"""
+"""The slotprobe image, a tool: the spread image with locks on knob slots 0, 55 and 70 made and shown."""
 import shutil
 
 import pytest
@@ -49,7 +43,7 @@ def test_g_with_steps_held_makes_and_takes_off_the_three_locks_by_stocks_routine
     G.twist(r, 7, 1)
     for step in (5, 9):
         assert [r.lock_at(step, s) for s in (0, 55, 70)] == [0x1080, 0x1180, 0x1280]
-        assert r.lock_at(step, 17) == NONE and r.lock_at(step, 24) == NONE      # nothing else of the step's
+        assert r.lock_at(step, 17) == NONE and r.lock_at(step, 24) == NONE  # nothing else of the step's
     says = [s for _, _, s in r.show()]
     assert all(t in says for t in ("L00", "1080", "L55", "1180", "L70", "1280"))
     G.twist(r, 7, -1)

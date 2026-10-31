@@ -31,7 +31,7 @@ def test_only_section_7_changes_and_only_in_declared_regions(result, official):
     a, b = official.section(7), built.section(7)
     changed = {i for i in range(len(a)) if a[i] != b[i]}
     assert changed and changed <= declared
-    assert len(regions[7]) == 5                        # two caves, three pointers
+    assert len(regions[7]) == 5  # two caves, three pointers
     assert sum(e - s for s, e in regions[7]) == 1326 + 1292 + 12
 
 
@@ -45,10 +45,10 @@ def test_bootstrap_and_updater_are_untouched(result, official):
 def test_file_is_well_formed_and_the_same_shape(result, official):
     raw, _, built, _, _ = result
     assert len(raw) == len(official.raw)
-    assert built.transport == official.transport           # same packet count: section 7 is stored raw
-    assert built.container.blob[:0x20 + 16 * 8] == official.container.blob[:0x20 + 16 * 8]   # header and table
+    assert built.transport == official.transport  # same packet count: section 7 is stored raw
+    assert built.container.blob[:0x20 + 16 * 8] == official.container.blob[:0x20 + 16 * 8]  # header and table
     assert fw.sha256(raw) != fw.sha256(official.raw)
-    again = fw.Image(raw)                                  # decodes from scratch, all checksums verified
+    again = fw.Image(raw)  # decodes from scratch, all checksums verified
     assert again.section(7) == built.section(7)
 
 

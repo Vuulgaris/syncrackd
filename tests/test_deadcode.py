@@ -1,9 +1,4 @@
-"""tools/deadcode.py: code that nothing reaches, in both programs.
-
-The audio program is the check on the method: its unreached runs were found by hand first
-and never run while every stock machine plays (tests/test_sampler.py). The main program's
-result is static evidence only.
-"""
+"""tools/deadcode.py: code that nothing reaches, in both programs."""
 import pytest
 
 from tools import audiomap as am
@@ -55,16 +50,16 @@ def test_main_survey_agrees_with_what_is_known(main, official):
     # a routine found dead on its own while tracing the sample store
     assert holds(main, mm.SAMPLE_ERASE)
     # no other code address in the map is in a run
-    known = {mm.CAVE[0], mm.CAVE_AMUTE[0], mm.SAMPLE_ERASE, mm.CAVE_KEEP[0], mm.CAVE_HALVES[0], mm.CAVE_TEXT[0], mm.CAVE_PAGE[0], mm.CAVE_PAGE2[0], mm.CAVE_BANK[0],    # the last six: chosen from this survey
-             mm.CAVE_METER[0], mm.CAVE_PAGE3[0], mm.METER_SRC, mm.METER_QUIET, mm.METER_LEVEL,   # the meter image's two, and its numbers in the first
-             mm.CAVE_RIGHT[0],                                                                  # the stereo image's
-             mm.CAVE_PAGE4[0], mm.METER_GAIN, mm.REC_GAINS,                                     # the gain image's: the page's fourth run, and its numbers after the meter's
-             mm.CAVE_PAGE5[0], mm.CAVE_PAGE6[0],                                                # the stops image's: the page's fifth and sixth
-             mm.CAVE_SOLO[0],                                                                   # the solo image's
-             mm.CAVE_FEED[0],                                                                   # the feed image's: the routine that writes a block of a take
-             mm.CAVE_ONCE[0], mm.ONCE_DIRTY}                                                    # the once image's: its sixteen bytes (the second eight) and its code
-    # every run taken since is a CAVE_ of the map, chosen from this survey too; what lives in one (a cave's numbers,
-    # a routine first in it) is its own. Anything else the map names must be code something reaches.
+    known = {mm.CAVE[0], mm.CAVE_AMUTE[0], mm.SAMPLE_ERASE, mm.CAVE_KEEP[0], mm.CAVE_HALVES[0], mm.CAVE_TEXT[0], mm.CAVE_PAGE[0], mm.CAVE_PAGE2[0], mm.CAVE_BANK[0],  # the last six: chosen from this survey
+             mm.CAVE_METER[0], mm.CAVE_PAGE3[0], mm.METER_SRC, mm.METER_QUIET, mm.METER_LEVEL,  # the meter image's two, and its numbers in the first
+             mm.CAVE_RIGHT[0],  # the stereo image's
+             mm.CAVE_PAGE4[0], mm.METER_GAIN, mm.REC_GAINS,  # the gain image's: the page's fourth run, and its numbers after the meter's
+             mm.CAVE_PAGE5[0], mm.CAVE_PAGE6[0],  # the stops image's: the page's fifth and sixth
+             mm.CAVE_SOLO[0],  # the solo image's
+             mm.CAVE_FEED[0],  # the feed image's: the routine that writes a block of a take
+             mm.CAVE_ONCE[0], mm.ONCE_DIRTY}  # the once image's: its sixteen bytes (the second eight) and its code
+    # every run taken since is a CAVE_ of the map, chosen from this survey too; what lives in one (a cave's numbers, a
+    # routine first in it) is its own. Anything else the map names must be code something reaches.
     caves = [v for n, v in vars(mm).items() if n.startswith("CAVE_") and isinstance(v, tuple) and len(v) == 2
              and all(isinstance(x, int) for x in v)]
     for name in dir(mm):
@@ -73,8 +68,6 @@ def test_main_survey_agrees_with_what_is_known(main, official):
             if isinstance(a, int) and mm.BASE <= a < mm.CODE_END and a not in known \
                     and not any(lo <= a <= hi for lo, hi in caves):
                 assert not holds(main, a), name
-    # every place the images patch that is not one of our own runs is live code:
-    # those patches run on the unit (mixer link, mute, knob display, recorder feed, big slots)
     ours = (mm.CAVE, mm.CAVE_AMUTE, mm.CAVE_REC)
     stock = official.section(3)
     for p in build_main.patches(stock, mixer=True, rec=True, big=True)[0]:

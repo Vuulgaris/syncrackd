@@ -1,9 +1,4 @@
-"""The user's patcher and its bundle (tools/patch.py, tools/bundle.py), on the stream image as built.
-
-The bundle made from the built image, applied to the official file, gives the built image to the byte, with
-numpy not there, and as the single file alone in a folder with no site-packages; it holds no 32-byte window of Elektron's code; and a bundle for another file, with other bytes
-under its runs, touching a protected section, or giving another output, is refused.
-"""
+"""The user's patcher and its bundle (tools/patch.py, tools/bundle.py), on the stream image as built."""
 import copy
 import json
 import os

@@ -1,19 +1,14 @@
-/* Main CPU (section 3, OS 1.42 only): audio mute for the dry sound of the
- * analog tracks (9..12). Sits in front of the mixer link (engine/mixlink.c)
- * in the chain that replaces the one call to the mixer.
+/* Main CPU (section 3, OS 1.42 only): audio mute for the dry sound of the analog tracks (9..12). Sits in front of the
+ * mixer link (engine/mixlink.c) in the chain that replaces the one call to the mixer.
  *
- * The dry sound of an analog voice never passes the mixer: it goes to the
- * outputs through two level circuits, left and right, that the main CPU steers.
- * The per-block routine works their values out from the track's volume and pan
- * before it calls the mixer (0x4008ffc0: level times pan law, 0..65535, 0 is
- * shut) and sends the whole control block to the hardware after the mixer
- * returns. In between, here, the two values of every muted analog track are
- * set to 0, which is what the track's own volume at 0 gives.
+ * The dry sound of an analog voice never passes the mixer: it goes to the outputs through two level circuits, left
+ * and right, that the main CPU steers. The per-block routine works their values out from the track's volume and pan
+ * before it calls the mixer (0x4008ffc0: level times pan law, 0..65535, 0 is shut) and sends the whole control block
+ * to the hardware after the mixer returns. In between, here, the two values of every muted analog track are set to 0,
+ * which is what the track's own volume at 0 gives.
  *
- * Nothing is saved or put back: the routine works the block out again from
- * the parameters every time. "Muted" is the rule of the mixer link, which
- * also shows the mixer a volume of 0 for these tracks and so cuts their sends.
- */
+ * Nothing is saved or put back: the routine works the block out again from the parameters every time. "Muted" is the
+ * rule of the mixer link, which also shows the mixer a volume of 0 for these tracks and so cuts their sends. */
 #include "sampler.h"
 
 #define MUTES ((const u32 *)0x80003048)         /* [0] global mutes, [1] solos: a bit per track */
@@ -26,9 +21,9 @@
 void *mix_link(void *a, void *b, u8 *params);   /* MIX_NEXT: the next in the chain, from its build */
 
 #ifdef ALOCK
-/* The alock image: this block's solos, worked out for all twelve tracks. A sampler track as the slock image has
- * it; an analog track as the mark its playing step left in slot 26 says, if it holds an analog machine. In a run
- * of its own: the analog mute's is full. */
+/* The alock image: this block's solos, worked out for all twelve tracks. A sampler track as the slock image has it;
+ * an analog track as the mark its playing step left in slot 26 says, if it holds an analog machine. In a run of its
+ * own: the analog mute's is full. */
 #ifdef SOLOEND
 #define SOLOS_RUN ".cave.e"     /* the soloend image: a run of its own (mainmap.CAVE_SOLOEND), the alock image's is full */
 #else
@@ -76,8 +71,8 @@ __attribute__((section(SOLOS_RUN), noinline)) static u32 solo_now(const u8 *para
 #ifdef XMUTE
 /* The trig image: an analog track that holds the crossfade is heard through a global mute as it goes up, with no solo
  * on (engine/mixlink.c, XMUTE). Its word is made its crossfade's share squared, as stock's level word is, and its bit
- * of the mute is handed back to be cleared; the loop then turns it down by the others' crossfades as any track. In the
- * profile's run: the analog mute's and the solos' are full. With no crossfade who is 0, no analog track. */
+ * of the mute is handed back to be cleared; the loop then turns it down by the others' crossfades as any track. In
+ * the profile's run: the analog mute's and the solos' are full. With no crossfade who is 0, no analog track. */
 __attribute__((section(".cave.y"), noinline)) static u32 heard(u32 top, u32 who)
 {
     u16 *c = CONTROL + who - ANALOG_FIRST;
@@ -92,9 +87,9 @@ __attribute__((section(".cave.y"), noinline)) static u32 heard(u32 top, u32 who)
 #endif
 
 #ifdef XKNOB
-/* The xknob image: a sampler track's crossfade is its knob on slot 25, DEC's, stored upside down (127 is 0, so a track
- * made before, its DEC at 127 as stock leaves it, has none). Read every block from the block the mixer is given, a lock
- * and an LFO with it, into the eight numbers the mixer link and the analog mute go by. 
+/* The xknob image: a sampler track's crossfade is its knob on slot 25, DEC's, stored upside down (127 is 0, so a
+ * track made before, its DEC at 127 as stock leaves it, has none). Read every block from the block the mixer is
+ * given, a lock and an LFO with it, into the eight numbers the mixer link and the analog mute go by.
  *
  * In the recorder's run: the analog mute's has room for the call only. */
 __attribute__((section(".cave.r"), noinline)) static void xf_knobs(const u8 *params)
@@ -113,12 +108,10 @@ __attribute__((section(".cave.r"), noinline)) static void xf_knobs(const u8 *par
 #ifdef FAST
 /* The fast image: is there nothing for the analog mute and the mixer link to change this block? No solo (the knobs',
  * and no mark on a track's solo slot), no track muted by the global or the pattern's mutes, no sampler track's knob D
- * turned (slot 25 at 127 or past it), the analog tracks' crossfades 0. Then they would show stock's mixer the block as
- * it is and put back what they did not change: so the solos and the eight crossfades are left as solo_now and
+ * turned (slot 25 at 127 or past it), the analog tracks' crossfades 0. Then they would show stock's mixer the block
+ * as it is and put back what they did not change: so the solos and the eight crossfades are left as solo_now and
  * xf_knobs would leave them (none), and the mixer is called straight away (stock's mixer writes nothing of the block:
- * tests/test_fast.py). One pass of the bytes that matter, a pointer a track. to giving
- * the UI back the links' time on the blocks where they do nothing: the maintainer's patterns all unmuted, solos only in fills. In
- * a run of its own. */
+ * tests/test_fast.py). In a run of its own. */
 __attribute__((section(".cave.k"), noinline)) static u32 quiet(const u8 *params)
 {
     const u8 *p = params, *q = params - WORDS_BACK;
@@ -157,9 +150,9 @@ void *mix_amute(void *a, void *b, u8 *params)
 
     mute = (mute ? ~mute : MUTES[0] | *PATTERN_MUTES) >> ANALOG_FIRST;
 #elif defined(SLOCK)
-    /* The slock image: a sampler track's solo may be a step's own, a lock on slot 17 (engine/sampler.h, SLOCK).
-     * This block's solos: the knobs' long, without a digital track that is no sampler, and with every sampler track
-     * as the mark its playing step left says. Kept for the mixer link, which this routine calls. */
+    /* The slock image: a sampler track's solo may be a step's own, a lock on slot 17 (engine/sampler.h, SLOCK). This
+     * block's solos: the knobs' long, without a digital track that is no sampler, and with every sampler track as the
+     * mark its playing step left says. Kept for the mixer link, which this routine calls. */
     u32 mute = SOLO_WORD, d;
     u32 v;
 
@@ -213,9 +206,9 @@ void *mix_amute(void *a, void *b, u8 *params)
         }
     }
 #elif defined(XFADE)
-    /* The xfade image: an analog track has no crossfade of its own, so it is turned down by the largest of the
-     * eight (XFADES, engine/sampler.h). Stock makes a level word of the volume squared (0x40090084), so the
-     * word is made (127 - x) / 127 squared of what it was: what the volume the mixer link shows would have given. */
+    /* The xfade image: an analog track has no crossfade of its own, so it is turned down by the largest of the eight
+     * (XFADES, engine/sampler.h). Stock makes a level word of the volume squared (0x40090084), so the word is made
+     * (127 - x) / 127 squared of what it was: what the volume the mixer link shows would have given. */
     u32 top = 0, x;
 
     if (XFADE_ANY)

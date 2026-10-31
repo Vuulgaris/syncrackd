@@ -1,17 +1,16 @@
 /* Main CPU (section 3, OS 1.42 only): the once image's part that runs in the main task.
  *
- * A step locked to record once is spent where the sequencer plays it (engine/once.S): its word in
- * the pattern's table is made one that says nothing, and the track's byte of ONCE_DIRTY is set. The
- * lock itself is taken off here, by stock's routine for a lock removed by hand, so the step's count
- * of locks, the track's "this slot has a lock" byte and the pattern's listeners go as they do then.
+ * A step locked to record once is spent where the sequencer plays it (engine/once.S): its word in the pattern's table
+ * is made one that says nothing, and the track's byte of ONCE_DIRTY is set. The lock itself is taken off here, by
+ * stock's routine for a lock removed by hand, so the step's count of locks, the track's "this slot has a lock" byte
+ * and the pattern's listeners go as they do then.
  *
- * It is called from the main task's loop when a message has come, before the message is dealt with
- * (once_loop). That task hands a key's or a knob's message to the UI's objects, so a lock is changed
- * here from the task that changes locks by hand. Nothing is taken off between two messages; until
- * then the spent lock is a lock that says nothing.
+ * It is called from the main task's loop when a message has come, before the message is dealt with (once_loop). That
+ * task hands a key's or a knob's message to the UI's objects, so a lock is changed here from the task that changes
+ * locks by hand. Nothing is taken off between two messages; until then the spent lock is a lock that says nothing.
  *
- * The pattern is the selected one. A spent lock in a pattern that is not selected any more stays as
- * it is: it says nothing, and a turn of REC with its step held takes it off. */
+ * The pattern is the selected one. A spent lock in a pattern that is not selected any more stays as it is: it says
+ * nothing, and a turn of REC with its step held takes it off. */
 #define RECORDER
 #define ONCE
 #include "sampler.h"

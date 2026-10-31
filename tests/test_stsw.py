@@ -1,14 +1,4 @@
-"""The stsw image (engine/sampler.h, STSW): the grain image with KEYS back to two and the stretch a switch of its own.
-
-
-
-(with the main CPU's few instructions a block). Here, the main CPU only:
-  - KEYS (H) turns between CHRO and SLCE and leaves the stretch;
-  - E is the track's stretch, STRC ON or OFF, SPD at 64 going into it;
-  - with a step held E locks the step's, in slot 17's low byte; the TRIG page's SOLO keeps it, and it keeps the solo's;
-  - the per-block routine sends a step's mark over the track's bit, as bit 6 of slot 24's low byte;
-  - section 7 the grain image's.
-Emulation only."""
+"""The stsw image (engine/sampler.h, STSW): the grain image with KEYS back to two and the stretch a switch of its own."""
 
 import shutil
 
@@ -27,7 +17,7 @@ from tools import mainmap as mm
 pytestmark = pytest.mark.skipif(not shutil.which("m68k-elf-gcc"), reason="no ColdFire cross-compiler")
 
 E, H = 5, 8
-ON, OFF, NO_SOLO = 0xd5, 0xa9, 0x00     # engine/sampler.h, STSW
+ON, OFF, NO_SOLO = 0xd5, 0xa9, 0x00  # engine/sampler.h, STSW
 SLOT = 17
 
 
@@ -49,11 +39,11 @@ def test_keys_turns_between_chro_and_slce_and_leaves_the_stretch(main):
     t = 2
     r = X.keyed(main, t)
     for stretch in (0, 8):
-        G.geared(r, [256, 256, -256, -256])     # (a kit afresh: the word after it)
+        G.geared(r, [256, 256, -256, -256])  # (a kit afresh: the word after it)
         r.mc.write(G.KIT + mm.KIT_TRACK * t + mm.KIT_WORDS + 2 * mm.REC_SLOT, (R.signed(4, 0) | stretch | 16).to_bytes(2, "big"))
         for bits, name in ((2, "SLCE"), (2, "SLCE"), (0, "CHRO"), (0, "CHRO")):
             G.twist(r, H, 1)
-            assert G.own(r, t) == R.signed(4, 0) | stretch | bits and name in says(r)      # bit 4, the old lock, goes
+            assert G.own(r, t) == R.signed(4, 0) | stretch | bits and name in says(r)  # bit 4, the old lock, goes
 
 
 def test_e_is_the_tracks_stretch(main):
@@ -68,11 +58,11 @@ def test_e_is_the_tracks_stretch(main):
     assert G.own(r, t) == R.signed(4, 0) | 8 and r.fifth() == ["STRC", "ON"] and r.mc.read(spd, 1)[0] == 64
     r.mc.write(spd, (80 << 8).to_bytes(2, "big"))
     G.twist(r, E, 1)
-    assert G.own(r, t) == R.signed(4, 0) | 8 and r.mc.read(spd, 1)[0] == 80          # within a stretch SPD is left alone
+    assert G.own(r, t) == R.signed(4, 0) | 8 and r.mc.read(spd, 1)[0] == 80  # within a stretch SPD is left alone
     G.twist(r, E, -1)
     assert G.own(r, t) == R.signed(4, 0) and r.fifth() == ["STRC", "OFF"]
     G.twist(r, H, 1)
-    assert G.own(r, t) == R.signed(4, 0) | 2 and r.fifth() == ["STRC", "OFF"]       # KEYS leaves it
+    assert G.own(r, t) == R.signed(4, 0) | 2 and r.fifth() == ["STRC", "OFF"]  # KEYS leaves it
 
 
 def sampling(r, built):
@@ -101,11 +91,11 @@ def test_e_with_a_step_held_locks_the_steps_and_the_solo_keeps_it(main):
     r.hold(5, 9)
     G.twist(r, E, 1)
     assert locks(r) == {5: NO_SOLO << 8 | ON, 9: NO_SOLO << 8 | ON} and r.fifth() == ["STRC", "ON"]
-    assert G.own(r, t) == R.signed(4, 0)                                   # the track's own is as it was
+    assert G.own(r, t) == R.signed(4, 0)  # the track's own is as it was
     G.twist(r, E, -1)
     assert locks(r) == {5: OFF, 9: OFF} and r.fifth() == ["STRC", "OFF"]
     trigpage(r, main)
-    G.twist(r, T.E, 1)                                                     # the TRIG page's SOLO, the same steps held
+    G.twist(r, T.E, 1)  # the TRIG page's SOLO, the same steps held
     assert locks(r) == {5: mm.SOLO_LOCK_ON << 8 | OFF, 9: mm.SOLO_LOCK_ON << 8 | OFF}
     sampling(r, main)
     G.twist(r, E, 1)
@@ -114,7 +104,7 @@ def test_e_with_a_step_held_locks_the_steps_and_the_solo_keeps_it(main):
     G.twist(r, T.E, -1)
     assert locks(r) == {5: mm.SOLO_LOCK_OFF << 8 | ON, 9: mm.SOLO_LOCK_OFF << 8 | ON}
     r.hold(12)
-    G.twist(r, T.E, 1)                                                     # a step with no stretch's mark: the solo's alone
+    G.twist(r, T.E, 1)  # a step with no stretch's mark: the solo's alone
     assert locks(r)[12] == mm.SOLO_LOCK_ON << 8 | 0x80
 
 
@@ -129,7 +119,7 @@ class Word(L.Word):
 
     def _put17(self, uc, address, size, user):
         if self.s17 is not None:
-            uc.mem_write(R.WRITTEN + 142 * 3 + 76 - 2 * (24 - SLOT), self.s17.to_bytes(2, "big"))     # slot 24 is at + 76
+            uc.mem_write(R.WRITTEN + 142 * 3 + 76 - 2 * (24 - SLOT), self.s17.to_bytes(2, "big"))  # slot 24 is at + 76
 
 
 @pytest.mark.parametrize("s17", [0x0000, 0x3580, 0x1a80, NO_SOLO << 8 | ON, 0x3500 | ON, NO_SOLO << 8 | OFF, 0x1a00 | OFF, 0x40d4, 0x40aa])
@@ -142,10 +132,10 @@ def test_the_routine_sends_a_steps_mark_over_the_tracks_bit(main, s17):
             want = s17 & 0xff == ON or (s17 & 0xff != OFF and own != 0)
             assert bool(got["sent"] & 0x40) == want and got["own"] == R.signed(9, rec) | own, (rec, own, hex(got["sent"]))
             if not want or rec:
-                assert got["sent"] >> 8 == (R.ON if rec else R.OFF)              # no stretch, or REC on: the mark
+                assert got["sent"] >> 8 == (R.ON if rec else R.OFF)  # no stretch, or REC on: the mark
             else:
-                assert got["sent"] & 0x80cf == 0x8049                           # stretched, REC off: SPD and the rest in turn
-            assert got["sent"] & 0x0f == 9                                       # the source (bits 4 and 5: the lock image's tag)
+                assert got["sent"] & 0x80cf == 0x8049  # stretched, REC off: SPD and the rest in turn
+            assert got["sent"] & 0x0f == 9  # the source (bits 4 and 5: the lock image's tag)
 
 
 def test_the_image(official_path, engine):

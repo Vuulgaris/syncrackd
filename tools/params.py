@@ -1,9 +1,10 @@
 """UI parameter descriptors from section 3 (main CPU): names, slots, ranges, defaults.
 
 Pinned per OS: section 3 moves between builds. Records are 0x34 bytes:
-    +0x00 machine type or page id   +0x04 slot   +0x08 min   +0x0c max
-    +0x10 default (min, max, default are 8.8)    +0x28 long name
-    +0x2c group tag                 +0x30 short name (the three are pointers)
++0x00 machine type or page id   +0x04 slot   +0x08 min   +0x0c max
++0x10 default (min, max, default are 8.8)    +0x28 long name
++0x2c group tag                 +0x30 short name (the three are pointers)
+
 """
 from dataclasses import dataclass
 

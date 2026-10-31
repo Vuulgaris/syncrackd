@@ -1,18 +1,4 @@
-"""The scratch image: every take held on the drive once recording stops, so a power off before a save keeps it.
-
-
-
-a held take is not in the bank until a save.
-
-engine/scratch.c: a table sector after the banks' one, then 47 places of a slot's size. hold_body writes each take the
-drive does not have into a place and marks it kept; back_body sends the places to their slots at a start;
-scratch_commit (a save) copies them into the bank; scratch_drop (a load) has their slots loaded from the bank.
-scratch_poll starts the jobs from the main task's loop.
-
-Held here with tests/test_banks.py's rig: the store's own read and write and the bank routines run, the drive is a
-dictionary, the audio CPU's side is played by the test, the runner's job start is a stub. Not held: that the main
-task has a message soon after a take ends, that the drive past 196 MB writes as the part before it, the unit.
-"""
+"""The scratch image: every take held on the drive once recording stops, so a power off before a save keeps it."""
 import hashlib
 import shutil
 
@@ -109,7 +95,7 @@ def test_the_code_is_in_runs_nothing_reaches(official, main):
     for name in ("hold_body", "back_body", "scratch_commit", "scratch_drop", "scratch_poll", "scr_take"):
         assert any(lo <= syms[name] < hi for lo, hi in RUNS)
     lo, hi = mm.CAVE_ONCE
-    assert main[0][mm.off(lo):mm.off(hi)].count(b"\x4e\xb9" + syms["scratch_poll"].to_bytes(4, "big")) == 1      # the main task's loop calls it
+    assert main[0][mm.off(lo):mm.off(hi)].count(b"\x4e\xb9" + syms["scratch_poll"].to_bytes(4, "big")) == 1  # the main task's loop calls it
 
 
 def test_a_take_goes_to_a_place_header_last_then_the_table_and_is_marked_kept(main):
@@ -207,7 +193,7 @@ def test_a_load_has_the_held_slots_loaded_from_the_bank_and_empties_the_table(ma
     audio = B.BankAudio(r, {})
     r.serve(audio)
     assert r.load((7, 12, B.PROGRESS)) == 1
-    assert audio.done == {10: 500} and audio.got(10) == B.sample(500, 1)       # the take was kept: only the table says so
+    assert audio.done == {10: 500} and audio.got(10) == B.sample(500, 1)  # the take was kept: only the table says so
     assert read_table(r) == (0, {}) and r.writes == [TABLE]
 
 
@@ -221,12 +207,12 @@ def test_the_poll_starts_the_start_job_once_then_a_hold_when_the_feed_has_stoppe
     poll()
     done()
     poll()
-    assert len(r.jobs) == 1                                         # nothing fed since
+    assert len(r.jobs) == 1  # nothing fed since
     r.mc.w32(FED, 0x00400003)
     poll()
-    assert len(r.jobs) == 1                                         # being fed
+    assert len(r.jobs) == 1  # being fed
     poll()
-    assert r.jobs[1:] == [("Take Hold", r.syms["hold_body"])]       # the same at the next message: stopped
+    assert r.jobs[1:] == [("Take Hold", r.syms["hold_body"])]  # the same at the next message: stopped
     done()
     poll()
     assert len(r.jobs) == 2
@@ -234,11 +220,11 @@ def test_the_poll_starts_the_start_job_once_then_a_hold_when_the_feed_has_stoppe
     poll()
     r.mc.w32(mm.SAVE_STATE, 1)
     poll()
-    assert len(r.jobs) == 2                                         # not while a save runs
+    assert len(r.jobs) == 2  # not while a save runs
     r.mc.w32(mm.SAVE_STATE, 2)
     r.mc.w32(r.syms["scr_vars"], 1)
     poll()
-    assert len(r.jobs) == 2                                         # nor while one of ours does
+    assert len(r.jobs) == 2  # nor while one of ours does
     done()
     poll()
     assert len(r.jobs) == 3 and not r.stray
@@ -248,13 +234,13 @@ def test_the_image(official_path, main):
     quiet = lambda s: None
     raw, _, built, _, _ = build.build(official_path, log=quiet, xfade=47, prof=True)
     was_raw, _, was, _, _ = build.build(official_path, log=quiet, xfade=46, prof=True)
-    assert hashlib.sha256(was_raw).hexdigest().startswith("a85e26c5")      # the scan image, as it is
+    assert hashlib.sha256(was_raw).hexdigest().startswith("a85e26c5")  # the scan image, as it is
     assert built.section(7) == was.section(7)
     new, old = built.section(3), was.section(3)
     assert new == main[0]
     runs = [r for n, r in vars(mm).items() if n.startswith("CAVE") and isinstance(r, tuple) and len(r) == 2]
     ours = lambda b, j: any(lo <= int.from_bytes(b[j:j + 4], "big") < hi for lo, hi in runs)
-    moved = lambda k: any(ours(new, j) and ours(old, j) for j in range(k - 3, k + 1))      # a call of ours whose routine moved
+    moved = lambda k: any(ours(new, j) and ours(old, j) for j in range(k - 3, k + 1))  # a call of ours whose routine moved
     diff = [mm.BASE + k for k in range(len(new)) if new[k] != old[k]]
     assert diff and [hex(a) for a in diff if not any(lo <= a < hi for lo, hi in runs) and not moved(mm.off(a))] == []
     print("scratch image", hashlib.sha256(raw).hexdigest())

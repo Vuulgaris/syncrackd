@@ -1,15 +1,4 @@
-"""The fresh image (engine/phone.c, FRESH): the destnum image with a new project asking the phone as a load does.
-
-
-Stock's Project Load
-job makes a project that is not there and saves it (0x4005bbfa, the save at 0x4005bc2c) and never calls the load, where
-the phone is asked. Here, with stock's routines around it played (test_phone's rig):
-  - after the phone's hello, a new project is saved, then asked for as a load asks, the ask's bank byte + 128 (its bit
-    in the high-bits byte before it), then loaded with the slots the phone names; the next ordinary ask has no mark;
-  - with no hello it is saved and counted (0x64 says it), nothing asked or loaded;
-  - a save that failed is all there is;
-  - the image: the destnum image's but for the new run and the second save call's address; section 7 the destnum image's.
-Emulation only."""
+"""The fresh image (engine/phone.c, FRESH): the destnum image with a new project asking the phone as a load does."""
 import shutil
 
 import pytest
@@ -54,7 +43,7 @@ def test_after_the_hello_a_new_project_is_asked_for_marked_new_and_loaded(fresh)
     assert r.log[2][1] == bytes(new)
     assert r.var("knows_count") == 1 and r.var("knows_project") == 5 and r.var("knows_bank") == 2
     r.log.clear()
-    assert r.mc.call(r.syms["knows_load"], 0x1234, 5, 0x5678) == 7       # LOAD PROJECT after it: no mark
+    assert r.mc.call(r.syms["knows_load"], 0x1234, 5, 0x5678) == 7  # LOAD PROJECT after it: no mark
     assert r.log[1][1] == bytes(FRAME) and r.var("knows_count") == 2
 
 
@@ -63,8 +52,8 @@ def test_with_no_hello_it_is_saved_and_counted_and_nothing_else(fresh):
     assert made(r) == 1
     assert r.log == [("save", 0x1234, 5, 0x5678)]
     assert r.var("knows_count") == 1 and r.var("knows_project") == 5 and r.var("knows_bank") == 2
-    F.ask(r)                                                            # what 0x64 says now: project 5, bank 2, a load
-    assert r.log == [("write", F.reply(5, 2, 1, 1000)), ("commit",)]   # (the start's id: the clock at the count)
+    F.ask(r)  # what 0x64 says now: project 5, bank 2, a load
+    assert r.log == [("write", F.reply(5, 2, 1, 1000)), ("commit",)]  # (the start's id: the clock at the count)
 
 
 def test_a_save_that_failed_is_all(fresh):
@@ -85,4 +74,4 @@ def test_the_image(official_path, fresh):
     outside = [hex(mm.BASE + k) for k in range(len(n)) if n[k] != o[k] and not (lo <= mm.BASE + k < hi) and not (call <= mm.BASE + k < call + 4)]
     assert outside == []
     assert n[mm.off(call):mm.off(call) + 4] == fresh[1]["fresh_save"].to_bytes(4, "big")
-    assert o[mm.off(call):mm.off(call) + 4] == o[mm.off(mm.PROJECT_SAVE_CALLS[0] + 2):mm.off(mm.PROJECT_SAVE_CALLS[0] + 2) + 4]    # save_keep's, as the first
+    assert o[mm.off(call):mm.off(call) + 4] == o[mm.off(mm.PROJECT_SAVE_CALLS[0] + 2):mm.off(mm.PROJECT_SAVE_CALLS[0] + 2) + 4]  # save_keep's, as the first

@@ -1,12 +1,4 @@
-"""The mixtime image, a tool: the ring image with the profile splitting its mixer stretch into stock's mixer and our links.
-
-to a split of the mixer stretch (34.7 hundredths of a block on a heavy pattern, stock's
-mixer and our links around it, not told apart). The mixer link (engine/mixlink.c, MIXSPLIT) calls stock's mixer through
-mix_timed, in a run of its own, which reads the profile's timer before and after it into the record's + 36 (the lap
-image's first reading) and + 56 (the last stack long). tools/prof_read.py knows the layout by where those two lie.
-
-Held here by running mix_timed with stock's mixer played; not held: the counts on the unit.
-"""
+"""The mixtime image, a tool: the ring image with the profile splitting its mixer stretch into stock's mixer and our links."""
 import hashlib
 import shutil
 
@@ -83,7 +75,7 @@ def test_the_image(official_path, main):
     quiet = lambda s: None
     raw, _, built, _, _ = build.build(official_path, log=quiet, xfade=33, prof=True)
     was_raw, _, was, _, _ = build.build(official_path, log=quiet, xfade=32, prof=True)
-    assert hashlib.sha256(was_raw).hexdigest().startswith("e0bf856c")      # the ring image, as it is
+    assert hashlib.sha256(was_raw).hexdigest().startswith("e0bf856c")  # the ring image, as it is
     assert built.section(7) == was.section(7)
     new, old = built.section(3), was.section(3)
     assert new == main[0]

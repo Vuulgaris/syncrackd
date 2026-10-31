@@ -1,14 +1,4 @@
-"""The rxcap image: the rxoff image with the USB audio receive off only while the phone has said a capture is on.
-
-
-
-the phone says when it captures. engine/phone.c, CAPTURE: 0x65 sets the word first in the
-gate's run, 0x66 clears it; neither is answered or handed on. engine/rxgate.S, CAPTURE: the receive is skipped only with
-the word set and the unit sending, and the word is cleared whenever the unit sends nothing.
-
-Held here by running the gate (stock's clear run, stock's receive played) and the SysEx entry with test_phone's rig;
-not held: the USB controller, the phone's frames on the wire.
-"""
+"""The rxcap image: the rxoff image with the USB audio receive off only while the phone has said a capture is on."""
 import hashlib
 import shutil
 
@@ -59,7 +49,7 @@ def test_the_receive_is_off_only_with_the_phones_word_and_the_unit_sending(main,
     assert (len(seen) == 1) == receives
     if not receives:
         assert mc.read(R.USB_IN, 256) == bytes(256)
-    assert mc.r32(WORD) == left                                    # cleared when the unit sends nothing
+    assert mc.r32(WORD) == left  # cleared when the unit sends nothing
 
 
 def test_the_word_is_first_in_the_gates_run(main):
@@ -90,7 +80,7 @@ def test_the_image(official_path, main, rxoff):
     quiet = lambda s: None
     raw, _, built, _, _ = build.build(official_path, log=quiet, xfade=36, prof=True)
     was_raw, _, was, _, _ = build.build(official_path, log=quiet, xfade=35, prof=True)
-    assert hashlib.sha256(was_raw).hexdigest().startswith("32c67235")      # the rxoff image, as it is
+    assert hashlib.sha256(was_raw).hexdigest().startswith("32c67235")  # the rxoff image, as it is
     assert built.section(7) == was.section(7)
     new, old = built.section(3), was.section(3)
     assert new == main[0] and old == rxoff[0]

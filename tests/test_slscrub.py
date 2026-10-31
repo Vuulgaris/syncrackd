@@ -1,12 +1,4 @@
-"""The slscrub image (engine/sampler.h, SLSCRUB): the scrub image with STRT and LEN followed on a slice.
-
-The slice image left a slice's knobs
-alone while it played. Here:
-  - a looping slice, stretched and not, follows LEN and then STRT to where a new trig with those knobs would start;
-    on the scrub image it stays where its note began;
-  - whole-sample notes with the knobs moved, and slices at rest, the scrub image's to the bit;
-  - the main CPU the lock image's.
-Emulation only."""
+"""The slscrub image (engine/sampler.h, SLSCRUB): the scrub image with STRT and LEN followed on a slice."""
 
 import shutil
 
@@ -22,9 +14,9 @@ from tools import build_engine, build_main
 
 pytestmark = pytest.mark.skipif(not shutil.which("m68k-elf-gcc"), reason="no ColdFire cross-compiler")
 
-POS, PA, PB, PC, DUCK = 8, 36, 40, 44, 69       # struct st
-SLCE = 0x80 / 256                               # slot 24 as sent: KEYS on slices (SLICE_BIT), REC off
-SLST = ((0x80 | 64) << 8 | 0xc0) / 256          # and stretched, SPD 64
+POS, PA, PB, PC, DUCK = 8, 36, 40, 44, 69  # struct st
+SLCE = 0x80 / 256  # slot 24 as sent: KEYS on slices (SLICE_BIT), REC off
+SLST = ((0x80 | 64) << 8 | 0xc0) / 256  # and stretched, SPD 64
 MOVES = {100: {LENGTH: 10}, 160: {START: 64}}
 
 
@@ -45,7 +37,8 @@ def folded(monkeypatch):
 
 def run(built, word, note, moves, blocks, loop=1, retrig=False):
     """Track 0 on a tone, slot 24 `word`, its knobs moved at the blocks `moves` says; with retrig, a trig and three more
-    block. -> its output, and (place, pa, pb, pc, duck) a block."""
+    block. -> its output, and (place, pa, pb, pc, duck) a block.
+    """
     x = X.tone()
     e = P.engine(built, pool={0: x, 1: x})
     for slot, v in {SAMPLE: H.PK.knob_of(0), P.MODE: 0, P.TUNE: 64, LENGTH: 127, START: 0, LOOP: loop, 24: word}.items():
@@ -72,7 +65,7 @@ def test_a_looping_slice_follows_len_then_strt(scrub, engine, word):
             assert followed[1:4] == fresh[1:4] and followed[3] != start[3] and followed[4] == 0
             assert followed[1] <= followed[0] >> 12 < followed[2] and np.abs(y[-32 * 30:-32]).max() > 0
         else:
-            assert followed[3] == start[3] != fresh[3]                  # stays where its note began
+            assert followed[3] == start[3] != fresh[3]  # stays where its note began
 
 
 @pytest.mark.parametrize("word, note, moves", [(0, 60, MOVES), (X.sent24(64), 60, MOVES), (SLST, 63, {}), (SLCE, 57, {})],

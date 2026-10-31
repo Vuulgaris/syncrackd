@@ -19,8 +19,8 @@ int mac_dot(const short *a, const short *b, int n)
 }
 """
 
-# EMAC and ColdFire-only instructions the stock engine uses.
-# The audio CPU is MCF5441x class (ISA C + EMAC), see docs/FINDINGS.md.
+# EMAC and ColdFire-only instructions the stock engine uses. The audio CPU is MCF5441x class (ISA C + EMAC), see
+# docs/FINDINGS.md.
 ASM_SRC = """
     .text
     .globl emac_probe

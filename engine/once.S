@@ -1,40 +1,32 @@
 | Main CPU (section 3, OS 1.42 only): REC's third setting, ONCE. The once image.
 |
-| 
-| 
+| A step's REC at ONCE is a lock on slot 24 at ONCE_WORD (engine/sampler.h; LOCK_ONCE here, and ONCE_SPENT is
+| LOCK_SPENT). Its high byte is the mark of a step locked on, so stock plays it and the audio CPU, the feed and
+| recword.S take it as one. What makes it once is here, in the routine of stock's that plays a step (0x4008b8fa, the
+| track in d4 and the step in d3 at both places below). That routine runs wherever a step is played, the sequencer's
+| task and the UI's: nothing is called from here but stock's own next routine, and only words and bytes are stored.
 |
-| A step's REC at ONCE is a lock on slot 24 at ONCE_WORD (engine/sampler.h; LOCK_ONCE here, and ONCE_SPENT is LOCK_SPENT). Its high byte is the mark
-| of a step locked on, so stock plays it and the audio CPU, the feed and recword.S take it as one.
-| What makes it once is here, in the routine of stock's that plays a step (0x4008b8fa, the track in d4
-| and the step in d3 at both places below). That routine runs wherever a step is played, the
-| sequencer's task and the UI's: nothing is called from here but stock's own next routine, and only
-| words and bytes are stored.
+| once_seq, for a step that has locks: stock's routine gathers them into the event, and then a lock at ONCE_WORD is
+| made ONCE_SPENT in the pattern's table, a word that is no mark. The event has its copy: this pass records, to the
+| track's next event as a step locked on does, and the next pass does not. The track's byte of once_vars + 8 says a
+| spent lock is there; the main task takes it off with stock's routine for a lock removed by hand (once_loop,
+| engine/onceclean.c).
 |
-| once_seq, for a step that has locks: stock's routine gathers them into the event, and then a lock at
-| ONCE_WORD is made ONCE_SPENT in the pattern's table, a word that is no mark. The event has its copy:
-| this pass records, to the track's next event as a step locked on does, and the next pass does not.
-| The track's byte of once_vars + 8 says a spent lock is there; the main task takes it off with stock's
-| routine for a lock removed by hand (once_loop, engine/onceclean.c).
+| The track's own REC at ONCE is its byte of once_vars. The next step played on the track gets (slot 24, on) added to
+| its event's locks, and the byte is cleared: once_seq where the step has locks, once_none where it has none. A step
+| with a REC lock of its own that says on uses the byte up; one that says off leaves it for the next.
 |
-| The track's own REC at ONCE is its byte of once_vars. The next step played on the track gets
-| (slot 24, on) added to its event's locks, and the byte is cleared: once_seq where the step has locks,
-| once_none where it has none. A step with a REC lock of its own that says on uses the byte up; one
-| that says off leaves it for the next.
-|
-| Only a sampler's track: tracks 0 to 7 whose machine, in the block the audio CPU is sent, is type 44.
-| On the others slot 24 is a knob or the hold flag, and a lock there is left alone.
+| Only a sampler's track: tracks 0 to 7 whose machine, in the block the audio CPU is sent, is type 44. On the others
+| slot 24 is a knob or the hold flag, and a lock there is left alone.
     .section .cave.o,"ax"
     .globl  once_vars, once_seq, once_none, once_loop
 once_vars:
     .fill   16,1,0
 #ifdef HANDREC
     .pushsection .cave.b,"ax"
-| The handrec image, its second build: first in the long image's run (nothing of this chain uses it), at places
-| recword.S and recfeed.c are built to (mm.HAND_HOLD, mm.HAND_LEFT, mm.HAND_REC), before they are built. 
-|
-| the TRIG page's LEN. hand_hold: a bit a track whose take runs past its note's release
-| (the feed puts it in the window's word at 0x802, high byte, and rec_all ignores that track's release). hand_left:
-| a long a track, what is left of the take in the tempo's units (BPM x 120 a block, mm.TEMPO).
+| the TRIG page's LEN. hand_hold: a bit a track whose take runs past its note's release (the feed puts it in the
+| window's word at 0x802, high byte, and rec_all ignores that track's release). hand_left: a long a track, what is
+| left of the take in the tempo's units (BPM x 120 a block, mm.TEMPO).
     .globl  hand_rec, hand_hold, hand_left
 hand_hold:
     .long   0
@@ -54,8 +46,8 @@ hand_rec:
     lsl.l   #2,%d3
     lea     hand_left(%pc),%a0
     move.l  (%a0,%d3.l),%d1
-    beq.w   2f                      | no take held
-    sub.l   TEMPO,%d1               | a block of it
+    beq.w   2f                      | no take held a block of it
+    sub.l   TEMPO,%d1
     bgt.w   1f
     clr.l   (%a0,%d3.l)             | its length is over: no mark, so the feed stops and the take with it
     lea     hand_hold(%pc),%a0
@@ -74,8 +66,8 @@ hand_rec:
     beq.w   8f                      | not at ONCE
     move.l  %a5,%d1
     btst    %d2,%d1
-    beq.w   7f                      | at ONCE, no note yet: the mark waits for it
-    clr.b   (%a0,%d2.l)             | its note: the ONCE is taken
+    beq.w   7f                      | at ONCE, no note yet: the mark waits for it its note: the ONCE is taken
+    clr.b   (%a0,%d2.l)
     move.l  PATTERN_DATA,%d1
     beq.w   7f
     movea.l %d1,%a0
@@ -85,8 +77,8 @@ hand_rec:
     mvz.b   961(%a0),%d1            | the TRIG page's LEN
     andi.l  #127,%d1
     lsl.l   #2,%d1
-    lea     LEN_TABLE + 4,%a0       | (as the step routine indexes it: from + 4)
-    move.l  (%a0,%d1.l),%d1         | its length
+    lea     LEN_TABLE + 4,%a0       | (as the step routine indexes it: from + 4) its length
+    move.l  (%a0,%d1.l),%d1
     lea     hand_left(%pc),%a0
     move.l  %d1,(%a0,%d3.l)
     lea     hand_hold(%pc),%a0
@@ -168,9 +160,9 @@ once_track:
     cmpi.l  #44 << 8,%d0
 1:  rts
 
-| In place of stock's `movel %fp,%sp@-` and its call of the routine that gathers a step's locks (six
-| bytes). On the stack: the return, then stock's other five arguments, the track's table first. Stock
-| pops six longs after the call, so the return address is left where the event was.
+| In place of stock's `movel %fp,%sp@-` and its call of the routine that gathers a step's locks (six bytes). On the
+| stack: the return, then stock's other five arguments, the track's table first. Stock pops six longs after the call,
+| so the return address is left where the event was.
 once_seq:
     move.l  20(%sp),-(%sp)
     move.l  20(%sp),-(%sp)
@@ -183,19 +175,18 @@ once_seq:
 #ifdef STAY
 | The stay image. The routine that plays a step has two callers. The sequencer's (0x4008cf86) hands it 0 for the
 | event's place. The other (0x4008c288, in 0x4008c128) hands it a place: it plays the step the sequencer is on, for
-| one track or all, and stock runs it whenever a track of the pattern is changed (two listeners jump to it,
-| 0x400179f2 and 0x40018ff6) and at a few keys. With the sequencer stopped the step it is on is the first. So a lock
-| made at ONCE on the first step was spent by the change that made it, and the main task took it off: 
-| And a track's own ONCE was
-| used up by any change to the track. That caller is no play here: nothing of ours is done for it.
-| The place is the step routine's fifth argument: 56 bytes of its frame, its return and four arguments above the
-| return and the five longs stock has pushed here.
+| one track or all, and stock runs it whenever a track of the pattern is changed (two listeners jump to it, 0x400179f2
+| and 0x40018ff6) and at a few keys. With the sequencer stopped the step it is on is the first. So a lock made at ONCE
+| on the first step was spent by the change that made it, and the main task took it off: And a track's own ONCE was
+| used up by any change to the track. That caller is no play here: nothing of ours is done for it. The place is the
+| step routine's fifth argument: 56 bytes of its frame, its return and four arguments above the return and the five
+| longs stock has pushed here.
 #ifdef FIRSTREC
 | The firstrec image. A start plays the first step of the first pass by none of this: it queues the record this caller
 | (the other one) built last for each track, at STOP or a listener's pass, its locks in the buffer its + 68 points at
-| (docs/FINDINGS.md, the recprobe tool). That record carries a ONCE and records, and the ONCE was never spent there. So
-| this caller's step and table are kept a track (first_keep), a start spends the ONCE on that step (first_spend), and
-| the sequencer's own play of that step on the next pass has the main task take the spent lock off (first_late).
+| (docs/FINDINGS.md, the recprobe tool). That record carries a ONCE and records, and the ONCE was never spent there.
+| So this caller's step and table are kept a track (first_keep), a start spends the ONCE on that step (first_spend),
+| and the sequencer's own play of that step on the next pass has the main task take the spent lock off (first_late).
     tst.l   100(%sp)
     beq.s   2f
     move.l  4(%sp),%d0
@@ -213,9 +204,9 @@ once_seq:
     lsl.l   #4,%d0
     movea.l %d0,%a0
     lsl.l   #3,%d0
-    adda.l  %d0,%a0                 | 144 bytes a step
-    adda.l  4(%sp),%a0              | the step's row in the track's table
-    mvz.w   48(%a0),%d0             | slot 24
+    adda.l  %d0,%a0                 | 144 bytes a step the step's row in the track's table slot 24
+    adda.l  4(%sp),%a0
+    mvz.w   48(%a0),%d0
     cmpi.l  #LOCK_ONCE,%d0
     bne.s   1f
     move.w  #LOCK_SPENT,48(%a0)     | played once: the word in the pattern is no mark from here on
@@ -241,8 +232,8 @@ once_seq:
 9:  movea.l (%sp),%a0
     jmp     (%a0)
 
-| In place of stock's `clrl %fp@(8)`, for a step with no locks (four bytes: a bsr.w, so this run is near it).
-| d0, d1, a0 and a1 hold nothing of stock's here: the other way to where both go on is through a call.
+| In place of stock's `clrl %fp@(8)`, for a step with no locks (four bytes: a bsr.w, so this run is near it). d0, d1,
+| a0 and a1 hold nothing of stock's here: the other way to where both go on is through a call.
 once_none:
     clr.l   8(%fp)                  | stock's: no locks in the event
 #ifdef STAY
@@ -268,8 +259,8 @@ once_none:
     addq.l  #1,8(%fp)
 1:  rts
 
-| In place of the main task's one wait for a message, (queue) -> the message: stock's wait, and when it has
-| one, what the sequencer left for this task (engine/onceclean.c). Stock reads d0 alone after it.
+| In place of the main task's one wait for a message, (queue) -> the message: stock's wait, and when it has one, what
+| the sequencer left for this task (engine/onceclean.c). Stock reads d0 alone after it.
 once_loop:
     move.l  4(%sp),-(%sp)
     jsr     MAIN_WAIT
@@ -286,9 +277,9 @@ once_loop:
     move.l  (%a0)+,%d0
     or.l    (%a0),%d0
 #ifdef STAY
-| The stay image: and the srr image's eight bytes (engine/recword.S), which say a track's old locks of MODE are to
-| go. Until here they were looked at only when a ONCE had been spent: the old locks stayed, and went, with any lock
-| of the reduction made since, at the first ONCE spent after. The routine is in a run of its own, for room here.
+| The stay image: and the srr image's eight bytes (engine/recword.S), which say a track's old locks of MODE are to go.
+| Until here they were looked at only when a ONCE had been spent: the old locks stayed, and went, with any lock of the
+| reduction made since, at the first ONCE spent after. The routine is in a run of its own, for room here.
     lea     SRR_DIRTY_AT,%a0
     or.l    (%a0)+,%d0
     or.l    (%a0),%d0
@@ -302,14 +293,14 @@ once_loop:
     rts
 
 #ifdef HANDREC
-| The handrec image. 
+| The handrec image.
 |
-| While the sequencer is stopped, a track whose own REC is at ONCE (its byte
-| of once_vars) sends REC's mark (engine/recword.S HANDREC), so a note played by hand records. A start takes every
-| track's ONCE back: armed while stopped is for that, not for the first step the sequencer plays.
+| While the sequencer is stopped, a track whose own REC is at ONCE (its byte of once_vars) sends REC's mark
+| (engine/recword.S HANDREC), so a note played by hand records. A start takes every track's ONCE back: armed while
+| stopped is for that, not for the first step the sequencer plays.
 |
-| In place of a start's `movel %d0,SEQ_STATE` (six bytes; 0x4008ad50 after MIDI 0xFA, and 0x4008b602): that store,
-| and the eight bytes cleared, and any take held by hand let go. Keeps all but a0, which both places load next.
+| In place of a start's `movel %d0,SEQ_STATE` (six bytes; 0x4008ad50 after MIDI 0xFA, and 0x4008b602): that store, and
+| the eight bytes cleared, and any take held by hand let go. Keeps all but a0, which both places load next.
     .globl  hand_start
 hand_start:
     move.l  %d0,SEQ_STATE
@@ -354,8 +345,8 @@ first_keep:
 1:  rts
 
 | The sequencer's play of step d3 on track d4: the step a start spent a ONCE on, played again, has the main task take
-| the spent lock off (its event has it, no mark: nothing records, and nothing held from the first pass goes on).
-| Uses d0, a0.
+| the spent lock off (its event has it, no mark: nothing records, and nothing held from the first pass goes on). Uses
+| d0, a0.
 first_late:
     moveq   #7,%d0
     cmp.l   %d4,%d0

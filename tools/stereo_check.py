@@ -1,34 +1,30 @@
-"""A measured check of one-track stereo on the unit, all eight tracks. Files only: it never talks to a Syntakt.
+"""Files only: it never talks to a Syntakt.
 
-    make stereo-sample              # eight stereo check samples as 16 files for Transfer, slots 49 to 64
-    make stereo-sample FIRST=1      # or from any odd slot up to 49
-    make stereo-check               # reads a recording from samples/check/ and says what it shows
-
-
-
-
+make stereo-sample              # eight stereo check samples as 16 files for Transfer, slots 49 to 64
+make stereo-sample FIRST=1      # or from any odd slot up to 49
+make stereo-check               # reads a recording from samples/check/ and says what it shows
 
 Eight samples, one for each track, 4 seconds each, made here with nothing of Elektron's in them:
-    0.00 to 2.00 s   a low tone on the left only and a high tone on the right only. Sixteen
-                     different tones in all, so every track's two channels can be told apart in one
-                     recording of all of them
-    after 2.25 s     one burst of hiss, the same on both sides, each sample's at its own moment
+0.00 to 2.00 s   a low tone on the left only and a high tone on the right only. Sixteen
+different tones in all, so every track's two channels can be told apart in one
+recording of all of them
+after 2.25 s     one burst of hiss, the same on both sides, each sample's at its own moment
 By ear, one track alone: a low tone in the left ear, a high one in the right, then a blip of hiss
 dead centre. All eight together: two chords, then eight blips one after another.
 
-The measured part: play them on the unit, record the main mix (a take on another sampler track with
 SRC on MAIN, saved and pulled off with Transfer; or the unit's USB audio), and give the recording to
 check(). From the recording alone it says, for each sample it hears:
-  - whether its left tone is on the left and its right tone on the right, and how far under each
-    the other side's is. A sample's left tone on both sides and its right tone nowhere is the main
-    CPU playing that track's left channel twice: the right channel did not cross;
-  - whether its two sides are a block of the same sound: its hiss is the same on both, so the two
-    sides line up to the frame, and a right channel a block early or late is 32 frames off, which
-    no tone shows;
+- whether its left tone is on the left and its right tone on the right, and how far under each
+the other side's is. A sample's left tone on both sides and its right tone nowhere is the main
+CPU playing that track's left channel twice: the right channel did not cross;
+- whether its two sides are a block of the same sound: its hiss is the same on both, so the two
+sides line up to the frame, and a right channel a block early or late is 32 frames off, which
+no tone shows;
 and for each side of the whole recording: how far under the tones their harmonics are (distortion),
 what else is there, and its largest jump (a block read while it was being written is a click the
 size of a tone).
 Every sample has to play at the same pitch (any one: TUNE and the note may be moved together).
+
 """
 import argparse
 import os
@@ -44,12 +40,12 @@ N = 8
 # no tone's 2nd to 7th harmonic comes within 25 Hz of another tone, and no two are closer than 45 Hz
 F_LEFT = (300, 345, 390, 435, 480, 525, 625, 715)
 F_RIGHT = (1130, 1225, 1330, 1405, 1465, 1525, 1600, 1660)
-LEVEL = 8192                            # a tone: a quarter of full scale
+LEVEL = 8192  # a tone: a quarter of full scale
 TONES = (0.0, 2.0)
-HISS_AT, HISS_EVERY, HISS_LONG = 2.25, 0.18, 0.13      # sample k's burst starts at HISS_AT + k * HISS_EVERY
+HISS_AT, HISS_EVERY, HISS_LONG = 2.25, 0.18, 0.13  # sample k's burst starts at HISS_AT + k * HISS_EVERY
 NAME = "STCHECK"
-BLOCK = 32                              # frames the two CPUs hand over at a time
-STEP = 240                              # the loudness of a recording is followed 5 ms at a time
+BLOCK = 32  # frames the two CPUs hand over at a time
+STEP = 240  # the loudness of a recording is followed 5 ms at a time
 HARMONICS = (2, 3, 4, 5)
 
 
@@ -72,7 +68,7 @@ def sample(k=0):
     m = int(HISS_LONG * RATE)
     spec = np.fft.rfft(np.random.default_rng(2026 + k).standard_normal(m))
     hz = np.fft.rfftfreq(m, 1 / RATE)
-    spec[(hz < 200) | (hz > 6000)] = 0                  # hiss the unit's filters pass whole
+    spec[(hz < 200) | (hz > 6000)] = 0  # hiss the unit's filters pass whole
     hiss = np.fft.irfft(spec, m)
     hiss *= 1.5 * LEVEL / np.abs(hiss).max()
     at = int((HISS_AT + k * HISS_EVERY) * RATE)
@@ -85,7 +81,7 @@ def write_samples(outdir, first=49):
     if not 1 <= first <= 65 - 2 * N or first % 2 == 0:
         raise SystemExit("the eight samples take 16 slots from an odd one: 1 to %d" % (65 - 2 * N))
     os.makedirs(outdir, exist_ok=True)
-    for f in os.listdir(outdir):                        # a run from another slot is not left beside this one
+    for f in os.listdir(outdir):  # a run from another slot is not left beside this one
         if NAME in f and f.endswith(".wav"):
             os.remove(os.path.join(outdir, f))
     paths, rows = [], []
@@ -162,7 +158,9 @@ def _strength(x, y, freqs):
 
 
 def _speed(x, y):
-    """What the recording's pitch is to the samples' own: the one number that puts all sixteen tones where the most sound is."""
+    """What the recording's pitch is to the samples' own: the one number that puts all sixteen tones where the most sound
+    is.
+    """
     spec = np.abs(np.fft.rfft((x + y) * np.hanning(len(x))))
     peak = (int(spec[20:].argmax()) + 20) * RATE / len(x)
     every = F_LEFT + F_RIGHT
@@ -176,8 +174,9 @@ def _speed(x, y):
 
 
 def _fit(x, freqs, twice=False):
-    """Least squares of x on sines and cosines of freqs. -> (amplitude of each, what is left).
-    twice: fitted again without the frames that stand far out of what was left, so that a click does not bend the fit."""
+    """Least squares of x on sines and cosines of freqs. -> (amplitude of each, what is left). twice: fitted again
+    without the frames that stand far out of what was left, so that a click does not bend the fit.
+    """
     t = np.arange(len(x)) / RATE
     cols = [np.ones(len(x))]
     for f in freqs:
@@ -214,8 +213,9 @@ def _step(x, y, lo, hi):
 
 
 def check(left, right):
-    """A recording of the check samples -> (verdict, lines). 'stereo': every sample heard is right on both sides and
-    the recording is clean. 'mono': every one is its left on both sides. 'fault': anything else."""
+    """A recording of the check samples -> (verdict, lines). 'stereo': every sample heard is right on both sides and the
+    recording is clean. 'mono': every one is its left on both sides. 'fault': anything else.
+    """
     left, right = np.asarray(left, dtype=float), np.asarray(right, dtype=float)
     n = min(len(left), len(right))
     left, right = left[:n], right[:n]
@@ -298,21 +298,21 @@ def check(left, right):
             if good or bad:
                 faults.append("The %s side of the recording has no tone at all: is PAN in the middle, and is this the main mix?" % side)
             continue
-        own = np.sqrt(sum(amps[base + k] ** 2 for k in heard))         # the tones of this side together
+        own = np.sqrt(sum(amps[base + k] ** 2 for k in heard))  # the tones of this side together
         worst = max(db(amps[place[h * tones[k]]], amps[base + k]) for k in heard for h in HARMONICS if h * tones[k] in place)
         rest = rest[RATE // 20:-RATE // 20]
         rms = np.sqrt(np.mean(rest ** 2))
-        quiet = 1.4826 * np.median(np.abs(rest))                        # what is left, the clicks apart
+        quiet = 1.4826 * np.median(np.abs(rest))  # what is left, the clicks apart
         floor, peak = db(quiet, own / np.sqrt(2)), db(np.abs(rest).max(), own)
         lines.append("The %s side: harmonics %s their tones, everything else %s the tones, its largest jump %s."
                      % (side, _under(worst), _under(floor), _under(peak)))
         if worst > -40:
             faults.append("Distortion on the %s side: a harmonic only %s its tone." % (side, _under(worst)))
-        if peak > -30 and np.abs(rest).max() > 8 * quiet:               # large jumps in little else: clicks, not noise
+        if peak > -30 and np.abs(rest).max() > 8 * quiet:  # large jumps in little else: clicks, not noise
             at = np.nonzero(np.abs(rest) > max(10 ** (-30 / 20) * own, 8 * quiet))[0]
             faults.append("Clicks on the %s side: %d in %.1f s, the largest %s the tones."
                           % (side, 1 + int(np.count_nonzero(np.diff(at) > 4 * BLOCK)), len(rest) / RATE, _under(peak)))
-        elif db(rms, own / np.sqrt(2)) > -40:                           # a take is 16 bits: its own noise is 60 dB and more under these tones
+        elif db(rms, own / np.sqrt(2)) > -40:  # a take is 16 bits: its own noise is 60 dB and more under these tones
             faults.append("Noise on the %s side: only %s the tones." % (side, _under(db(rms, own / np.sqrt(2)))))
     if unheard and len(unheard) < N:
         lines.append("Not in the recording: sample%s %s." % ("s" if len(unheard) > 1 else "", ", ".join(map(str, unheard))))

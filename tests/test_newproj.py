@@ -1,18 +1,4 @@
-"""The newproj image (engine/phone.c, NEWPROJ): the fresh image with NEW PROJECT asking the phone, and every ask saying the
-project it leaves.
-
-
-NEW PROJECT is stock's Project Init job (0x40059f9e), which calls the project maker (0x4001d16a) with -1 and
-neither saves nor loads; the fresh image hooked only an empty slot's load. Here, with stock's routines around it played
-(test_phone's rig):
-  - NEW PROJECT after the phone's hello: the maker, then an ask of project 0x3fff marked new (the bank byte + 128),
-    saying the project left, a wait, and the slots the phone names; counted as a load of no project;
-  - NEW PROJECT with no hello: the maker, counted, nothing asked;
-  - an empty slot's new project: the maker (the project left read first), then after its save the ask, marked new,
-    saying that project left;
-  - LOAD PROJECT: the ask says the project it leaves, 7f 7f for one never saved;
-  - the image: the fresh image's but for the phone's runs, the bank code's, the new runs and the three calls.
-Emulation only."""
+"""The newproj image (engine/phone.c, NEWPROJ): the fresh image with NEW PROJECT asking the phone, and every ask saying the"""
 import shutil
 
 import pytest
@@ -58,7 +44,7 @@ def test_new_project_after_the_hello_asks_marked_new_with_the_project_left_and_l
     assert r.log[0] == ("make", 0x1234, -1)
     assert r.log[1][1] == frame(0x3fff, 0, 9, new=True)
     assert r.var("knows_count") == 1 and r.var("knows_project") == 0x3fff
-    assert r.mc.read(r.syms["phone_frame"] + 14, 1) == b"\x00"          # the mark gone after
+    assert r.mc.read(r.syms["phone_frame"] + 14, 1) == b"\x00"  # the mark gone after
 
 
 def test_new_project_with_no_hello_is_made_and_counted_only(newproj):
@@ -72,7 +58,7 @@ def test_an_empty_slots_new_project_asks_after_its_save_with_the_project_left(ne
     r = rig(newproj)
     r.mc.w32(r.syms["phone_seen"], 1)
     call(r, "fresh_make", 0x1234, 5)
-    assert r.log == [("make", 0x1234, 5)] and r.var("knows_count") == 0     # nothing asked yet: the save comes first
+    assert r.log == [("make", 0x1234, 5)] and r.var("knows_count") == 0  # nothing asked yet: the save comes first
     r.log.clear()
     assert r.mc.call(r.syms["fresh_save"], 0x1234, 5, 0x5678) == 1
     assert [e[0] for e in r.log] == ["save"] + ASKED

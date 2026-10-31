@@ -1,14 +1,4 @@
-"""The sink image (engine/mirror.c, PIECES): the shadow image with the viewer's frame put into the SysEx sink whole.
-
-On the unit the shadow image's frames still had strokes at the dials, in the same places on every page: the 56-byte
-pieces whose 64 packed bytes cross the stream's byte 144, 288 and so on, from that byte to the piece's end (the
-viewer, from the frames as received). Stock's put (0x40105f24) sends the sink's 144 bytes when they are full
-and copies the rest of the write from the write's start again. Here, the main CPU only, with stock's sink run as it is
-(its vtable 0x40242594, put, its send when full, the flush) and only the send to USB (0x40106976) played:
-  - the shadow image's frame comes out with those pieces damaged, as on the unit;
-  - the sink image's frame is the panel's to the byte, no write crossing a send;
-  - section 7 the shadow image's, and only our places differ from it in section 3.
-Only the unit can show: the viewer's picture clean."""
+"""The sink image (engine/mirror.c, PIECES): the shadow image with the viewer's frame put into the SysEx sink whole."""
 
 import hashlib
 import shutil
@@ -38,7 +28,7 @@ def shadow(official):
 def rig(built):
     r = Rig(built)
     mc = r.mc
-    r.stub(0x40103952, lambda n: 0)                             # no heap here: the frame shown is sent, as the second build
+    r.stub(0x40103952, lambda n: 0)
     mc.w32(SINK, SINK_VT)
     for off, v in ((4, 0), (8, 0), (12, 2), (16, 0), (532, SIZE)):
         mc.w32(SINK + off, v)

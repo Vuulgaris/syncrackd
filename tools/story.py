@@ -1,9 +1,8 @@
 """A build's story: its trace and a player that scrubs through it like a video.
 
-`python -m tools.build ... X` writes build/trace/X.json and build/story/X.html after the image;
-`python -m tools.story X [BASE]` renders the player again (after `make check`, to take the tests).
-Both are under build/, gitignored: the trace holds stock bytes and their listing (rule 2).
-Never publish the player: it shows Elektron code.
+`python -m tools.build ... X` writes build/trace/X.json and build/story/X.html after the image; `python -m tools.story
+X [BASE]` renders the player again (after `make check`, to take the tests). Both are under build/, gitignored: the
+trace holds stock bytes and their listing (rule 2). Never publish the player: it shows Elektron code.
 """
 
 import glob
@@ -21,8 +20,8 @@ from . import disasm as dis
 
 TRACE = os.path.join("build", "trace")
 STORY = os.path.join("build", "story")
-BASE = 0x40000400            # both sections load here (audiomap.BASE, mainmap.BASE)
-LIST_MAX = 192               # bytes of a patch put through objdump
+BASE = 0x40000400  # both sections load here (audiomap.BASE, mainmap.BASE)
+LIST_MAX = 192  # bytes of a patch put through objdump
 # what an image does, in plain words, for the story's headline
 ABOUT = {
     "norm": {
@@ -96,7 +95,8 @@ def _engine_index():
 
 
 def _bodies():
-    """Each function of ours and the text of its body, from the source (C defs, asm labels): rough, for who calls whom."""
+    """Each function of ours and the text of its body, from the source (C defs, asm labels): rough, for who calls whom.
+    """
     out = {}
     for path in sorted(glob.glob(os.path.join("engine", "*.[cS]"))):
         with open(path, errors="replace") as f:
@@ -270,14 +270,14 @@ def render(name, base=None, public=False):
                       for n in CHAIN[max(0, i - 4):i + 2]]
     if public:
         for p in t["patches"] + t["dropped"]:
-            p["stock"], p["ours"] = [], []            # ours too: a hook can carry stock's displaced instructions
+            p["stock"], p["ours"] = [], []  # ours too: a hook can carry stock's displaced instructions
             p.pop("was", None)
         t["public"] = True
     here = os.path.dirname(os.path.abspath(__file__))
     with open(os.path.join(here, "story.html")) as f:
         page = f.read()
     page = page.replace("/*TRACE*/null", json.dumps(t).replace("</", "<\\/"))
-    if public:                                    # the artifact's skeleton is its own
+    if public:  # the artifact's skeleton is its own
         for tag in ("<!doctype html>", '<html lang="en">', "<head>", "</head>", "<body>", "</body>", "</html>"):
             page = page.replace(tag, "", 1)
         page = page.replace("<title>Build Story</title>", "<title>Syntakt %s build</title>" % name, 1)

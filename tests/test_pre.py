@@ -1,21 +1,4 @@
-"""The pre image: the soft image with a take's sources read before the mixer.
-
-A muted track showed no level on the sampling page and recorded nothing, and the FX track's mute did nothing. The mixer is shown a muted track at a volume of 0, and a take was made from the frame the mixer
-leaves. Here the buffer of every digital track that is a take's source, or the meter's, and the FX track's return,
-are copied into a frame of ours before the mixer is called, and the feed and the meter read them there
-(engine/recfeed.c, PRE). And the FX track's mute, global or the pattern's, takes its return to nothing in its own
-buffers before the mixer, over a block, after the copy.
-
-Held here, the mixer a stand-in that changes nothing: a take of a track or of the return is made from the buffers as
-they were before the mixer, whatever the frame holds; every other source is the frame's, the window the prof image's
-to the bit; only the channels asked for are copied; the return under a mute goes down over a block, is nothing, comes
-up over a block, and its take is whole all the while; the meter reads the copy; and the image is the soft image but
-for the feed's runs.
-
-Not held, and only the unit can show it: that the track buffers before the mixer are the track's sound before its
-level (read from the meter going dark under a mute, not from the mixer); that the return reaches the outputs through
-the mixer alone, so that its mute is heard; how loud a take of a track now is.
-"""
+"""The pre image: the soft image with a take's sources read before the mixer."""
 import hashlib
 import shutil
 
@@ -52,7 +35,7 @@ def main(stock3):
 
 @pytest.fixture(scope="module")
 def prof(stock3):
-    return build_main.patched_image(stock3, xfade=12)         # the soft image's main program is the prof image's
+    return build_main.patched_image(stock3, xfade=12)  # the soft image's main program is the prof image's
 
 
 class Rig(PR.Rig):
@@ -93,7 +76,8 @@ def sound(seed):
 
 
 def go(r, takes, seed=3, mutes=0, pattern=0, page=0, source=0, quiet=0):
-    """One block. takes: {track: source}. -> the window before, the frame, the window after, the tracks, the inputs."""
+    """One block. takes: {track: source}. -> the window before, the frame, the window after, the tracks, the inputs.
+    """
     mc = r.mc
     tracks, inputs = sound(seed)
     r.reset(page=page, source=source, quiet=quiet, gains=M.GAINS)
@@ -109,8 +93,8 @@ def go(r, takes, seed=3, mutes=0, pattern=0, page=0, source=0, quiet=0):
     for t in range(8):
         b[STRIDE * t + F.P_REC:STRIDE * t + F.P_REC + 2] = (ON << 8 | takes[t] if t in takes else OFF << 8 | 7).to_bytes(2, "big")
     ret, after = r.run(bytes(b), frame, window)
-    assert all(size in (2, 4) for _, _, size, _ in r.window)        # the window stores words: never a byte
-    assert np.array_equal(longs(mc, mm.TRACKS, 8), tracks)          # the tracks' buffers are only read
+    assert all(size in (2, 4) for _, _, size, _ in r.window)  # the window stores words: never a byte
+    assert np.array_equal(longs(mc, mm.TRACKS, 8), tracks)  # the tracks' buffers are only read
     return window, frame, after, tracks, inputs
 
 
@@ -133,34 +117,34 @@ def test_a_take_of_a_track_or_of_the_return_is_made_from_the_buffers_before_the_
 def test_every_other_source_is_the_frames_and_the_window_the_prof_images(rig, was, takes):
     window, frame, after, _, _ = go(rig, takes, seed=6)
     assert after == go(was, takes, seed=6)[2] == M.want(window, frame, {t: (n, True) for t, n in takes.items()}, M.GAINS)
-    assert rig.window == was.window                                 # and what is read and written there, in order
+    assert rig.window == was.window  # and what is read and written there, in order
 
 
 def test_only_what_is_asked_for_is_copied(rig):
     mc = rig.mc
     mark = np.full((BLOCK, mm.FRAME_CH), 0x5a5a5a5a, dtype=np.int64)
     mc.write(mm.PRE_FRAME, mark.astype(">u4").tobytes())
-    mc.w32(mm.PRE_FRAME, 0)                                         # the return was not muted the block before
+    mc.w32(mm.PRE_FRAME, 0)  # the return was not muted the block before
     _, _, _, tracks, inputs = go(rig, {1: 4, 6: FX}, seed=8)
     ours = np.frombuffer(bytes(mc.read(mm.PRE_FRAME, 4 * BLOCK * mm.FRAME_CH)), dtype=">i4").astype(np.int64).reshape(BLOCK, mm.FRAME_CH)
     want = mark.copy()
     want[:, 4], want[:, 14], want[:, 15] = tracks[2], inputs[6], inputs[7]
     want[0, 0] = 0
     assert np.array_equal(ours, want)
-    assert np.array_equal(rig.at_mixer, inputs)                     # and with no mute the inputs reach the mixer as they came
+    assert np.array_equal(rig.at_mixer, inputs)  # and with no mute the inputs reach the mixer as they came
 
 
 def test_the_fx_tracks_mute_takes_its_return_down_over_a_block_and_the_take_is_whole(rig):
     rig.mc.w32(mm.PRE_FRAME, 0)
     k = np.arange(BLOCK)
     for step, (mutes, pattern, gain) in enumerate([(FX_BIT, 0, BLOCK - 1 - k), (FX_BIT, 0, 0 * k), (0, FX_BIT, 0 * k), (0, 0, k + 1), (0, 0, None),
-                                                   (0xfff, 0xfff, None)]):       # every other track's mute is nothing to it
+                                                   (0xfff, 0xfff, None)]):  # every other track's mute is nothing to it
         window, frame, after, tracks, inputs = go(rig, {2: FX}, seed=20 + step, mutes=mutes, pattern=pattern)
         want = inputs.astype(np.int64)
         if gain is not None:
             want[6:] = (want[6:] >> 5) * gain
         assert np.array_equal(rig.at_mixer, want), step
-        assert np.array_equal(rig.at_mixer[:6], inputs[:6])        # the analog tracks and the external input are not touched
+        assert np.array_equal(rig.at_mixer[:6], inputs[:6])  # the analog tracks and the external input are not touched
         assert after == M.want(window, before_the_mixer(frame, tracks, inputs), {2: (FX, True)}, M.GAINS), step
     assert rig.mc.r32(mm.PRE_FRAME) == 0
 
@@ -193,11 +177,11 @@ def test_the_image(official_path, official, main, prof):
     quiet = lambda s: None
     raw, _, built, _, syms = build.build(official_path, log=quiet, xfade=13)
     was_raw, _, was, _, _ = build.build(official_path, log=quiet, xfade=12)
-    assert hashlib.sha256(was_raw).hexdigest().startswith("20f3d6b6")      # the soft image, as it is
+    assert hashlib.sha256(was_raw).hexdigest().startswith("20f3d6b6")  # the soft image, as it is
     new, old = built.section(3), was.section(3)
     assert new == main[0] != old == prof[0] and len(new) == len(old)
     assert built.section(7) == was.section(7)
-    spans = [mm.CAVE_PRE, mm.CAVE_PROF, mm.CAVE_ALOCK, mm.CAVE_METER, (mm.MIX_CALL + 2, mm.MIX_CALL + 6)]       # the last: the mixer's call, to a routine that moved
+    spans = [mm.CAVE_PRE, mm.CAVE_PROF, mm.CAVE_ALOCK, mm.CAVE_METER, (mm.MIX_CALL + 2, mm.MIX_CALL + 6)]  # the last: the mixer's call, to a routine that moved
     stray = [mm.BASE + k for k in range(len(new)) if new[k] != old[k] and not any(mm.off(a) <= k < mm.off(b) for a, b in spans)]
     assert not stray, [hex(a) for a in stray[:24]]
     assert new[mm.off(mm.MIX_CALL):][:6] == b"\x4e\xb9" + syms["mix_rec"].to_bytes(4, "big")

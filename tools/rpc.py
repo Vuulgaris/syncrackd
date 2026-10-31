@@ -1,13 +1,14 @@
 """The unit's file protocol over USB MIDI SysEx, as bytes only. Nothing here opens a port.
 
-The reference the phone app is checked against (its golden frames come from here). Facts and how
-each was confirmed: docs/FINDINGS.md, "The file protocol, for the phone". Written from the facts,
-not from any source: Elektroid (GPL) was read, not copied.
+The reference the phone app is checked against (its golden frames come from here). Facts and how each was confirmed:
+docs/FINDINGS.md, "The file protocol, for the phone". Written from the facts, not from any source: Elektroid (GPL) was
+read, not copied.
 
 A frame is HEADER, the message packed 7 bits to a byte, 0xf7. A message is the sender's sequence
 number (2 bytes), 2 bytes (0 in a request; in a response the request's sequence number), the
 command, then its arguments. A response's command is the request's | 0x80, then a status byte
 (1 is good). Every number is big-endian.
+
 """
 import struct
 import zlib
@@ -33,26 +34,26 @@ DATA_CLEAR = 0x5C
 DATA_SWAP = 0x5D
 DATA_RENAME = 0x5E
 
-BLOCK = 0x2000         # bytes a partial read or write asks for
-LIST_START = 18        # a list response's first entry, in the unpacked message
+BLOCK = 0x2000  # bytes a partial read or write asks for
+LIST_START = 18  # a list response's first entry, in the unpacked message
 
 # A data file (a project, a sound, a sample) is a header, its payload and a footer.
-FILE_MAGIC = 0xAC11D303     # in the unit's code: mainmap.RPC_FILE_MAGIC_AT
-FILE_TAIL = 0xAAA1DAAA      # mainmap.RPC_FILE_TAIL_AT
-FILE_HEADER = ">IBHHIIiiIBB"    # magic, version 2, family, device, os, type, version, index, size, packed, footer
-FILE_FOOTER = ">III"            # crc() of the payload, the payload's size, FILE_TAIL (read off the unit)
+FILE_MAGIC = 0xAC11D303  # in the unit's code: mainmap.RPC_FILE_MAGIC_AT
+FILE_TAIL = 0xAAA1DAAA  # mainmap.RPC_FILE_TAIL_AT
+FILE_HEADER = ">IBHHIIiiIBB"  # magic, version 2, family, device, os, type, version, index, size, packed, footer
+FILE_FOOTER = ">III"  # crc() of the payload, the payload's size, FILE_TAIL (read off the unit)
 SYNTAKT_FAMILY, SYNTAKT_DEVICE = 8, 13
 TYPE_SAMPLE = 8
-SAMPLE_HEADER = 64          # 'SAMP', version, 3 pad, frames, name of 16, 36 reserved: mainmap.SAMPLE_HEADER
+SAMPLE_HEADER = 64  # 'SAMP', version, 3 pad, frames, name of 16, 36 reserved: mainmap.SAMPLE_HEADER
 
 
 def crc(data):
-    """zlib's crc32 begun at 0xffffffff: a file's footer and each written block (read off the unit 2026-10-14)."""
     return zlib.crc32(data, 0xFFFFFFFF)
 
 
 def pack7(data):
-    """8-bit bytes to 7-bit: each 7 bytes become their 7 high bits (first byte's the highest), then the 7 low parts."""
+    """8-bit bytes to 7-bit: each 7 bytes become their 7 high bits (first byte's the highest), then the 7 low parts.
+    """
     out = bytearray()
     for i in range(0, len(data), 7):
         chunk = data[i:i + 7]
@@ -160,7 +161,7 @@ def list_entries(msg):
     return out
 
 
-def sample_file(frames, name, slot, os_version=0x30303937):     # "0097", as the unit on 1.42 writes it
+def sample_file(frames, name, slot, os_version=0x30303937):  # "0097", as the unit on 1.42 writes it
     """A slot's sample (int16 mono, 48 kHz) as the data file /samples/<slot> takes."""
     pcm = struct.pack(">%dh" % len(frames), *frames)
     head = struct.pack(">4sB3xI16s36x", b"SAMP", 0, len(frames), name.encode("cp1252")[:16])

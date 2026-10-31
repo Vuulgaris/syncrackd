@@ -1,17 +1,4 @@
-"""The multi image: the alock image with several tracks recording at once, each from its own source.
-
-The ring is no ring: its eight blocks are a block a track. The main CPU feeds every track that says record its own
-source's block, and writes the count and the bits of the blocks it wrote as one long, last. The audio CPU takes a
-track's block before the voice loop (engine/stub.S, rec_all), where the stops image took the ring's after it.
-
-What is held here: a take is what the stops image's take of the same blocks is; eight tracks take eight blocks, each
-its own; a block the main CPU writes while the voices run is taken whole, by the next interrupt, once; the feed's
-blocks are the alock image's by the rule (tests/test_feed.py, spec), a track each; what a block of two, four and
-eight takes costs the main CPU; and both programs differ from the images before only in their declared places.
-
-Not held, and only the unit can show it: that the main CPU never writes a block while the audio CPU reads it. The
-order is read from stock, not timed, and the emulator has no time.
-"""
+"""The multi image: the alock image with several tracks recording at once, each from its own source."""
 import shutil
 
 import numpy as np
@@ -32,8 +19,8 @@ from tools import mainmap as mm
 
 pytestmark = pytest.mark.skipif(not shutil.which("m68k-elf-gcc"), reason="no ColdFire cross-compiler")
 
-LANE = m.MAILBOX + m.MAILBOX_RING       # track t's block: 128 bytes on from the track's before
-BITS = m.MAILBOX + 2                    # the blocks written with the count, a bit a track
+LANE = m.MAILBOX + m.MAILBOX_RING  # track t's block: 128 bytes on from the track's before
+BITS = m.MAILBOX + 2  # the blocks written with the count, a bit a track
 RND = m.MAILBOX + 4
 S_REC, S_RK, S_RPOS = PK.S_REC, PK.S_RK, PK.S_RPOS
 
@@ -74,7 +61,8 @@ def folded(monkeypatch):
     monkeypatch.setattr(P, "HookEngine", Folded)
 
 
-# ---- the audio CPU: a block a track, before the voices --------------------------------------------------------------
+# ---- the audio CPU: a block a track, before the voices
+# --------------------------------------------------------------
 
 def recorder(built, places, mode=P.REC | P.STEREO):
     """{track: place}: those tracks' SMPL on their places and REC on. mode: one for all, or {track: mode}."""
@@ -113,8 +101,8 @@ def test_eight_tracks_take_eight_blocks_each_its_own(multi):
     e = recorder(multi, places)
     feed = noise((12, 8, BLOCK, 2), 31)
     write(e, 7, {t: feed[0, t] for t in range(8)})
-    e.block(0xff, 0)                                # the trigs; the notes start in the interrupt after, and the takes
-    for b in range(1, 12):                          # begin with the one after that: the block written while they started
+    e.block(0xff, 0)  # the trigs; the notes start in the interrupt after, and the takes
+    for b in range(1, 12):  # begin with the one after that: the block written while they started
         write(e, 7 + b, {t: feed[b, t] for t in range(8)})
         e.block(0, 0)
     n = 10 * BLOCK
@@ -128,7 +116,8 @@ def test_eight_tracks_take_eight_blocks_each_its_own(multi):
 @pytest.mark.parametrize("track, place, mode", [(0, 3, P.REC | P.STEREO), (4, 20, P.REC), (7, 40, P.REC), (2, 63, P.REC | P.STEREO)])
 def test_a_take_is_the_stops_images_take_of_the_same_blocks(multi, stops, track, place, mode):
     """A stereo place's take, a mono one's and a single slot's, nine blocks and the note let go: the table's every line,
-    the marks of what is kept, the frames and the voice's own count."""
+    the marks of what is kept, the frames and the voice's own count.
+    """
     feed = noise((9, BLOCK, 2), 40 + place)
     old = recorder(stops, {track: place}, mode)
     for b, x in enumerate(feed):
@@ -148,7 +137,8 @@ def test_a_take_is_the_stops_images_take_of_the_same_blocks(multi, stops, track,
 
 def test_a_block_written_while_the_voices_run_is_taken_whole_by_the_next_interrupt_and_once(multi):
     """The main CPU's place in a block: it writes after its mixer, while the audio CPU is at its voices or past them.
-    Here every block is written as the voice loop is entered. On some blocks nothing is written: nothing is taken."""
+    Here every block is written as the voice loop is entered. On some blocks nothing is written: nothing is taken.
+    """
     track, place = 5, 9
     e = recorder(multi, {track: place})
     feed = noise((14, BLOCK, 2), 52)
@@ -165,8 +155,8 @@ def test_a_block_written_while_the_voices_run_is_taken_whole_by_the_next_interru
     for b in range(14):
         now["b"] = b
         e.block((1 << track) if b == 0 else 0, 0)
-        if b >= 2 and b - 1 not in skip:            # the note started in the second interrupt
-            want.append(feed[b - 1])                # the block before's, as it was when this interrupt began
+        if b >= 2 and b - 1 not in skip:  # the note started in the second interrupt
+            want.append(feed[b - 1])  # the block before's, as it was when this interrupt began
         got = taken(e, 2 * place, BLOCK * len(want))
         assert state(e, track) == ((1, 2 * place, BLOCK * len(want)) if b else (0, 0, 0))
         assert np.array_equal(got, np.array(want)[:, :, 0].ravel() if want else got)
@@ -179,7 +169,7 @@ def test_a_track_whose_bit_is_not_set_takes_nothing_while_another_is_fed(multi):
     feed = noise((6, 8, BLOCK, 2), 60)
     write(e, 1, {})
     e.block(0b01000010, 0)
-    e.block(0, 0)                                   # the notes start
+    e.block(0, 0)  # the notes start
     for b in range(6):
         write(e, 2 + b, {6: feed[b, 6]} if b % 2 else {1: feed[b, 1], 6: feed[b, 6]})
         e.block(0, 0)
@@ -193,15 +183,15 @@ def test_a_full_buffer_ends_the_take_and_nothing_goes_past_its_end(multi):
     e = recorder(multi, {track: place})
     feed = noise((3, BLOCK, 2), 70)
     e.block(1 << track, 0)
-    e.block(0, 0)                                   # the note starts
+    e.block(0, 0)  # the note starts
     at = e.voice(track) + ST
-    e.mc.w32(at + S_RPOS, m.REC_MAX - BLOCK)        # test only
+    e.mc.w32(at + S_RPOS, m.REC_MAX - BLOCK)  # test only
     write(e, 9, {track: feed[0]})
     e.block(0, 0)
     assert state(e, track) == (0, 12, m.REC_MAX)
     last = np.frombuffer(bytes(e.mc.read(PK.buf(12) + 2 * (m.REC_MAX - BLOCK), 2 * BLOCK)), dtype=">i2")
     assert np.array_equal(last, feed[0, :, 0])
-    e.mc.write(at + S_REC, b"\x01")                 # test only: a take that says it runs with no room left
+    e.mc.write(at + S_REC, b"\x01")  # test only: a take that says it runs with no room left
     marks = [bytes(e.mc.read(PK.buf(k), 4 * BLOCK)) for k in (13, 14)]
     write(e, 10, {track: feed[1]})
     e.block(0, 0)
@@ -210,7 +200,9 @@ def test_a_full_buffer_ends_the_take_and_nothing_goes_past_its_end(multi):
 
 
 def playing(built, takes=()):
-    """Eight samplers, 0 to 5 playing a sample each and looping, every track in `takes` recording. -> the engine, trigged."""
+    """Eight samplers, 0 to 5 playing a sample each and looping, every track in `takes` recording. -> the engine,
+    trigged.
+    """
     e = P.engine(built, pool={k: noise(3000 + 500 * k, 80 + k) for k in range(8)})
     P.box(e)
     for t in range(8):
@@ -233,8 +225,8 @@ def test_with_no_take_the_sound_is_the_stops_images_and_the_interrupt_no_longer(
     assert sorted(set(more)) == AUDIO_IDLE, more
 
 
-AUDIO_IDLE = [-35, -19]         # instructions more an interrupt with no take: fewer, the eight voices looked at in one routine
-AUDIO_TAKES = (12924, 18243)    # an interrupt with eight stereo takes running and fed: this image, the stops image
+AUDIO_IDLE = [-35, -19]  # instructions more an interrupt with no take: fewer, the eight voices looked at in one routine
+AUDIO_TAKES = (12924, 18243)  # an interrupt with eight stereo takes running and fed: this image, the stops image
 
 
 def test_what_eight_takes_cost_the_audio_cpu(multi, stops):
@@ -258,7 +250,8 @@ def test_what_eight_takes_cost_the_audio_cpu(multi, stops):
     assert AUDIO_TAKES[0] <= AUDIO_TAKES[1]
 
 
-# ---- the main CPU: every track that says record is fed its own --------------------------------------------------------
+# ---- the main CPU: every track that says record is fed its own
+# --------------------------------------------------------
 
 class Feed(F.Feed):
     """test_feed's rig for an image with the solos' run, where the multi image's source lookup is."""
@@ -277,7 +270,8 @@ def rig(main):
 
 
 def knobs(modes, locks=None):
-    """A block of parameters: every digital track a sampler, MODE as given, a step's REC as given and else not there."""
+    """A block of parameters: every digital track a sampler, MODE as given, a step's REC as given and else not there.
+    """
     b = bytearray(make_block(ALL, [modes.get(t, 0) for t in range(12)]))
     for t in range(8):
         b[STRIDE * t + F.P_REC] = (locks or {}).get(t, 0)
@@ -286,8 +280,9 @@ def knobs(modes, locks=None):
 
 
 def want(window, frame, takes, gains):
-    """The window after, by the rule: {track: (source, stereo)}, the tracks in order, each block made as the one
-    block was (tests/test_feed.py, spec), the dither's number going from one to the next; then the count and the bits."""
+    """The window after, by the rule: {track: (source, stereo)}, the tracks in order, each block made as the one block
+    was (tests/test_feed.py, spec), the dither's number going from one to the next; then the count and the bits.
+    """
     w = bytearray(window)
     count = (int.from_bytes(window[m.MAILBOX:m.MAILBOX + 2], "big") + 1) & 0xffff
     bits = 0
@@ -307,7 +302,7 @@ def fed(rig, modes, gains, locks=None, seed=3, seq=0x0105):
     rig.window = []
     window, frame = junk(seq), frames(seed=seed)
     ret, after = rig.run(knobs(modes, locks), frame, window)
-    assert all(size in (2, 4) for _, _, size, _ in rig.window)      # the window stores words: never a byte
+    assert all(size in (2, 4) for _, _, size, _ in rig.window)  # the window stores words: never a byte
     return window, frame, after
 
 
@@ -367,7 +362,7 @@ COST = {
     ("0 dB STER", 1): (1274, 71), ("0 dB STER", 2): (2542, 139), ("0 dB STER", 4): (5078, 275), ("0 dB STER", 8): (10150, 547),
     ("+12 dB MONO", 1): (1631, 71), ("+12 dB MONO", 2): (3256, 139), ("+12 dB MONO", 4): (6506, 275), ("+12 dB MONO", 8): (13006, 547),
 }
-ONE_MORE = {(141, 1)}       # one take on the first track, more than the alock image's: the loop goes on to the other seven, and the count is a long
+ONE_MORE = {(141, 1)}  # one take on the first track, more than the alock image's: the loop goes on to the other seven, and the count is a long
 
 
 def spent(rig, modes, frame, db):
@@ -399,7 +394,8 @@ def test_what_two_four_and_eight_takes_cost_the_main_cpu(rig, case, many):
     assert cost[0] <= many * F.CEILING
 
 
-# ---- the image ------------------------------------------------------------------------------------------------------
+# ---- the image
+# ------------------------------------------------------------------------------------------------------
 
 def test_the_image(official_path, official, stock3, main, multi, stops):
     quiet = lambda s: None
@@ -410,13 +406,13 @@ def test_the_image(official_path, official, stock3, main, multi, stops):
     spans = [mm.CAVE_METER, mm.CAVE_ALOCK]
     diff = [k for k in range(len(new)) if new[k] != old[k]]
     stray = [k for k in diff if not any(mm.off(a) <= k < mm.off(b) for a, b in spans)]
-    assert len(stray) <= 64, [hex(mm.BASE + k) for k in stray[:20]]       # operands that name a routine that moved
+    assert len(stray) <= 64, [hex(mm.BASE + k) for k in stray[:20]]  # operands that name a routine that moved
     seven, last = built.section(7), was.section(7)
     assert seven == multi[0] != last == stops[0] and len(seven) == len(last)
-    runs = [m.PITCH_CAVES["r"], m.PITCH_CAVES["p"], m.CAVES["y"]]         # the take, the post step, the hook
+    runs = [m.PITCH_CAVES["r"], m.PITCH_CAVES["p"], m.CAVES["y"]]  # the take, the post step, the hook
     diff = [k for k in range(len(seven)) if seven[k] != last[k]]
     stray = [m.BASE + k for k in diff if not any(m.off(a) <= k < m.off(b) for a, b in runs)]
-    assert diff and stray == [0x40002905, 0x4000989b]                     # two operands that name a routine that moved
+    assert diff and stray == [0x40002905, 0x4000989b]  # two operands that name a routine that moved
     for sid in official.ids:
         if sid not in (3, 7):
             assert built.container.by_id(sid).stored == official.container.by_id(sid).stored

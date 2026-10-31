@@ -1,25 +1,24 @@
-/* Main CPU (section 3, OS 1.42 only): the phone image. Built with engine/keeptakes.c and engine/banks.c
- * (LOAD, BANKS, SAVE, PTN, PHONE), and in a run of its own.
+/* Main CPU (section 3, OS 1.42 only): the phone image. Built with engine/keeptakes.c and engine/banks.c (LOAD, BANKS,
+ * SAVE, PTN, PHONE), and in a run of its own.
  *
- * At LOAD PROJECT, before stock's load, the unit asks the phone which of the project's bank's slots it has
- * changed, waits for the answer, and then loads the project as before, with those slots (and only those)
- * sent to the audio CPU as well as the takes the load always restores. No phone, no answer, a timeout: the
- * load is stock's and ours as it was, a few seconds later at the most.
+ * At LOAD PROJECT, before stock's load, the unit asks the phone which of the project's bank's slots it has changed,
+ * waits for the answer, and then loads the project as before, with those slots (and only those) sent to the audio CPU
+ * as well as the takes the load always restores. No phone, no answer, a timeout: the load is stock's and ours as it
+ * was, a few seconds later at the most.
  *
- *   unit to phone  0x60  project number (2 x 7 bits), bank (0 to 2)
- *   phone to unit  0x62  "working": any frame of it renews the wait
- *   phone to unit  0x61  "done": ten bytes of 7 bits, the slots (0 to 63) it wrote, bit n % 7 of byte n / 7
+ * unit to phone  0x60  project number (2 x 7 bits), bank (0 to 2)
+ * phone to unit  0x62  "working": any frame of it renews the wait
+ * phone to unit  0x61  "done": ten bytes of 7 bits, the slots (0 to 63) it wrote, bit n % 7 of byte n / 7
  *
- * Every id is one the unit's parser does not know (docs/FINDINGS.md, "The file protocol, for the phone"), so
- * a frame of these is harmless on any image without this hook. The frames use the unit's own SysEx sink: it
- * exists once the unit has had any message, and until then there is no phone to ask.
+ * Every id is one the unit's parser does not know (docs/FINDINGS.md, "The file protocol, for the phone"), so a frame
+ * of these is harmless on any image without this hook. The frames use the unit's own SysEx sink: it exists once the
+ * unit has had any message, and until then there is no phone to ask.
  *
- * What stands behind it (docs/FINDINGS.md, "The phone image's two unknowns, read" and "designed"): the
- * kernel's wait and give on a three-word object, its timer table (a callback every 2^k ticks), the SysEx
- * entry's one jump. The phone writes with the ordinary write commands, and those go to the bank the drive
- * routines are pointed at, so the unit points them at the project's bank for the wait and puts them back
- * before stock's load, which then makes its own bank switch and loads every slot if there is one.
- */
+ * What stands behind it (docs/FINDINGS.md, "The phone image's two unknowns, read" and "designed"): the kernel's wait
+ * and give on a three-word object, its timer table (a callback every 2^k ticks), the SysEx entry's one jump. The
+ * phone writes with the ordinary write commands, and those go to the bank the drive routines are pointed at, so the
+ * unit points them at the project's bank for the wait and puts them back before stock's load, which then makes its
+ * own bank switch and loads every slot if there is one. */
 #include "sampler.h"
 
 #define sample_store ((void *(*)(void))0x4016f292)
@@ -44,8 +43,9 @@ u32 wipe_load(void *manager, void *project, void *progress);     /* the wipe ima
 #define FIRST_WAIT 264000000u       /* about 2 s: the phone answers or there is none */
 #define WORK_WAIT 528000000u        /* about 4 s since the phone last said it was working */
 
-/* The ask image (-DSEEN): the phone has said 0x63 (or 0x65, 0x66) since the start. Any host's message makes the sink, so
- * without it every LOAD PROJECT after Transfer, slink or the viewer waited FIRST_WAIT for a phone that is not there. */
+/* The ask image (-DSEEN): the phone has said 0x63 (or 0x65, 0x66) since the start. Any host's message makes the sink,
+ * so without it every LOAD PROJECT after Transfer, slink or the viewer waited FIRST_WAIT for a phone that is not
+ * there. */
 #ifdef SEEN
 #define SEEN_VAR "        .globl phone_seen\nphone_seen:   .long 0\n"
 #else
@@ -93,8 +93,8 @@ void wipe_now(void);
 void left_is(s32 left);         /* the newproj image: the project left, into the ask's last two bytes */
 #endif
 
-/* Two runs: p, called directly; q, only reached by an address (the jump, the timer, a pointer): the runs
- * are further apart than a short call reaches. */
+/* Two runs: p, called directly; q, only reached by an address (the jump, the timer, a pointer): the runs are further
+ * apart than a short call reaches. */
 #define CAVE __attribute__((section(".cave.p"), noinline))
 #define QAVE __attribute__((section(".cave.q"), noinline))
 
@@ -171,8 +171,8 @@ CAVE u32 phone_load(void *manager, void *project, void *progress)
     return ok;
 }
 
-/* The SysEx entry's one jump: (data past the header, its length, the interface). A frame of ours is
- * taken here and not handed on; anything else goes where it went. */
+/* The SysEx entry's one jump: (data past the header, its length, the interface). A frame of ours is taken here and
+ * not handed on; anything else goes where it went. */
 QAVE void phone_sysex(const u8 *data, u32 len, u32 iface)
 {
     if (len >= 6 && (data[5] == 0x61 || data[5] == 0x62)) {
@@ -182,7 +182,8 @@ QAVE void phone_sysex(const u8 *data, u32 len, u32 iface)
                 phone_limit = WORK_WAIT;
             } else if (len >= 18) {
                 u32 j, lo = 0, hi = 0;
-                /* message bytes 5 to 14 are at 6, 7, 9 to 15 and 17 of the packed data (a high-bits byte leads each seven) */
+                /* message bytes 5 to 14 are at 6, 7, 9 to 15 and 17 of the packed data (a high-bits byte leads each
+                 * seven) */
                 for (j = 0; j < 5; j++)
                     lo |= (u32)(data[j < 2 ? 6 + j : 7 + j] & 0x7f) << (7 * j);
                 for (j = 0; j < 5; j++)
@@ -199,21 +200,14 @@ QAVE void phone_sysex(const u8 *data, u32 len, u32 iface)
 }
 
 #ifdef KNOWS
-/* The fltr image: the phone may ask which project the unit last loaded (asked for by the phone app, 2026-10-16),
- * so that a take is filed back into the right project's bank with no doubt about a load it did not see.
+/* phone to unit  0x63  no arguments
+ * unit to phone  0x64  project (2 x 7 bits; 0x3fff: none since the start), its bank (0 to 2), the loads since the
+ * start (3 x 7 bits), the start's id (3 x 7 bits)
  *
- *   phone to unit  0x63  no arguments
- *   unit to phone  0x64  project (2 x 7 bits; 0x3fff: none since the start), its bank (0 to 2), the loads since the
- *                        start (3 x 7 bits), the start's id (3 x 7 bits)
- *
- * Before any load since the start (the count 0) the project is the one the unit started with, as SAVE PROJECT would
- * save to (`0x40018c2c`; `7f 7f` for one never saved), and the bank the drive's now: the start-up is not a load through
- * the Project Load job (2026-10-17: so the phone is told of the start-up too).
- *
- * Every load counts, a phone there or not: the load call and the SysEx entry's jump come here first, and go on to
- * the phone image's routines as they are. The start's id is the first timer's low 21 bits the first time one is
- * asked for (0 is made 1): nothing of this run is kept across a start (the image is loaded afresh), so it is 0 until
- * then. In a run of its own. */
+ * Every load counts, a phone there or not: the load call and the SysEx entry's jump come here first, and go on to the
+ * phone image's routines as they are. The start's id is the first timer's low 21 bits the first time one is asked for
+ * (0 is made 1): nothing of this run is kept across a start (the image is loaded afresh), so it is 0 until then. In a
+ * run of its own. */
 #define RAVE __attribute__((section(".cave.r"), noinline))
 #define manager_of ((void *(*)(void))0x4016e9c8)        /* stock's project manager, made at its first call long before */
 #define project_now ((s32 (*)(void *))0x40018c2c)        /* (manager): the project's number, the byte at 0x40653441; -1 never saved */
@@ -258,7 +252,8 @@ RAVE void knows_sysex(const u8 *data, u32 len, u32 iface)
     u32 p, n, b, bank;
 
 #ifdef CAPTURE
-    /* The rxcap image: the phone's capture on (0x65) and off (0x66), no arguments, nothing answered (engine/rxgate.S). */
+    /* The rxcap image: the phone's capture on (0x65) and off (0x66), no arguments, nothing answered
+     * (engine/rxgate.S). */
     if (len >= 6 && (data[5] == 0x65 || data[5] == 0x66)) {
 #ifdef SEEN
         phone_seen = 1;
@@ -318,13 +313,13 @@ RAVE void knows_sysex(const u8 *data, u32 len, u32 iface)
 }
 
 #ifdef FRESH
-/* The fresh image (on the destnum image): stock's Project Load job makes a project that is not there and saves it, and
- * never calls the load (0x4005bbfa: 0x4001d16a, then the save at 0x4005bc2c), so a new project never asked the phone and
- * A kept the project before's samples. 
- * 
+/* The fresh image (on the destnum image): stock's Project Load job makes a project that is not there and saves it,
+ * and never calls the load (0x4005bbfa: 0x4001d16a, then the save at 0x4005bc2c), so a new project never asked the
+ * phone and A kept the project before's samples.
+ *
  * Here the save goes as before; then the new project is a load: counted, and with a phone there asked as a load asks,
- * the ask's bank byte + 128 to say it is new (its bit in the high-bits byte before it), then loaded as LOAD PROJECT loads
- * it, with the slots the phone names. With no phone it is counted only, and nothing is loaded. */
+ * the ask's bank byte + 128 to say it is new (its bit in the high-bits byte before it), then loaded as LOAD PROJECT
+ * loads it, with the slots the phone names. With no phone it is counted only, and nothing is loaded. */
 #define save_keep ((u32 (*)(void *, void *, void *))SAVE_KEEP_AT)
 #define FAVE __attribute__((section(".cave.f"), noinline))
 
@@ -369,11 +364,10 @@ FAVE u32 fresh_save(void *manager, void *project, void *progress)
 
 #ifdef NEWPROJ
 /* The newproj image (on the fresh image): NEW PROJECT is stock's Project Init job, which makes a project of no number
- * (0x40059fd6: 0x4001d16a with -1) and neither saves nor loads, so it never asked the phone. 
- * Both calls of the maker come
- * here: the project left read first (for the ask, fresh_save's too), then the maker; an empty slot's new project asks
- * after its save (fresh_save); NEW PROJECT is counted as a load of no project and, with the phone's hello, asks as a load
- * does (project 0x3fff, marked new), waits, and loads the slots the phone names (keeptakes.c, new_slots). */
+ * (0x40059fd6: 0x4001d16a with -1) and neither saves nor loads, so it never asked the phone. Both calls of the maker
+ * come here: the project left read first (for the ask, fresh_save's too), then the maker; an empty slot's new project
+ * asks after its save (fresh_save); NEW PROJECT is counted as a load of no project and, with the phone's hello, asks
+ * as a load does (project 0x3fff, marked new), waits, and loads the slots the phone names (keeptakes.c, new_slots). */
 #define project_make ((void (*)(void *, s32))0x4001d16a)
 #define new_slots ((void (*)(void))NEW_SLOTS_AT)
 #define GAVE __attribute__((section(".cave.g"), noinline))
@@ -429,13 +423,10 @@ GAVE void fresh_make(void *manager, s32 project)
 #endif
 
 #ifdef WIPE
-/* The wipe image (on the newproj image): on the unit the phone's writes and clears went unanswered while a project job
- * waited on it (the phone app's log, 2026-10-27: "no answer to dataClear", then "no answer to writeOpen" for every slot),
- * its reads served. 
- * So the phone, having read A into its banks, answers 0x6A with the slots to empty (the done frame's ten
- * bytes); the unit, in its job after the wait, writes each one's first sector over with zeros (its header: the loader,
- * the scan and the boot then take the slot as empty), only on the bank the phone was asked about, reads the slot
- * headers again, and loads those slots as LOAD PROJECT loads the phone's. */
+/* So the phone, having read A into its banks, answers 0x6A with the slots to empty (the done frame's ten bytes); the
+ * unit, in its job after the wait, writes each one's first sector over with zeros (its header: the loader, the scan
+ * and the boot then take the slot as empty), only on the bank the phone was asked about, reads the slot headers
+ * again, and loads those slots as LOAD PROJECT loads the phone's. */
 #define store_write ((s32 (*)(void *, u32, u32, const void *, const void *, u32))0x40111628)
 #define ZEROS ((u32 *)0x4d94f2c0)       /* keeptakes.c's SLOT_AT, the staging of a slot read: free outside a load */
 #define IAVE __attribute__((section(".cave.i"), noinline))
@@ -490,9 +481,10 @@ JAVE void wipe_sysex(const u8 *data, u32 len, u32 iface)
 #endif
 
 #ifdef STREAM
-/* The stream image (on the wipe image): the phone writes a project's samples once its load is done, and the unit loads
- * each slot it names (engine/keeptakes.c, stream_add). LOAD PROJECT, once the phone has answered it, ends by saying so:
- * the ask frame with 0x6C in its id's place, the project and bank as asked. 0x6B, at any time, is a slot list to load. */
+/* The stream image (on the wipe image): the phone writes a project's samples once its load is done, and the unit
+ * loads each slot it names (engine/keeptakes.c, stream_add). LOAD PROJECT, once the phone has answered it, ends by
+ * saying so: the ask frame with 0x6C in its id's place, the project and bank as asked. 0x6B, at any time, is a slot
+ * list to load. */
 #define stream_add ((void (*)(u32, u32))STREAM_ADD_AT)
 #define LAVE __attribute__((section(".cave.l"), noinline))
 #define MAVE __attribute__((section(".cave.m"), noinline))

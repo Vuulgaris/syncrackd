@@ -1,19 +1,4 @@
-"""The hitui image: the hits image with the filter pages saying what DEL is on a sampler track.
-
-
-On a sampler track DEL is the hits' threshold and the envelope does not
-wait (engine/hits.c), but stock's filter page still named it DEL and drew a delay into FLTR1's picture of the envelope.
-
-Three places of stock's are each a call of ours (engine/hits.c, HITUI): FLTR2's loop takes a knob's name, the base
-turn routine takes the pop-up's name, and FLTR1's loop asks DEL's value for its picture. Held here, stock's own
-instructions run around each from where it sets its stack up to past the call: on a sampler track DEL's record is
-named HITS and its value for the picture is 0; on any other machine, and for any other record, all is stock's; the
-stack and every register stock keeps are as stock leaves them. And the image differs from the hits image only there.
-
-Stand-ins, as tests/test_page.py has them: the routine that gives the active track and the one that gives its machine,
-the holder's name method and the routine that gives a record's value. Not held, and only the unit can show it: that
-the page looks right.
-"""
+"""The hitui image: the hits image with the filter pages saying what DEL is on a sampler track."""
 import hashlib
 import shutil
 
@@ -32,7 +17,7 @@ RAM = 0x41000000
 PAGE, METHODS, TRACKS, KIT, HOLDER, HOLDER_METHODS, FLAG = (RAM + k for k in (0x100, 0x400, 0x800, 0x900, 0xa00, 0xb00, 0xc00))
 NAME_FN, VALUE_FN, STOCK_NAME = RAM + 0x1000, RAM + 0x1010, RAM + 0x1020
 TOP = RAM + 0xf000
-KEPT = (2, 3, 4, 5, 6, 7, 10, 11, 12, 13, 14)       # d2 to d7, a2 to a6: what a routine is to leave as it found them
+KEPT = (2, 3, 4, 5, 6, 7, 10, 11, 12, 13, 14)  # d2 to d7, a2 to a6: what a routine is to leave as it found them
 NAMES = {0x3f: "DEL", 0x40: "ATK", 0x45: "FENR", 0: None}
 
 
@@ -92,7 +77,7 @@ class Rig:
 def test_fltr2_names_del_hits_on_a_sampler_and_every_other_knob_as_stock(hitui, machine, record):
     r = Rig(hitui, machine)
     regs, moved = r.go(mm.FLTR2_NAME, mm.FLTR2_NAME + 28, {2: record, 10: PAGE})
-    assert moved == -4                                          # one long pushed, as stock's
+    assert moved == -4  # one long pushed, as stock's
     want = "HITS" if (machine, record) == (44, 0x3f) else NAMES[record if record < 505 else 0] or r.text(r.mc.r32(mm.UI_RECORDS + 0x30))
     assert r.text(r.mc.r32(TOP - 4)) == want
     assert all(regs[n] == (record if n == 2 else PAGE if n == 10 else 0x1111 * (n + 1)) for n in KEPT)
@@ -105,8 +90,8 @@ def test_the_pop_up_names_del_hits_on_a_sampler(hitui, machine, record):
     r.mc.write(STOCK_NAME, fw.sb("56c190c684dff768"))
     regs, moved = r.go(mm.POPUP_NAME - 0x0e, mm.POPUP_NAME + 6, {0: HOLDER, 2: record, 10: PAGE})
     assert moved == 0
-    assert r.text(regs[4]) == ("HITS" if (machine, record) == (44, 0x3f) else "DEL")       # the name the pop-up is given, in d4
-    assert regs[8] == METHODS                                   # a0: the page's methods, as stock leaves it
+    assert r.text(regs[4]) == ("HITS" if (machine, record) == (44, 0x3f) else "DEL")  # the name the pop-up is given, in d4
+    assert regs[8] == METHODS  # a0: the page's methods, as stock leaves it
     assert all(regs[n] == {2: record, 4: regs[4], 10: PAGE}.get(n, 0x1111 * (n + 1)) for n in KEPT)
 
 
@@ -117,8 +102,8 @@ def test_fltr1s_picture_has_no_delay_on_a_sampler(hitui, machine, start, atk, dl
     r = Rig(hitui, machine)
     regs, moved = r.go(start, mm.FLTR1_DEL + 6, {3: FLAG, 10: PAGE, 11: VALUE_FN})
     assert moved == 0
-    assert regs[4] == r.values[atk]                             # d4: ATK's value, stock's
-    assert regs[0] == (0 if (machine, dl) == (44, 0x3f) else r.values[dl])     # d0: DEL's, for the picture
+    assert regs[4] == r.values[atk]  # d4: ATK's value, stock's
+    assert regs[0] == (0 if (machine, dl) == (44, 0x3f) else r.values[dl])  # d0: DEL's, for the picture
     assert all(regs[n] == {3: FLAG, 4: regs[4], 10: PAGE, 11: VALUE_FN}.get(n, 0x1111 * (n + 1)) for n in KEPT)
 
 
@@ -126,7 +111,7 @@ def test_the_image(official_path, official, hitui):
     quiet = lambda s: None
     raw, _, built, _, syms = build.build(official_path, log=quiet, xfade=17, prof=True)
     was_raw, _, was, _, _ = build.build(official_path, log=quiet, xfade=16, prof=True)
-    assert hashlib.sha256(was_raw).hexdigest().startswith("27af79e2")      # the hits image, as it is
+    assert hashlib.sha256(was_raw).hexdigest().startswith("27af79e2")  # the hits image, as it is
     new, old = built.section(3), was.section(3)
     assert new == hitui[0]
     spans = [mm.CAVE_HITS, (mm.FILTER_ENV_CALL + 2, mm.FILTER_ENV_CALL + 6), (mm.FLTR2_NAME, mm.FLTR2_NAME + 28),

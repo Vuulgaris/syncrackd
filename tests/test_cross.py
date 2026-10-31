@@ -1,31 +1,4 @@
-"""The "cross" image: a loop's end blended into its start, where the fade image dipped.
-
-
-The dip was the fade image's answer to a click: a forward loop faded out over the 128 frames before its
-seam and in over the 64 after, about 4 ms of nothing once a pass.
-
-A blend needs something that leads to the place the next pass begins, and a loop that keeps its length has only
-what lies outside it (engine/sampler.h, XFADE):
-  - the 256 frames before the start, when there are that many: the pass's last 256 frames go down as those come
-    up, and the pass ends on the very frame the next begins after;
-  - or else the 256 after the end: the seam is 256 frames later on both sides, the pass running on past its end as
-    the frames after the start come up under it;
-  - a loop of the whole sample has neither, and keeps the dip.
-Played backwards the same the other way round. The blended frames are made of the sample's own, before it is
-pitched, and written out ahead, eight a block, so that a block in a seam is no more work than any other.
-
-What is held here, in emulation:
-  - the engine is the reference model bit for bit (emu/sampler_ref.py, xfade=True): forward, backwards, mono,
-    stereo, each of the two kinds of blend, at five pitches, and with the knobs moving;
-  - where there is nothing to blend with, and for a one-shot and a ping-pong, it is the mode image's engine;
-  - what a seam is now: a steady level stays where it is, a ramp's jump is spread over the blend, and outside the
-    frames around a seam the loop is the frames it was, pass after pass: it is as long as it was;
-  - how the blend is written, that a seam reached before it is all there dips as it did, that a pass inside its
-    blend is left alone by the knobs;
-  - what it writes and where, what it costs a block, and where its code is.
-
-Not held: how it sounds, and time on the unit. The meter in the page's last place is there for the second.
-"""
+"""The "cross" image: a loop's end blended into its start, where the fade image dipped."""
 import shutil
 
 import numpy as np
@@ -46,12 +19,12 @@ from tools import build, build_engine, build_main, deadcode, params
 pytestmark = pytest.mark.skipif(not shutil.which("m68k-elf-gcc"), reason="no ColdFire cross-compiler")
 
 ST = 1712
-S_XN, S_XUSE = 84, 86                   # in a voice's sampler state: frames of the blend written; 1 may go in, 2 is in
+S_XN, S_XUSE = 84, 86  # in a voice's sampler state: frames of the blend written; 1 may go in, 2 is in
 W, NEAR, FAR, N, STEP, REACH = ref.XF_W, ref.XF_NEAR, ref.XF_FAR, ref.XF_N, ref.XF_STEP, ref.XF_REACH
-XF, XF_STRIDE, XF_BYTES = 0x44062000, 0x800, 16 + 4 * N     # a voice's: the seam (four longs), then the left's frames and the right's
-WRITTEN = N // STEP                     # blocks it takes to write a blend out
+XF, XF_STRIDE, XF_BYTES = 0x44062000, 0x800, 16 + 4 * N  # a voice's: the seam (four longs), then the left's frames and the right's
+WRITTEN = N // STEP  # blocks it takes to write a blend out
 FRAMES = 6000
-FULL = 20000 * 65536                    # the steady level's sample, as a track's buffer has it
+FULL = 20000 * 65536  # the steady level's sample, as a track's buffer has it
 # name: (the pool, the knobs, does a seam blend)
 LOOPS = {
     "sound before the start": (ALONE, dict(loop=1, start=30, length=60), True),
@@ -116,7 +89,8 @@ def region(knobs):
     return a, FRAMES if ln >= 127 << 8 else a + ref.scale(FRAMES - a, ln)
 
 
-# ---- the engine is the model ----------------------------------------------------------------------------------------
+# ---- the engine is the model
+# ----------------------------------------------------------------------------------------
 
 @pytest.mark.parametrize("note", NOTES)
 @pytest.mark.parametrize("name", list(LOOPS))
@@ -129,9 +103,9 @@ def test_the_engine_is_the_reference_model_bit_for_bit(cross, name, note):
     got, mine = state(e), seam_of(e)
     assert bool(got["playing"]) == p.playing and (mine["n"], mine["use"]) == (p.xn, p.xuse)
     a, b = region(knobs)
-    faded = b - a >= e.player(0, 0)["inc"] >> 2             # (three octaves up these loops are too short to be faded at all)
+    faded = b - a >= e.player(0, 0)["inc"] >> 2  # (three octaves up these loops are too short to be faded at all)
     assert (mine["n"] == N) == (blends and faded) and (faded or note > 70)
-    if p.playing and p.xuse != 2:               # (inside a blend the engine counts its place from the blend's first frame)
+    if p.playing and p.xuse != 2:  # (inside a blend the engine counts its place from the blend's first frame)
         assert (got["frame"], got["a"], got["b"], got["c"], got["span"], got["fade"]) == (p.pos >> 12, p.pa, p.pb, p.pc, p.span, p.fade)
     if blends:
         assert (mine["wall"], mine["to"]) == p.xkey
@@ -179,20 +153,22 @@ def test_where_there_is_nothing_to_blend_with_it_is_the_mode_images_engine(cross
     assert seam_of(e)["n"] == 0 and seam_of(e)["use"] == 0
 
 
-# ---- what a seam is now -----------------------------------------------------------------------------------------------
+# ---- what a seam is now
+# -----------------------------------------------------------------------------------------------
 
 @pytest.mark.parametrize("note", [60, 55.25, 43.5])
 @pytest.mark.parametrize("knobs", [dict(start=30, length=60), dict(length=60), dict(sample=61, start=10, length=60)])
 def test_a_steady_level_stays_where_it_is(cross, auto, note, knobs):
-    """The steady level's sample, looped. The mode image's engine takes it down to nothing and up again at every
-    seam; here, once the blend is written, it does not move."""
+    """The steady level's sample, looped. The mode image's engine takes it down to nothing and up again at every seam;
+    here, once the blend is written, it does not move.
+    """
     knobs = dict(knobs, loop=1, sample=knobs.get("sample", 66) if knobs.get("sample") != 61 else 61)
     script = hold(knobs.get("start", 0), knobs["length"], 500)
     _, was, _ = play(auto, ALONE, script, note=note, **knobs)
     e, left, _ = play(cross, ALONE, script, note=note, **knobs)
     late = slice((WRITTEN + 2) * BLOCK, None)
     level = int(was.max())
-    assert abs(level - FULL) < 4 and was[late].min() < level // 100         # the dip, to a 128th
+    assert abs(level - FULL) < 4 and was[late].min() < level // 100  # the dip, to a 128th
     # (a frame between two of a steady level is a 30,000th under it: the table's rows add up to within that)
     assert left[late].min() > level - level // 20000 and left[late].max() == level and seam_of(e)["n"] == N
     if note == 60:
@@ -200,28 +176,30 @@ def test_a_steady_level_stays_where_it_is(cross, auto, note, knobs):
 
 
 def test_a_ramps_jump_is_spread_over_the_blend(cross, auto):
-    """The ramp, a loop of a quarter of it: the end is 10,700 above the start. A cut there is that jump in one frame;
-    the dip took the sound down to nothing over 128 frames and up over 64; the blend takes it from the one level to
-    the other in 256 frames, at 36 a frame where the ramp's own slope is 7 and the dip's steepest was 201."""
+    """The ramp, a loop of a quarter of it: the end is 10,700 above the start. A cut there is that jump in one frame; the
+    dip took the sound down to nothing over 128 frames and up over 64; the blend takes it from the one level to the
+    other in 256 frames, at 36 a frame where the ramp's own slope is 7 and the dip's steepest was 201.
+    """
     knobs = dict(loop=1, sample=68, start=40, length=50)
     a, b = region(knobs)
     jump = (int(POOL[4][b - 1]) - int(POOL[4][a])) * 65536
     script = hold(40, 50, 500)
     _, was, _ = play(auto, ALONE, script, **knobs)
     e, left, _ = play(cross, ALONE, script, **knobs)
-    late = slice(b - a + 200, None)             # (the first seam comes before its blend is written, and dips)
+    late = slice(b - a + 200, None)  # (the first seam comes before its blend is written, and dips)
     steps, steps_was = np.abs(np.diff(left[late].astype(np.int64))), np.abs(np.diff(was[late].astype(np.int64)))
     slope = 40000 * 65536 // FRAMES
     assert jump > 10000 * 65536 and steps.max() < jump // 200 and steps.max() < slope + jump // W + 3 * 65536
-    assert steps_was.max() > 5 * steps.max()                                # the dip's way down, and its own wrap, were the steeper
+    assert steps_was.max() > 5 * steps.max()  # the dip's way down, and its own wrap, were the steeper
 
 
 @pytest.mark.parametrize("knobs, lead", [(dict(loop=1, start=30, length=60), 0), (dict(loop=1, length=60), W),
                                          (dict(loop=1, sample=63, start=10, length=60), 0)])
 def test_a_loop_is_as_long_as_it_was_and_only_the_frames_at_a_seam_are_others(cross, auto, knobs, lead):
-    """Noise, at its own pitch, eight passes: against the mode image's engine, every frame is the frame it was
-    but those of a blend and of the dip it stands in for. With nothing before the start to blend with, the seam is
-    256 frames on: the frames that differ are the dip's and the 256 after each wrap."""
+    """Noise, at its own pitch, eight passes: against the mode image's engine, every frame is the frame it was but those
+    of a blend and of the dip it stands in for. With nothing before the start to blend with, the seam is 256 frames
+    on: the frames that differ are the dip's and the 256 after each wrap.
+    """
     a, b = region(knobs)
     span = b - a
     blocks = 8 * span // BLOCK
@@ -229,15 +207,16 @@ def test_a_loop_is_as_long_as_it_was_and_only_the_frames_at_a_seam_are_others(cr
     _, was, _ = play(auto, ALONE, script, **knobs)
     _, left, _ = play(cross, ALONE, script, **knobs)
     other = np.nonzero(left != was)[0]
-    first = int(np.ceil((WRITTEN + 1) * BLOCK / span))                     # the first seam the blend is written for
+    first = int(np.ceil((WRITTEN + 1) * BLOCK / span))  # the first seam the blend is written for
     seams = [k * span for k in range(first, 9)]
     assert len(other) and all(any(s - max(W, 128) - 8 <= n < s + max(lead, 64) + 8 for s in seams) for n in other)
-    for s in seams[:-1]:                                                    # and at every such seam they do differ
+    for s in seams[:-1]:  # and at every such seam they do differ
         assert np.any((other >= s - 128) & (other < s + lead))
     assert np.array_equal(left[:seams[0] - W - 8], was[:seams[0] - W - 8])
 
 
-# ---- how the blend is written ---------------------------------------------------------------------------------------
+# ---- how the blend is written
+# ---------------------------------------------------------------------------------------
 
 @pytest.mark.parametrize("pool, knobs", [(ALONE, dict(loop=1, start=30, length=60)), (POOL, dict(loop=1, sample=63, start=10, length=60))])
 def test_eight_frames_a_block_from_the_block_after_the_note_starts(cross, pool, knobs):
@@ -248,10 +227,10 @@ def test_eight_frames_a_block_from_the_block_after_the_note_starts(cross, pool, 
     p = ref.Player(pool, fade=True, live=True, floor=True, hq=12, xfade=True)
     p.inc = 4096
     p.note_on(sample=knobs.get("sample", 64), start=knobs.get("start", 0), length=knobs.get("length", 127), loop=1)
-    e.block()                                                               # the note starts: nothing is written in that block,
+    e.block()  # the note starts: nothing is written in that block,
     p.block()
     assert seam_of(e)["n"] == 0 and bytes(e.mc.read(XF, XF_BYTES)) == b"\x5a" * XF_BYTES
-    wait = 1 if p.fstep else 0                                              # nor in the second block of the fade in a cut start has
+    wait = 1 if p.fstep else 0  # nor in the second block of the fade in a cut start has
     for k in range(1, WRITTEN + 6):
         e.block()
         p.move(knobs.get("start", 0), knobs.get("length", 127))
@@ -268,13 +247,14 @@ def test_eight_frames_a_block_from_the_block_after_the_note_starts(cross, pool, 
             r = np.frombuffer(raw[2 * N:], dtype=">i2")
             assert list(r[:p.xn]) == p.xr[:p.xn] and raw[2 * (N + p.xn):] == b"\x5a" * (2 * (N - p.xn))
         else:
-            assert raw[2 * N:] == b"\x5a" * (2 * N)                         # a mono sample: no right channel's frames
-    assert bytes(e.mc.read(XF + XF_BYTES, 8 * XF_STRIDE - XF_BYTES)) == b"\x5a" * (8 * XF_STRIDE - XF_BYTES)     # and no other voice's
+            assert raw[2 * N:] == b"\x5a" * (2 * N)  # a mono sample: no right channel's frames
+    assert bytes(e.mc.read(XF + XF_BYTES, 8 * XF_STRIDE - XF_BYTES)) == b"\x5a" * (8 * XF_STRIDE - XF_BYTES)  # and no other voice's
 
 
 def test_the_blend_is_the_pass_going_down_as_what_leads_to_its_start_comes_up():
-    """The model's own frames, read against the sample: 80 of the pass, 256 that go from the one to the other a
-    256th a frame, 16 of what the seam leads to."""
+    """The model's own frames, read against the sample: 80 of the pass, 256 that go from the one to the other a 256th a
+    frame, 16 of what the seam leads to.
+    """
     x = [int(v) for v in POOL[0]]
     for knobs, rev in ((dict(start=30, length=60), False), (dict(length=60), False), (dict(sample=63, start=10, length=60), True),
                        (dict(sample=63, start=30), True)):
@@ -296,8 +276,9 @@ def test_the_blend_is_the_pass_going_down_as_what_leads_to_its_start_comes_up():
 
 
 def test_a_seam_reached_before_the_blend_is_all_written_dips_as_it_did(cross, auto):
-    """A loop of 23 ms: its first seam comes at block 35 and the blend is written at block 45. That seam is the
-    mode image's, frame for frame; the next is blended."""
+    """A loop of 23 ms: its first seam comes at block 35 and the blend is written at block 45. That seam is the mode
+    image's, frame for frame; the next is blended.
+    """
     knobs = dict(loop=1, sample=66, start=30, length=30)
     a, b = region(knobs)
     span = b - a
@@ -311,8 +292,9 @@ def test_a_seam_reached_before_the_blend_is_all_written_dips_as_it_did(cross, au
 
 
 def test_a_pass_inside_its_blend_is_left_alone_by_the_knobs(cross):
-    """STRT and LEN turned while a pass is in its blend: nothing of the note moves until it has wrapped, then
-    they are taken as a block that follows any other."""
+    """STRT and LEN turned while a pass is in its blend: nothing of the note moves until it has wrapped, then they are
+    taken as a block that follows any other.
+    """
     knobs = dict(loop=1, start=30, length=60)
     e = start(cross, POOL, **knobs)
     e.block(trig=1)
@@ -330,7 +312,7 @@ def test_a_pass_inside_its_blend_is_left_alone_by_the_knobs(cross):
         e.block()
         inside += 1
     assert 1 < inside <= REACH // BLOCK + 2
-    now = state(e)                                                          # wrapped, to where the blend led; and the block after takes the knobs
+    now = state(e)  # wrapped, to where the blend led; and the block after takes the knobs
     assert now["a"] == seam["to"] == held["c"] and now["frame"] < seam["to"] + BLOCK
     e.block()
     a, b = region(dict(start=50, length=70))
@@ -346,16 +328,16 @@ def test_a_seam_that_moves_begins_its_blend_again(cross):
     was = seam_of(e)
     assert was["n"] == N
     e.block()
-    assert seam_of(e) == was                                                # at rest: nothing more is written
+    assert seam_of(e) == was  # at rest: nothing more is written
     e.set_slot(0, START, 31)
     e.block()
     got = seam_of(e)
     assert got["n"] == STEP and got["to"] != was["to"]
-    for k in range(1, 40):                                                  # LEN moving every block: begun again every block
+    for k in range(1, 40):  # LEN moving every block: begun again every block
         e.set_slot(0, LENGTH, 60 + k / 4)
         e.block()
         assert seam_of(e)["n"] == STEP and seam_of(e)["use"] == 0
-    e.set_slot(0, LENGTH, 127)                                              # and a loop too short to be faded has none
+    e.set_slot(0, LENGTH, 127)  # and a loop too short to be faded has none
     e.set_slot(0, START, 126.5)
     e.block()
     assert seam_of(e)["n"] == 0
@@ -372,11 +354,13 @@ def test_a_new_note_begins_with_no_blend(cross):
     assert got["n"] == 0 and got["use"] == 0 and state(e)["frame"] < region(dict(start=30, length=60))[0] + 2 * BLOCK
 
 
-# ---- what it writes, and what it costs ----------------------------------------------------------------------------------
+# ---- what it writes, and what it costs
+# ----------------------------------------------------------------------------------
 
 def test_it_writes_a_voices_blend_and_nothing_else_that_the_mode_image_does_not(cross, auto):
-    """Two looping tracks and six idle ones, 200 blocks: every write the engine makes outside the voices' own state
-    is a write the mode image's engine makes, or lies in the two voices' blends."""
+    """Two looping tracks and six idle ones, 200 blocks: every write the engine makes outside the voices' own state is a
+    write the mode image's engine makes, or lies in the two voices' blends.
+    """
     from unicorn import UC_HOOK_MEM_WRITE
 
     def writes(built):
@@ -423,24 +407,26 @@ CYCLE = 90
 
 
 def cycle(image, factory, **knobs):
-    """Eight pitched stereo loops trigged together every 90 blocks, the third time round: -> instructions of the
-    block the notes start in, and of the two after."""
+    """Eight pitched stereo loops trigged together every 90 blocks, the third time round: -> instructions of the block
+    the notes start in, and of the two after.
+    """
     c = costs(image, factory, 55.25, 2 * CYCLE + 8, trig_every=CYCLE, **knobs)[2 * CYCLE - 1:]
     return c[1], c[2], c[3]
 
 
 def test_what_it_costs_an_interrupt(cross, auto, factory):
     """Instructions, of 117,348 for stock's heaviest; eight pitched stereo loops trigged together. The mode image's
-    engine first, for what a block was. A loop cut out of a sample: a block its blend's frames are written in is
-    2,100 over a steady one, for 44 blocks; a steady block is 600 over what it was (is the seam where it was, may
-    the pass go in); and a block in a seam, which was 9,400 over for the dip, is 3,800 over."""
+    engine first, for what a block was. A loop cut out of a sample: a block its blend's frames are written in is 2,100
+    over a steady one, for 44 blocks; a steady block is 600 over what it was (is the seam where it was, may the pass
+    go in); and a block in a seam, which was 9,400 over for the dip, is 3,800 over.
+    """
     was = costs(auto[0], factory, 55.25, 150, start=30, length=40)
     now = costs(cross[0], factory, 55.25, 150, start=30, length=40)
     steady_was, steady = int(np.median(was[60:])), int(np.median(now[WRITTEN + 8:]))
     writing = int(np.median(now[5:WRITTEN]))
-    assert abs(steady_was - 102750) < 300 and 8500 < max(was[60:]) - steady_was < 10300     # the dip's blocks stood out
+    assert abs(steady_was - 102750) < 300 and 8500 < max(was[60:]) - steady_was < 10300  # the dip's blocks stood out
     assert 450 < steady - steady_was < 750
-    assert 1900 < writing - steady < 2400                                                  # eight frames of two channels, eight tracks
+    assert 1900 < writing - steady < 2400  # eight frames of two channels, eight tracks
     assert 3300 < max(now[WRITTEN + 8:]) - steady < 4300 and max(now[WRITTEN + 8:]) - steady < (max(was[60:]) - steady_was) // 2
     # a loop of the whole sample, which has nothing to blend with: 500 a block more, and nothing written
     was, now = costs(auto[0], factory, 55.25, 60), costs(cross[0], factory, 55.25, 60)
@@ -448,13 +434,14 @@ def test_what_it_costs_an_interrupt(cross, auto, factory):
 
 
 def test_the_heaviest_blocks_are_what_they_were(cross, auto, factory):
-    """The block eight notes start in, which is the most an interrupt comes to, and the blocks of the fade in after a
-    cut start: 300 and 500 more. Nothing of a blend is written in a block a fade is on in. From a sample's own start
-    there is no fade, and the blend's first frames are written the block after the notes start: 2,800 more there,
-    in a block that was a steady one."""
+    """The block eight notes start in, which is the most an interrupt comes to, and the blocks of the fade in after a cut
+    start: 300 and 500 more. Nothing of a blend is written in a block a fade is on in. From a sample's own start there
+    is no fade, and the blend's first frames are written the block after the notes start: 2,800 more there, in a block
+    that was a steady one.
+    """
     was, now = cycle(auto[0], factory, start=30, length=40), cycle(cross[0], factory, start=30, length=40)
     assert 0 < now[0] - was[0] < 500 and 0 < now[1] - was[1] < 700 and max(now) == now[0] < 0.975 * T.SWARM
-    assert 2500 < now[2] - was[2] < 3100                                    # the fade in is over: the seam is worked out, and eight frames
+    assert 2500 < now[2] - was[2] < 3100  # the fade in is over: the seam is worked out, and eight frames
     was, now = cycle(auto[0], factory, length=40), cycle(cross[0], factory, length=40)
     assert 0 < now[0] - was[0] < 500 and 2500 < now[1] - was[1] < 3100 and max(now) == now[0] < 0.925 * T.SWARM
 
@@ -462,10 +449,11 @@ def test_the_heaviest_blocks_are_what_they_were(cross, auto, factory):
 def test_a_note_that_does_not_loop_costs_what_it_did(cross, auto, factory):
     was = costs(auto[0], factory, 55.25, 40, loop=0)
     got = costs(cross[0], factory, 55.25, 40, loop=0)
-    assert all(0 <= b - a < 420 for a, b in zip(was, got))                             # two calls and three tests a voice a block
+    assert all(0 <= b - a < 420 for a, b in zip(was, got))  # two calls and three tests a voice a block
 
 
-# ---- where it is ------------------------------------------------------------------------------------------------------
+# ---- where it is
+# ------------------------------------------------------------------------------------------------------
 
 def test_section_7_is_the_mode_images_but_for_our_code(stock, cross, auto):
     image, syms = cross
@@ -478,15 +466,16 @@ def test_section_7_is_the_mode_images_but_for_our_code(stock, cross, auto):
     lo, hi = m.CROSS_CAVES["o"]
     assert (lo, hi) == m.SPARE_RUNS[1] and hi - lo == 108 and lo <= syms["into"] < hi
     assert auto[0][m.off(lo):m.off(hi)] == stock[m.off(lo):m.off(hi)] and stock[m.off(hi) - 2:m.off(hi)] == b"\x4e\x75"
-    mine = {n.split(".")[0]: a for n, a in syms.items()}                    # (the compiler gives a routine it has specialised a longer name)
+    mine = {n.split(".")[0]: a for n, a in syms.items()}  # (the compiler gives a routine it has specialised a longer name)
     for name in ("bake", "xstep", "xset", "seam", "outside", "into"):
         assert any(a <= mine[name] < b for a, b in runs.values()) and name not in auto[1]
 
 
 def test_the_last_small_run_is_reached_by_nothing(stock, auto, descs, factory):
-    """The third of the four runs of unreferenced functions the map lists as spare (the time image's routine has
-    two, and the fourth is named four times in stock): nothing of stock's or of the mode image's names it or
-    branches there, and it is never run or read while every machine plays."""
+    """The third of the four runs of unreferenced functions the map lists as spare (the time image's routine has two, and
+    the fourth is named four times in stock): nothing of stock's or of the mode image's names it or branches there,
+    and it is never run or read while every machine plays.
+    """
     run = m.CROSS_CAVES["o"]
     T.reached_by_nothing(stock, [run])
     T.reached_by_nothing(auto[0], [run])

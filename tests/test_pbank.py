@@ -1,15 +1,4 @@
-"""The pbank image (engine/pbank.c, PBANK): the next image with BANK off the sampling page and in the PROJECT menu.
-
-
-one entry that moves to the next bank each time it is chosen, and the bank
-still loads only with a project. Here, the main CPU only:
-  - the PROJECT menu, built by stock's own constructors at the start, has a fourth entry under MANAGE PROJECTS, drawn
-    by stock's own list: SAMPLE BANK and the loaded bank, A>B with another chosen;
-  - choosing it, through stock's own call of an entry's action, moves BANK_WANT on, after C to A, and marks the menu
-    to be drawn again; nothing is loaded;
-  - knob D of the sampling page shows and turns nothing;
-  - section 7 the spread image's.
-Emulation only: the list's keys and its redraw on the unit are not run."""
+"""The pbank image (engine/pbank.c, PBANK): the next image with BANK off the sampling page and in the PROJECT menu."""
 
 import hashlib
 import re
@@ -29,8 +18,8 @@ from tools import mainmap as mm
 pytestmark = pytest.mark.skipif(not shutil.which("m68k-elf-gcc"), reason="no ColdFire cross-compiler")
 
 BANK_NOW, BANK_WANT = 0x40196aba, 0x40196abe
-ITEM_CLASS = 0x402410f8                 # an entry of a list: its name's call at + 24, its action's data at + 28
-ITEM_ACTION = 0x400fa638                # (entry): stock's call of an entry's action, as the list makes it (0x400ff5b6)
+ITEM_CLASS = 0x402410f8  # an entry of a list: its name's call at + 24, its action's data at + 28
+ITEM_ACTION = 0x400fa638  # (entry): stock's call of an entry's action, as the list makes it (0x400ff5b6)
 D_ = 3
 
 
@@ -72,7 +61,7 @@ def banks(s, now, want):
 def test_the_project_menu_has_a_fourth_entry_drawn_by_stock(main, scr, stock):
     was, now = stock.draw(menu(stock) + 56), scr.draw(menu(scr) + 56)
     rows = [y for y in range(64) if (was[y] != now[y]).any()]
-    assert rows and min(rows) >= 40                     # the three entries and the title as they were; under them, ours
+    assert rows and min(rows) >= 40  # the three entries and the title as they were; under them, ours
     assert len(entries(scr, main[1]["bank_name"])) == 1
     banks(scr, 0, 0)
     a = scr.draw(menu(scr) + 56)
@@ -93,7 +82,7 @@ def test_choosing_it_moves_to_the_next_bank_and_loads_nothing(main, scr, now, wa
         scr.mc.write(page + 20, b"\0")
         scr.run(ITEM_ACTION, item)
         assert scr.mc.r32(BANK_WANT) == b and scr.mc.r32(BANK_NOW) == now
-        assert scr.mc.read(page + 20, 1) == b"\x01"     # the menu marked to be drawn again
+        assert scr.mc.read(page + 20, 1) == b"\x01"  # the menu marked to be drawn again
 
 
 def test_the_text(main, scr):
@@ -118,14 +107,14 @@ def test_knob_d_of_the_sampling_page_is_nothing(main):
 
 def test_the_sampling_page_draws_d_empty(scr):
     dots = scr.draw(scr.page(*S.PAGES["sampling"]))
-    assert not dots[16:27, 106:117].any()            # inside stock's dotted box: no name, no value
+    assert not dots[16:27, 106:117].any()  # inside stock's dotted box: no name, no value
 
 
 def test_the_image(official_path, official, main):
     quiet = lambda s: None
     raw, _, built, _, _ = build.build(official_path, log=quiet, xfade=62, prof=True)
     was_raw, _, was, _, _ = build.build(official_path, log=quiet, xfade=61, prof=True)
-    assert hashlib.sha256(was_raw).hexdigest().startswith("8da5c8f4")      # the next image, as it is
+    assert hashlib.sha256(was_raw).hexdigest().startswith("8da5c8f4")  # the next image, as it is
     print("pbank image", hashlib.sha256(raw).hexdigest())
     new, old = built.section(3), was.section(3)
     assert new == main[0]

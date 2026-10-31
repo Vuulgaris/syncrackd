@@ -1,13 +1,4 @@
-"""The back image (engine/stub.S, BACK): the atrig image with SY SWARM, SY TOY, SY BITS and SD BASIC back as stock's.
-
-
-Our code that was in their runs (caves d, e, g) is linked at m.FAR and carried past section 7's end;
-far_load, in place of the start's two calls, copies it there between stock's SRAM copy and its BSS clear. Here:
-  - their runs, their table entries and the start's bytes outside the call are stock's;
-  - the copy, run: what lands at m.FAR is what the section carries;
-  - the sampler's sound, its hits word, SRR and a normalized take are the norm image's engine's to the bit;
-  - each restored machine plays as on stock.
-Emulation only: nothing of the start itself runs here (the rig loads the far code where the copy puts it)."""
+"""The back image (engine/stub.S, BACK): the atrig image with SY SWARM, SY TOY, SY BITS and SD BASIC back as stock's."""
 
 import shutil
 
@@ -105,7 +96,7 @@ def test_srr_is_norms(norm, back, official):
             r.set_slot(t, SAMPLE, 64 + t % 3)
             r.set_slot(t, START, 0)
             r.set_slot(t, LENGTH, 127)
-            r.set_slot(t, 23, 20 + 13 * t)      # SRR, MODE's slot
+            r.set_slot(t, 23, 20 + 13 * t)  # SRR, MODE's slot
             r.set_note(t, 60)
         r.block(0, 0)
         outs.append(np.concatenate([r.block(0xff if k == 0 else 0, 0)[2] for k in range(60)], axis=1))

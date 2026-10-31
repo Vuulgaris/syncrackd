@@ -1,14 +1,4 @@
-"""The xcarry image: the xcont image with the crossfade's amount handed over through the page's own method.
-
-Read (stock's turn, 0x4003b870): the change of a
-turn is added through the page's method at + 96 to the page's own value for the record, not to the kit's word that
-xf_take wrote, so the turning track began from its own old number. XCARRY, xf_carry: before the turn, the track's
-value is brought to the pattern's crossfade (the unfiltered largest, xf_live) through the page's + 88, which stock's
-own methods carry to the holder, and stock's turn goes on from it.
-
-Held here with the page rig, stock's + 84 and + 88 run as they are, the holder's value and change stood in for.
-Not held: the holder itself, and the unit.
-"""
+"""The xcarry image: the xcont image with the crossfade's amount handed over through the page's own method."""
 import hashlib
 import shutil
 
@@ -62,7 +52,7 @@ def test_the_turning_track_is_given_the_holders_amount_before_the_turn(main):
 def test_on_the_xcont_image_the_page_kept_its_own(xcont):
     r = turning(xcont, 5, {2: 60}, own=0)
     G.twist(r, D, 1)
-    assert r.changes == [] and r.ui[R_DEC] == TOP << 8            # the turn began from 0: the snap
+    assert r.changes == [] and r.ui[R_DEC] == TOP << 8  # the turn began from 0: the snap
 
 
 def test_a_track_that_holds_it_already_is_not_changed(main):
@@ -82,7 +72,7 @@ def test_the_image(official_path, main, xcont):
     quiet = lambda s: None
     raw, _, built, _, _ = build.build(official_path, log=quiet, xfade=45, prof=True)
     was_raw, _, was, _, _ = build.build(official_path, log=quiet, xfade=44, prof=True)
-    assert hashlib.sha256(was_raw).hexdigest().startswith("0c1210c5")      # the xcont image, as it is
+    assert hashlib.sha256(was_raw).hexdigest().startswith("0c1210c5")  # the xcont image, as it is
     assert built.section(7) == was.section(7)
     new, old = built.section(3), was.section(3)
     assert new == main[0] and old == xcont[0]

@@ -1,9 +1,7 @@
-/* EMAC hook in C. Same semantics as emu/emac.py, which stays the reference:
- * tests/test_emu_engine.py checks the two give bit-identical audio.
+/* EMAC hook in C. Same semantics as emu/emac.py, which stays the reference: tests/test_emu_engine.py checks the two
+ * give bit-identical audio.
  *
- * Built by emu/native.py into build/. Unicorn functions are passed in as
- * pointers so this file links against nothing.
- */
+ * Built by emu/native.py into build/. Unicorn functions are passed in as pointers so this file links against nothing. */
 #include <stddef.h>
 #include <stdint.h>
 
@@ -38,10 +36,9 @@ typedef struct {
     uint8_t kind, acc, rx, ry, rw, sub, clear, mode, areg, src_imm, src_reg;
 } emac_insn;
 
-/* One hook covers a whole code region. table[(addr - base) / 2] is NULL for
- * an ordinary instruction, SKIP for the NOPs inside a replaced EMAC
- * instruction, or the EMAC instruction to run. Unicorn walks its whole hook
- * list on every hooked instruction, so one hook per EMAC site is far slower. */
+/* One hook covers a whole code region. table[(addr - base) / 2] is NULL for an ordinary instruction, SKIP for the
+ * NOPs inside a replaced EMAC instruction, or the EMAC instruction to run. Unicorn walks its whole hook list on every
+ * hooked instruction, so one hook per EMAC site is far slower. */
 typedef struct {
     emac_state *st;
     const emac_insn **table;

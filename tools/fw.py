@@ -1,11 +1,12 @@
-"""Pinned Syntakt OS images: load, patch, build, verify. Never flashes anything.
+"""Pinned Syntakt OS images: load, patch, build, verify.
 
 Safety rules enforced here:
 - only official files with a known SHA-256 load
 - only sections in PATCHABLE can be replaced; bootstrap and updater hard-fail
 - every patch asserts the stock bytes at its site
 - verify() checks a built image differs from the official one only inside
-  the declared regions
+the declared regions
+
 """
 import glob
 import hashlib
@@ -49,8 +50,8 @@ class GuardError(Exception):
 @dataclass(frozen=True)
 class Patch:
     section: int
-    offset: int      # offset in the decoded section
-    stock: bytes     # bytes the official OS must have here
+    offset: int  # offset in the decoded section
+    stock: bytes  # bytes the official OS must have here
     new: bytes
     note: str = ""
 
@@ -194,13 +195,12 @@ def apply(img, patches):
 def verify(official, built_raw, regions):
     """Check a built file against the official image. Raises GuardError.
 
-    The built file must decode cleanly (packet checksums, content checksum,
-    layout), keep every section's length, and differ from the official
-    sections only inside regions = {id: [(start, end), ...]}.
+    The built file must decode cleanly (packet checksums, content checksum, layout), keep every section's length, and
+    differ from the official sections only inside regions = {id: [(start, end), ...]}.
     """
     built = Image(built_raw)
-    # the packet count follows the container size, which moves when a compressed
-    # section is repacked; decode() has already checked it against the packets present
+    # the packet count follows the container size, which moves when a compressed section is repacked; decode() has
+    # already checked it against the packets present
     for field in ("product", "base", "start_seq"):
         if getattr(built.transport, field) != getattr(official.transport, field):
             raise GuardError("transport parameter %s changed" % field)
