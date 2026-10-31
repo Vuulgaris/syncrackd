@@ -1,10 +1,18 @@
 PY ?= .venv/bin/python
 
-.PHONY: test setup render engine image image-phone image-full image-rec image-big image-keep image-double image-screen image-page image-load image-bank image-fade image-mute image-len image-live image-floor image-reclock image-pitch image-meter image-save image-safe image-probe image-stereo image-time image-time12 image-gain image-mode image-cross image-pack image-stops image-solo image-ptn image-feed image-once image-soloknob image-xfade image-gfade image-dma image-apage image-slock image-alock image-multi image-srr image-gear image-stay image-soft image-pre image-tail image-lap image-hits image-hitui image-trim image-slim image-six image-eight image-trig image-switch image-box image-xknob image-xshare image-fltr image-probe17 image-tlsolo image-long image-slice image-ring image-mixtime image-fast image-evtime image-rxoff image-evrx image-rxcap image-copy image-nodiv image-allright image-prewas image-cut image-nofx image-xfix image-xcont image-xcarry image-scan image-scratch image-soloend image-eucl image-norm image-atrig image-pad7 image-back image-stretch image-lock image-scrub image-slscrub image-grain image-stsw image-spread image-trans image-next image-pbank image-kind image-mirror image-trap image-shadow image-sink image-tune image-letgo image-ask image-axf image-gainup image-onedest image-destnum image-fresh image-newproj image-wipe image-stream image-evict image-handrec image-firstrec image-slotprobe samples stereo-sample stereo-check image-prof prof-read story check bundle single site
+.PHONY: test test-chain setup render engine image image-phone image-full image-rec image-big image-keep image-double image-screen image-page image-load image-bank image-fade image-mute image-len image-live image-floor image-reclock image-pitch image-meter image-save image-safe image-probe image-stereo image-time image-time12 image-gain image-mode image-cross image-pack image-stops image-solo image-ptn image-feed image-once image-soloknob image-xfade image-gfade image-dma image-apage image-slock image-alock image-multi image-srr image-gear image-stay image-soft image-pre image-tail image-lap image-hits image-hitui image-trim image-slim image-six image-eight image-trig image-switch image-box image-xknob image-xshare image-fltr image-probe17 image-tlsolo image-long image-slice image-ring image-mixtime image-fast image-evtime image-rxoff image-evrx image-rxcap image-copy image-nodiv image-allright image-prewas image-cut image-nofx image-xfix image-xcont image-xcarry image-scan image-scratch image-soloend image-eucl image-norm image-atrig image-pad7 image-back image-stretch image-lock image-scrub image-slscrub image-grain image-stsw image-spread image-trans image-next image-pbank image-kind image-mirror image-trap image-shadow image-sink image-tune image-letgo image-ask image-axf image-gainup image-onedest image-destnum image-fresh image-newproj image-wipe image-stream image-evict image-handrec image-firstrec image-slotprobe samples stereo-sample stereo-check image-prof prof-read story check bundle single site
 
-# every core, a test file to a worker (a long file in hundreds: tests/conftest.py). JOBS=0 runs them one after another.
+# The quick run, what a change needs: the tools, the emulator, the engine, the facts read from stock, and the release
+# image's own test file. test-chain runs every image's own file too (about 137 files, ten to twenty minutes): before
+# a release, or after a change to source older images are built from. A test file to a worker (a long file in
+# hundreds: tests/conftest.py); JOBS=0 runs them one after another.
 JOBS ?= auto
+TEST_CORE = toolchain container audio_map emu_engine sampler stereo_path build mainpatch deadcode emac patch public rpc stereo_check
+TEST_NOW = firstrec
 test:
+	$(PY) -m pytest -q -n $(JOBS) --dist loadgroup $(foreach t,$(TEST_CORE) $(TEST_NOW),tests/test_$(t).py)
+
+test-chain:
 	$(PY) -m pytest -q -n $(JOBS) --dist loadgroup tests
 
 # renders every stock machine to build/renders/ and prints the CPU budget

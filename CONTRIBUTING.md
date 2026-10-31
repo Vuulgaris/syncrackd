@@ -14,6 +14,7 @@ Contributions are welcome. The project is run the way the Linux kernel is: one m
 ## How a change is shaped
 
 - **A feature is an image.** It builds on the newest image in the chain, its new code sits under its own `#ifdef` or in a new file (older images must still build to the same hashes), and it has its own test file, `tests/test_<image>.py`, showing it differs from the image before only in what it declares.
+- **Which tests.** `make check IMAGE=x` runs your image's own test file. `make test` is the quick run (the tools, the emulator, the engine, and the release image's own file): run it before a PR. `make test-chain` runs every image's file (ten to twenty minutes): only if you changed source that older images are built from, and then say so in the PR. The tests need the official 1.42 file in `firmware/` and the cross-compiler; CI has neither, so it checks only the guard and that everything compiles.
 - **Where stock's own routine can run in emulation, run it.** A stand-in shares your mistake.
 - **A change to how a page looks:** `make screen` it and attach the PNG to the PR. (Only your own PR, and only because the screen is ours: if the render is mostly stock's page, describe it instead.)
 - **One change per PR.** One feature or one fix. Small commits, each one building.
