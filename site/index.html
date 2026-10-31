@@ -29,7 +29,7 @@
   ol { list-style: none; counter-reset: n; padding: 0; margin: 0; }
   ol li { counter-increment: n; margin: 0 0 10px; padding-left: 4ch; text-indent: -4ch; }
   ol li::before { content: counter(n) ".  "; color: var(--dim); }
-  #drop { display: block; margin-top: 6px; text-indent: 0; border: 2px dashed var(--line); padding: 10px 12px; cursor: pointer; }
+  #drop { display: inline-block; vertical-align: top; text-indent: 0; border: 2px dashed var(--line); padding: 10px 12px; cursor: pointer; }
   #drop:hover, #drop.over, #drop:focus-within { border-color: var(--fg); }
   #drop input { position: absolute; opacity: 0; width: 1px; height: 1px; }
   #drop span::before { content: "> "; color: var(--dim); }
@@ -41,9 +41,7 @@
   #status::after { content: ""; display: inline-block; width: .55em; height: 1em; margin-left: .2em; vertical-align: -.12em;
                    background: currentColor; animation: blink 1s steps(1) infinite; }
   @keyframes blink { 50% { opacity: 0; } }
-  #result { display: none; margin-top: 12px; }
-  .hash { word-break: break-all; color: var(--hot); text-transform: none; }
-  a.button { display: inline-block; margin-top: 12px; color: var(--bg); background: var(--fg); padding: 2px 12px;
+  a.button { display: none; margin-top: 12px; color: var(--bg); background: var(--fg); padding: 2px 12px;
              text-decoration: none; text-shadow: none; }
   a.button:hover, a.button:focus { background: var(--hot); outline: none; }
   @media (max-width: 560px) { body { font-size: 19px; } h1 { font-size: 64px; } }
@@ -55,25 +53,19 @@
   <header>
     <h1>SynCrackd</h1>
     <p>OS 1.42 patcher</p>
-    <p class="dim">Unofficial. Not Elektron's. At your own risk. <a href="https://github.com/Vuulgaris/syncrackd/blob/main/DISCLAIMER.md">Disclaimer</a></p>
+    <p class="dim">Unofficial. At your own risk. <a href="https://github.com/Vuulgaris/syncrackd/blob/main/DISCLAIMER.md">Disclaimer</a></p>
   </header>
   <hr>
   <ol>
-    <li>Back up your +Drive with Transfer.</li>
-    <li>Get Syntakt OS 1.42 from Elektron.</li>
-    <li>Load it. It never leaves this page.
-      <label id="drop"><input type="file" id="file" accept=".syx"><span>Syntakt_OS1.42.syx</span></label></li>
-    <li>Hashes must match. Save.</li>
-    <li>Flash as any OS update. Undo: flash stock 1.42.</li>
+    <li>Back up your +Drive.</li>
+    <li>Get OS 1.42 from Elektron.</li>
+    <li><label id="drop"><input type="file" id="file" accept=".syx,.zip"><span>Drop the .zip or .syx</span></label></li>
+    <li>Save. Flash with Transfer.</li>
   </ol>
   <p id="status" aria-live="polite">Loading</p>
-  <div id="result">
-    <p class="dim">Got</p><p class="hash" id="sha"></p>
-    <p class="dim">Want</p><p class="hash" id="want"></p>
-    <a class="button" id="save" download>Save</a>
-  </div>
+  <a class="button" id="save" download>Save</a>
   <hr>
-  <p class="dim">Don't share the output: it holds Elektron's firmware. <a href="https://github.com/Vuulgaris/syncrackd">Source</a> (MIT)</p>
+  <p class="dim">Undo: flash stock 1.42. Don't share the output. <a href="https://github.com/Vuulgaris/syncrackd">Source</a></p>
 </main>
 
 <script id="worker" type="text/js-worker">
@@ -92,7 +84,23 @@ patch = g["_install"]()
 import base64, json, zlib
 fw = patch.fw
 bundle = json.loads(zlib.decompress(base64.b85decode("".join(g["_BUNDLE"].split()))))
+def unzip(path):
+    import io, zipfile
+    with open(path, "rb") as f:
+        data = f.read()
+    if data[:4] != b"PK\\x03\\x04":
+        return
+    z = zipfile.ZipFile(io.BytesIO(data))
+    names = [n for n in z.namelist() if n.lower().endswith(".syx") and not n.startswith("__MACOSX/")
+             and not n.rsplit("/", 1)[-1].startswith("._")]
+    if not names:
+        raise fw.GuardError("no .syx in this zip")
+    picked = [z.read(n) for n in names]
+    known = [b for b in picked if fw.sha256(b) in fw.KNOWN]
+    with open(path, "wb") as f:
+        f.write((known or picked)[0])
 try:
+    unzip("/os.syx")
     raw = patch.apply(fw.load("/os.syx"), bundle)
     result = (True, raw, fw.sha256(raw), bundle["image"])
 except fw.GuardError as e:
@@ -119,7 +127,6 @@ result
   const status = (text, cls) => { $("status").textContent = text; $("status").className = cls || ""; };
   const release = await fetch("release.json").then((r) => r.json());
   const script = await fetch(release.file).then((r) => r.text());
-  $("want").textContent = release.output;
 
   const src = $("worker").textContent;
   const worker = new Worker(URL.createObjectURL(new Blob([src], { type: "text/javascript" })));
@@ -129,22 +136,19 @@ result
   worker.onmessage = (e) => {
     if (e.data.warm) { busy = false; status("Ready."); return; }
     clearInterval(tick); busy = false;
-    if (!e.data.ok) { status("Refused: " + e.data.err, "bad"); return; }
+    if (!e.data.ok) { status(/unknown file hash/.test(e.data.err) ? "Not OS 1.42." : e.data.err, "bad"); return; }
     const match = e.data.sha === release.output;
-    $("sha").textContent = e.data.sha;
-    const url = URL.createObjectURL(new Blob([e.data.out], { type: "application/octet-stream" }));
-    $("save").href = url;
-    $("save").download = "Syntakt_OS1.42_syncrackd_" + e.data.image + ".syx";
-    $("result").style.display = "block";
-    status(match ? "OK. Hashes match."
-                 : "Hash mismatch. Do not flash.", match ? "ok" : "bad");
-    $("save").style.display = match ? "inline-block" : "none";
     window.lastResult = { sha: e.data.sha, match, bytes: e.data.out.length };
+    if (!match) { status("Failed. Don't flash.", "bad"); return; }
+    $("save").href = URL.createObjectURL(new Blob([e.data.out], { type: "application/octet-stream" }));
+    $("save").download = "Syntakt_OS1.42_syncrackd_" + e.data.image + ".syx";
+    $("save").style.display = "inline-block";
+    status("Done.", "ok");
   };
 
   window.patchBytes = (buf) => {
     if (busy) { status("Busy."); return; }
-    busy = true; started = Date.now(); $("result").style.display = "none";
+    busy = true; started = Date.now(); $("save").style.display = "none";
     tick = setInterval(() => status("Patching... " + Math.round((Date.now() - started) / 1000) + "s"), 500);
     worker.postMessage({ syx: buf, script }, [buf]);
   };
@@ -156,7 +160,7 @@ result
   drop.addEventListener("dragleave", () => drop.classList.remove("over"));
   drop.addEventListener("drop", (e) => { e.preventDefault(); drop.classList.remove("over");
                                          take(e.dataTransfer.files[0]); });
-  status("Loading (10 MB, once)...");
+  status("Loading...");
 })();
 </script>
 </body>
