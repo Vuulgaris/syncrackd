@@ -44,6 +44,8 @@
   a.button { display: none; margin-top: 12px; color: var(--bg); background: var(--fg); padding: 2px 12px;
              text-decoration: none; text-shadow: none; }
   a.button:hover, a.button:focus { background: var(--hot); outline: none; }
+  .video { position: relative; aspect-ratio: 16 / 9; margin: 18px 0 0; border: 2px solid var(--line); background: #000; }
+  .video iframe { position: absolute; inset: 0; width: 100%; height: 100%; border: 0; }
   @media (max-width: 560px) { body { font-size: 19px; } h1 { font-size: 64px; } }
   @media (prefers-reduced-motion: reduce) { #status::after { animation: none; } }
 </style>
@@ -64,6 +66,9 @@
   </ol>
   <p id="status" aria-live="polite">Loading</p>
   <a class="button" id="save" download>Save</a>
+  <hr>
+  <p>Walkthrough</p>
+  <div class="video"><iframe src="https://www.youtube-nocookie.com/embed/zRZBmGb-m-4" title="SynCrackd: Stereo Sampling Syntakt Mod" allow="accelerometer; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" referrerpolicy="strict-origin-when-cross-origin" allowfullscreen loading="lazy"></iframe></div>
   <hr>
   <p class="dim">Undo: flash stock 1.42. Don't share the output. <a href="https://github.com/Vuulgaris/syncrackd">Source</a></p>
 </main>
