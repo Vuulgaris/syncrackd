@@ -6,9 +6,7 @@ A sampler for the Elektron Syntakt, built as a patch to the official OS 1.42.
 
 ## Video
 
-https://github.com/user-attachments/assets/d754bcb9-5a66-4578-baf0-59466183af42
-
-Recording with a record trig. The full walkthrough: [SynCrackd: Stereo Sampling Syntakt Mod](https://www.youtube.com/watch?v=zRZBmGb-m-4) on YouTube.
+[![Watch the SynCrackd walkthrough on YouTube](site/video.jpg)](https://www.youtube.com/watch?v=zRZBmGb-m-4)
 
 ## What it does
 
