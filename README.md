@@ -4,6 +4,10 @@ A sampler for the Elektron Syntakt, built as a patch to the official OS 1.42.
 
 **Unofficial. Not made, endorsed or supported by Elektron.** Read [DISCLAIMER.md](DISCLAIMER.md) before you flash anything.
 
+## Video
+
+[![SynCrackd: Stereo Sampling Syntakt Mod](https://img.youtube.com/vi/5BPgww21v5A/maxresdefault.jpg)](https://www.youtube.com/watch?v=5BPgww21v5A)
+
 ## What it does
 
 The mod replaces the Twinshot machine with a sample player and adds a sampling page. Everything else is the Syntakt you know.
