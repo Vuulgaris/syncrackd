@@ -14,7 +14,7 @@ Recording with a record trig. The full walkthrough: [SynCrackd: Stereo Sampling 
 
 The mod replaces the Twinshot machine with a sample player and adds a sampling page. Everything else is the Syntakt you know.
 
-- **A sample machine** on any digital track: 64 slots, 16-bit 48 kHz, mono or stereo, from a 64 MB pool. A stereo sample takes two slots.
+- **A stereo sample machine** on any digital track: 64 slots, 16-bit 48 kHz, mono or stereo, from a 64 MB pool. A stereo sample takes two slots.
 - **Playback**: start and length that follow the knobs live, loops with a crossfaded seam, sample rate reduction, a pushed TUNE that steps finer.
 - **Slices**: KEYS on SLCE plays the sample's transients across the keyboard.
 - **Time stretch**: STRC on, the sample follows the tempo, SPD sets the ratio. Lockable per step.
