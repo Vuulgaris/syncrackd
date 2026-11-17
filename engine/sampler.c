@@ -2734,6 +2734,10 @@ CAVE(e) static void norm_block(void)
     norm_pick(n, NORM_PEND, now);
     if (!n->gain)
         return;
+#ifdef SLEEP
+    if (!SLP->ok)                               /* the sleep image: scaled on a light block; the peaks above every block */
+        return;
+#endif
     k = n->k;
     x = REC_BUF(k);
     if (SLOT[k].data != x || SLOT[k].frames != n->frames) {
@@ -2754,13 +2758,79 @@ CAVE(e) static void norm_block(void)
 }
 #endif
 
+#ifdef SLEEP
+/* The sleep image: is this block, so far, no longer than blocks have been at this place of late. See sampler.h. */
+CAVE(g) static u32 light(u32 *avg)
+{
+    u32 e = SLP_T_COUNT - SLP_T_START, a = *avg;
+
+    *avg = a + ((s32)(e - a) >> 4);
+    return (s32)(e - a - (a >> 5)) <= 0;
+}
+
+/* The sleep image: a voice's buffer made nothing. */
+CAVE(u) static void sleep_clear(s32 *o)     /* in a run where nothing of ours moves for it */
+{
+    u32 k = BLOCK;
+
+    do
+        *o++ = 0;
+    while (--k);
+}
+
+/* The sleep image, before the voice loop (sleep_hook, engine/stub.S): the voices not run this block. See sampler.h. */
+CAVE(w) void sleep_pre(u32 trig)
+{
+    struct slp *z = SLP;
+    u8 *q = z->quiet;
+    const s32 *v = VOICE(0);
+    s32 *o = (s32 *)OUT_BUF;
+    u32 skip = 0, bit, n = ++z->count;
+
+    for (bit = 1; bit < 1u << N_TRACKS; bit += bit, n += 2, q++, v += 450, o += BLOCK)
+        if (trig & bit)
+            *q = 0;                             /* the stages act on its trig in this block: awake from here */
+        else if (*q >= SLP_BLOCKS && v[V_ENGINE] != ENGINE_ID && (n & 15)) {
+            skip |= bit;
+            sleep_clear(o);
+        }
+    z->skip = skip;
+}
+
+/* The sleep image, after the last stage: how long each stock voice that was run has been under the floor. */
+CAVE(e) static void sleep_post(void)
+{
+    struct slp *z = SLP;
+    u32 t, skip = z->skip;
+
+    for (t = 0; t < N_TRACKS; t++) {
+        const s32 *o = (const s32 *)(OUT_BUF + 4 * BLOCK * t);
+
+        if ((skip >> t & 1) || VOICE(t)[V_ENGINE] == ENGINE_ID)
+            continue;
+        if (heard(o, o))
+            z->quiet[t] = 0;
+        else if (z->quiet[t] != 255)
+            z->quiet[t]++;
+    }
+}
+#endif
+
 /* The keep box's step, but for a request of a part of the take being scaled that is not yet: no answer this block.
  * The main CPU asks again till it has one (engine/keeptakes.c, ask: PATIENCE). */
+#ifdef SLEEP
+CAVE(f) static void norm_keep(void)     /* the sleep image: and none on a block that is not a light one; out of cave g for the room */
+#else
 CAVE(g) static void norm_keep(void)
+#endif
 {
     const struct norm *n = NORM_AT;
     volatile struct keepbox *b = KEEP_AUDIO;
 
+#ifdef SLEEP
+    if (!light(&SLP->avg[0]))
+        return;
+#endif
     if (NORM_UP == NORM_MAGIC && n->gain && b->req != b->ack && b->slot - n->k <= n->two && b->off / 2 + 256 > n->pos)
         return;
     keep_step();
@@ -2773,6 +2843,9 @@ CAVE(e) void hits_block(void)
     const u8 *params = HIT_PARAMS;
     u32 word = 0, t, want = 0, k = HIT_RR & (N_SLOTS - 1), mask = R_MASK;
 
+#ifdef SLEEP
+    SLP->ok = light(&SLP->avg[1]);
+#endif
 #ifdef NORM
     norm_block();
 #endif
@@ -2792,11 +2865,19 @@ CAVE(e) void hits_block(void)
         }
         word |= hit_pass(s, HITV(t), v[V_START], &want) << 4 * t;
     }
+#ifdef SLEEP
+    if (!SLP->ok)                               /* the sleep image: no slot gone over on a block that is not a light one */
+        ;
+    else
+#endif
     if (want)                                   /* a playing voice's slot first */
         hit_scan(want - 1);
     else if (hit_scan(k))
         HIT_RR = k + 1;
     *HIT_BOX = word;
+#ifdef SLEEP
+    sleep_post();
+#endif
 }
 #endif
 

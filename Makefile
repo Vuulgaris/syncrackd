@@ -1,6 +1,6 @@
 PY ?= .venv/bin/python
 
-.PHONY: test test-chain setup render engine image image-phone image-full image-rec image-big image-keep image-double image-screen image-page image-load image-bank image-fade image-mute image-len image-live image-floor image-reclock image-pitch image-meter image-save image-safe image-probe image-stereo image-time image-time12 image-gain image-mode image-cross image-pack image-stops image-solo image-ptn image-feed image-once image-soloknob image-xfade image-gfade image-dma image-apage image-slock image-alock image-multi image-srr image-gear image-stay image-soft image-pre image-tail image-lap image-hits image-hitui image-trim image-slim image-six image-eight image-trig image-switch image-box image-xknob image-xshare image-fltr image-probe17 image-tlsolo image-long image-slice image-ring image-mixtime image-fast image-evtime image-rxoff image-evrx image-rxcap image-copy image-nodiv image-allright image-prewas image-cut image-nofx image-xfix image-xcont image-xcarry image-scan image-scratch image-soloend image-eucl image-norm image-atrig image-pad7 image-back image-stretch image-lock image-scrub image-slscrub image-grain image-stsw image-spread image-trans image-next image-pbank image-kind image-mirror image-trap image-shadow image-sink image-tune image-letgo image-ask image-axf image-gainup image-onedest image-destnum image-fresh image-newproj image-wipe image-stream image-evict image-handrec image-firstrec image-slotprobe samples stereo-sample stereo-check image-prof prof-read story check bundle single site
+.PHONY: test test-chain setup render engine image image-phone image-full image-rec image-big image-keep image-double image-screen image-page image-load image-bank image-fade image-mute image-len image-live image-floor image-reclock image-pitch image-meter image-save image-safe image-probe image-stereo image-time image-time12 image-gain image-mode image-cross image-pack image-stops image-solo image-ptn image-feed image-once image-soloknob image-xfade image-gfade image-dma image-apage image-slock image-alock image-multi image-srr image-gear image-stay image-soft image-pre image-tail image-lap image-hits image-hitui image-trim image-slim image-six image-eight image-trig image-switch image-box image-xknob image-xshare image-fltr image-probe17 image-tlsolo image-long image-slice image-ring image-mixtime image-fast image-evtime image-rxoff image-evrx image-rxcap image-copy image-nodiv image-allright image-prewas image-cut image-nofx image-xfix image-xcont image-xcarry image-scan image-scratch image-soloend image-eucl image-norm image-atrig image-pad7 image-back image-stretch image-lock image-scrub image-slscrub image-grain image-stsw image-spread image-trans image-next image-pbank image-kind image-mirror image-trap image-shadow image-sink image-tune image-letgo image-ask image-axf image-gainup image-onedest image-destnum image-fresh image-newproj image-wipe image-stream image-evict image-handrec image-firstrec image-sololen image-sleep image-slotprobe samples stereo-sample stereo-check image-prof prof-read story check bundle single site
 
 # The quick run, what a change needs: the tools, the emulator, the engine, the facts read from stock, and the release
 # image's own test file. test-chain runs every image's own file too (about 137 files, ten to twenty minutes): before
@@ -8,7 +8,7 @@ PY ?= .venv/bin/python
 # hundreds: tests/conftest.py); JOBS=0 runs them one after another.
 JOBS ?= auto
 TEST_CORE = toolchain container audio_map emu_engine sampler stereo_path build mainpatch deadcode emac patch public rpc stereo_check
-TEST_NOW = firstrec
+TEST_NOW = sleep
 test:
 	$(PY) -m pytest -q -n $(JOBS) --dist loadgroup $(foreach t,$(TEST_CORE) $(TEST_NOW),tests/test_$(t).py)
 
@@ -522,6 +522,14 @@ image-handrec:
 # the firstrec image (level 82, on handrec): PLAY records a ONCE on the first step on the first pass. Main CPU only.
 image-firstrec:
 	$(PY) -m tools.build "$$(find firmware -name '*.syx' | head -1)" firstrec
+
+# the sololen image (level 83, on firstrec): a solo lock, trig or trigless, digital or analog, held for its step's LEN. Main CPU only.
+image-sololen:
+	$(PY) -m tools.build "$$(find firmware -name '*.syx' | head -1)" sololen
+
+# the sleep image (level 84, on sololen): a stock voice rests when silent, one never trigged too; the save copy, the normalizer and the scan on light blocks. Audio CPU only.
+image-sleep:
+	$(PY) -m tools.build "$$(find firmware -name '*.syx' | head -1)" sleep
 
 # a tool, not to keep: the spread image with locks on knob slots 0, 55 and 70 made by G with a step held, shown in D, F and G.
 image-tuneprobe:

@@ -163,6 +163,8 @@ SRR_CAVES = {
     "d": (SWARM_UPDATE, TWIN_UPDATE),  # 1,264 bytes
 }
 SRR_STATE = 0x44050a40  # free memory after the stops image's count: a voice's hold, sixteen bytes a voice
+SLEEP_STATE = 0x44050ac0  # free memory after the srr image's holds: struct slp (engine/sampler.h), any numbers at a start
+SLEEP_GATE = 0x4000445c  # the voice loop's read of a voice's engine: move.l (a4,d3.l),d5 ; moveq #11,d1, the track in d2
 # The hits image (engine/sampler.h, HITS): a slot's hits, a voice's place among them, the window's long that says them
 HITS_STORE, HITS_BYTES = 0x44070000, 512  # a slot's: its place, frames, print, frames gone over, follower, gap, count, then 123 longs
 HITS_VOICE, HITS_RR = 0x44078000, 0x44078080  # a voice's, 16 bytes: how far said, its frame a block ago, the slot, the next hit; then the slot in turn

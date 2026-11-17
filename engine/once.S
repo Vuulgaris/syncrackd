@@ -172,6 +172,9 @@ once_seq:
     move.l  %fp,-(%sp)              | the event
     jsr     STEP_LOCKS
     lea     24(%sp),%sp
+#ifdef SOLOLEN
+    jsr     solo_len                | the sololen image: a solo lock's step starts its LEN
+#endif
 #ifdef STAY
 | The stay image. The routine that plays a step has two callers. The sequencer's (0x4008cf86) hands it 0 for the
 | event's place. The other (0x4008c288, in 0x4008c128) hands it a place: it plays the step the sequencer is on, for
@@ -236,6 +239,9 @@ once_seq:
 | a0 and a1 hold nothing of stock's here: the other way to where both go on is through a call.
 once_none:
     clr.l   8(%fp)                  | stock's: no locks in the event
+#ifdef SOLOLEN
+    jsr     solo_none               | the sololen image: no solo lock queued for a start
+#endif
 #ifdef STAY
 #ifdef FIRSTREC
     tst.l   80(%sp)                 | the firstrec image: this caller's record is a step with no locks
@@ -307,6 +313,9 @@ hand_start:
 #ifdef FIRSTREC
     jsr     first_spend             | the firstrec image: the ONCE of the step each track's queued record plays
 #endif
+#ifdef SOLOLEN
+    jsr     solo_begin              | the sololen image: the queued step's solo lock starts its LEN
+#endif
     lea     once_vars(%pc),%a0
     clr.l   (%a0)+
     clr.l   (%a0)
@@ -364,4 +373,182 @@ first_late:
     adda.l  %d4,%a0
     move.b  #1,(%a0)
 1:  rts
+#endif
+
+#ifdef SOLOLEN
+| The sololen image.
+|
+| Now every step with a solo lock, ON or OFF, trig or none, digital (slot 17, on a sampler's track) or analog (slot
+| 26), holds it for that step's LEN: its own at the pattern's data + 1177 a track + 192 + step, 0xff for the TRIG
+| page's at + 961, stock's table mm.LEN_TABLE of its lengths (0 at INF: held till the next), counted down by the tempo
+| a block (solo_tick, from engine/hits.c); at nothing the track's bit of solo_gone (mm.SOLO_GONE) is set and the solos
+| pass over the lock (engine/amute.c). A start plays the record the other caller built last (the firstrec image): its
+| step's lock is kept by solo_len and started by solo_begin. Bits are set and cleared a byte at a time (one
+| instruction: the block's interrupt runs solo_tick), a track's bit t in the byte at + 3 - t / 8.
+    .pushsection .cave.l,"ax"
+    .globl  solo_left, solo_pend, solo_run, solo_pmask, solo_len, solo_none, solo_begin, solo_tick
+solo_left:
+    .fill   48,1,0                  | a long a track 0 to 11: what is left of its solo lock, in the tempo's units
+solo_pend:
+    .fill   48,1,0                  | the same of the step the other caller built last
+solo_run:
+    .long   0                       | a bit a track counting down
+solo_pmask:
+    .long   0                       | a bit a track whose step the other caller built last has a solo lock
+
+| a1 a long of bits, d4 a track: a1 the byte its bit is in. Uses d1.
+solo_byte:
+    move.l  %d4,%d1
+    lsr.l   #3,%d1
+    neg.l   %d1
+    lea     3(%a1,%d1.l),%a1
+    rts
+
+| d0 a length (0: INF), d4 the track: its lock is heard and counts down from d0. Uses d1, a0, a1.
+solo_set:
+    lea     solo_run,%a1
+    bsr.w   solo_byte
+    bclr    %d4,(%a1)
+    lea     solo_left,%a0
+    move.l  %d4,%d1
+    lsl.l   #2,%d1
+    move.l  %d0,(%a0,%d1.l)
+    tst.l   %d0
+    beq.s   1f
+    bset    %d4,(%a1)
+1:  lea     SOLO_GONE_AT,%a1
+    bsr.w   solo_byte
+    bclr    %d4,(%a1)
+    rts
+
+| From once_seq, the step's locks gathered (d3 the step, d4 the track, fp the event, 104(sp) the step routine's place:
+| 0 from the sequencer). Uses d0, d1, a0, a1.
+solo_len:
+    moveq   #11,%d0
+    cmp.l   %d4,%d0
+    bcs.w   9f                      | the FX track: no solo an analog track's solo
+    moveq   #26,%d1
+    moveq   #7,%d0
+    cmp.l   %d4,%d0
+    bcs.s   1f
+    move.l  %d4,%d0                 | a digital track's, only on a sampler's
+    mulu.w  #142,%d0
+    add.l   #PARAM_SENT + 62,%d0
+    movea.l %d0,%a0
+    mvz.w   (%a0),%d0               | the machine's type, a byte up
+    cmpi.l  #44 << 8,%d0
+    bne.w   9f
+    moveq   #17,%d1
+1:  move.l  8(%fp),%d0              | the event's count of locks, (slot, value) from + 20, 8 bytes each
+    lea     20(%fp),%a0
+2:  subq.l  #1,%d0
+    bmi.s   5f
+    cmp.w   (%a0),%d1
+    beq.s   3f
+    addq.l  #8,%a0
+    bra.s   2b
+3:  mvz.b   2(%a0),%d0              | the lock's mark SOLO_LOCK_ON
+    cmpi.l  #0x35,%d0
+    beq.s   4f
+    cmpi.l  #0x1a,%d0               | SOLO_LOCK_OFF
+    bne.s   5f
+4:  move.l  PATTERN_DATA,%d0
+    beq.s   5f
+    movea.l %d0,%a0
+    move.l  %d4,%d0
+    mulu.w  #1177,%d0
+    adda.l  %d0,%a0
+    lea     192(%a0),%a1
+    mvz.b   (%a1,%d3.l),%d0         | the step's LEN
+    cmpi.l  #0xff,%d0
+    bne.s   6f
+    mvz.b   961(%a0),%d0            | none: the TRIG page's
+6:  andi.l  #127,%d0
+    lsl.l   #2,%d0
+    lea     LEN_TABLE + 4,%a0
+    move.l  (%a0,%d0.l),%d0         | its length
+    tst.l   104(%sp)
+    bne.s   7f
+    bra.w   solo_set                | the sequencer's: from now the other caller's: kept for a start
+7:  lea     solo_pend,%a0
+    move.l  %d4,%d1
+    lsl.l   #2,%d1
+    move.l  %d0,(%a0,%d1.l)
+    lea     solo_pmask,%a1
+    bsr.w   solo_byte
+    bset    %d4,(%a1)
+    rts
+5:  tst.l   104(%sp)
+    beq.s   9f
+    lea     solo_pmask,%a1          | the other caller's step has none
+    bsr.w   solo_byte
+    bclr    %d4,(%a1)
+9:  rts
+
+| From once_none, a step with no locks (84(sp) the place). Uses d1, a1.
+solo_none:
+    tst.l   84(%sp)
+    beq.s   9f
+    moveq   #11,%d1
+    cmp.l   %d4,%d1
+    bcs.s   9f
+    lea     solo_pmask,%a1
+    bsr.w   solo_byte
+    bclr    %d4,(%a1)
+9:  rts
+
+| From hand_start: each track whose queued step has a solo lock counts down from its LEN. Keeps all but a0.
+solo_begin:
+    lea     -16(%sp),%sp
+    movem.l %d0-%d1/%d4/%a1,(%sp)
+    moveq   #0,%d4
+1:  lea     solo_pmask,%a1
+    bsr.w   solo_byte
+    btst    %d4,(%a1)
+    beq.s   2f
+    lea     solo_pend,%a0
+    move.l  %d4,%d0
+    lsl.l   #2,%d0
+    move.l  (%a0,%d0.l),%d0
+    bsr.w   solo_set
+2:  addq.l  #1,%d4
+    moveq   #12,%d0
+    cmp.l   %d0,%d4
+    blt.s   1b
+    movem.l (%sp),%d0-%d1/%d4/%a1
+    lea     16(%sp),%sp
+    rts
+
+| From engine/hits.c every block: each track counting down, a block of the tempo off; at nothing its lock is over.
+| Uses d0, d1, a0, a1.
+solo_tick:
+    move.l  solo_run,%d0
+    beq.s   9f
+    move.l  %d4,-(%sp)
+    moveq   #0,%d4
+1:  btst    %d4,%d0
+    beq.s   2f
+    lea     solo_left,%a0
+    move.l  %d4,%d1
+    lsl.l   #2,%d1
+    adda.l  %d1,%a0
+    move.l  (%a0),%d1
+    sub.l   TEMPO,%d1
+    bgt.s   3f
+    clr.l   (%a0)
+    lea     solo_run,%a1
+    bsr.w   solo_byte
+    bclr    %d4,(%a1)
+    lea     SOLO_GONE_AT,%a1
+    bsr.w   solo_byte
+    bset    %d4,(%a1)
+    bra.s   2f
+3:  move.l  %d1,(%a0)
+2:  addq.l  #1,%d4
+    moveq   #12,%d1
+    cmp.l   %d1,%d4
+    blt.s   1b
+    move.l  (%sp)+,%d4
+9:  rts
+    .popsection
 #endif

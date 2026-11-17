@@ -1775,7 +1775,7 @@ def tune_patches(image):
     return out, syms
 
 
-def once_patches(image, srr=False, stay=False, scratch=None, nxt=None, handrec=False, firstrec=False):
+def once_patches(image, srr=False, stay=False, scratch=None, nxt=None, handrec=False, firstrec=False, sololen=False):
     for addr, stock, what in ONCE_CONTEXT + (STAY_CONTEXT if stay else []):
         _expect(image, addr, bytes.fromhex(stock), "REC's ONCE, " + what)
     if stay and image.count(be32(mm.STEP_PLAY)):  # its two callers are by calls relative to the pc: no third by a long
@@ -1808,7 +1808,15 @@ def once_patches(image, srr=False, stay=False, scratch=None, nxt=None, handrec=F
     if firstrec:  # the firstrec image: what a start queues for the first step
         for addr, stock, what in FIRSTREC_CONTEXT:
             _expect(image, addr, bytes.fromhex(stock), "the firstrec image: " + what)
-    code, syms = build_engine.compile_code(("once.S", "onceclean.c"), caves, "once_firstrec" if firstrec else "once_handrec" if handrec else "once_next" if nxt else "once_scratch" if scratch else "once_stay" if stay else "once_srr" if srr else "once",
+    if sololen:  # the sololen image: a solo lock's lengths in a run of their own
+        lo, hi = mm.CAVE_SOLOLEN
+        for addr in (lo - 2, hi - 2):
+            _expect(image, addr, bytes.fromhex("4e75"), "the sololen image's run starts and ends a routine")
+        named = {k for k in range(0, len(image) - 3, 2) if lo <= int.from_bytes(image[k:k + 4], "big") < hi}
+        if named:  # a long at an odd place is bytes that happen to read so (one, 0x4015f5a3)
+            raise fw.GuardError("an address in the sololen image's run is named in the main program")
+        caves["l"] = mm.CAVE_SOLOLEN
+    code, syms = build_engine.compile_code(("once.S", "onceclean.c"), caves, "once_sololen" if sololen else "once_firstrec" if firstrec else "once_handrec" if handrec else "once_next" if nxt else "once_scratch" if scratch else "once_stay" if stay else "once_srr" if srr else "once",
                                            ("STEP_LOCKS=%#x" % mm.STEP_LOCKS, "MAIN_WAIT=%#x" % mm.MAIN_WAIT, "PARAM_SENT=%#x" % mm.PARAM_SENT,
                                             "LOCK_ONCE=%#x" % mm.ONCE_WORD, "LOCK_SPENT=%#x" % mm.ONCE_SPENT)
                                            + (("SRR",) if srr else ())  # the srr image: an old pattern's locks of MODE are taken off there too
@@ -1817,7 +1825,8 @@ def once_patches(image, srr=False, stay=False, scratch=None, nxt=None, handrec=F
                                            + (("NEXT", "NEXT_POLL_AT=%#x" % nxt) if nxt else ())
                                            + (("HANDREC", "SEQ_STATE=%#x" % mm.SEQ_STATE, "TEMPO=%#x" % mm.TEMPO, "PATTERN_DATA=%#x" % mm.PATTERN_DATA,
                                                "LEN_TABLE=%#x" % mm.LEN_TABLE) if handrec else ())
-                                           + (("FIRSTREC", "PLACES=%#x" % mm.SEQ_PLACES) if firstrec else ()))  # the next image: DEST's NEXT kept at each message     # the scratch image: the poll at each message    # the stay image: nothing is spent where a step is only brought up to date
+                                           + (("FIRSTREC", "PLACES=%#x" % mm.SEQ_PLACES) if firstrec else ())
+                                           + (("SOLOLEN", "SOLO_GONE_AT=%#x" % mm.SOLO_GONE) if sololen else ()))  # the next image: DEST's NEXT kept at each message     # the scratch image: the poll at each message    # the stay image: nothing is spent where a step is only brought up to date
     start, end = mm.CAVE_ONCE
     if handrec and (syms["hand_hold"], syms["hand_left"], syms["hand_rec"]) != (mm.HAND_HOLD, mm.HAND_LEFT, mm.HAND_REC):
         raise fw.GuardError("the handrec image's numbers and hand_rec must be first in the long image's run")
@@ -1841,6 +1850,10 @@ def once_patches(image, srr=False, stay=False, scratch=None, nxt=None, handrec=F
     # jsr (the wait) -> jsr once_loop
     out.append(fw.Patch(3, mm.off(mm.MAIN_LOOP_WAIT), JSR + be32(mm.MAIN_WAIT), JSR + be32(syms["once_loop"]),
                         "REC's ONCE: the main task takes a spent lock off when a message has come"))
+    if sololen:  # the sololen image: its run
+        lo, hi = mm.CAVE_SOLOLEN
+        out.append(fw.Patch(3, mm.off(lo), image[mm.off(lo):mm.off(hi)], code["l"] + build_engine.NOP * ((hi - lo - len(code["l"])) // 2),
+                            "the sololen image: a solo lock held for its step's LEN"))
     if handrec:  # the handrec image: its run
         lo, hi = mm.CAVE_LONG
         out.append(fw.Patch(3, mm.off(lo), image[mm.off(lo):mm.off(hi)], code["b"] + build_engine.NOP * ((hi - lo - len(code["b"])) // 2),
@@ -1884,14 +1897,15 @@ HITUI_CONTEXT = [
 ]
 
 
-def hits_patches(image, ui=False, soloend=False, trans=False):
+def hits_patches(image, ui=False, soloend=False, trans=False, sololen=None):
     for addr, stock, what in HITS_CONTEXT + (HITUI_CONTEXT if ui else []):
         _expect(image, addr, bytes.fromhex(stock), "the hits image, " + what)
     if any(image.count(be32(a)) for a in range(mm.CAVE_HITS[0], mm.CAVE_HITS[1], 2)):
         raise fw.GuardError("an address in the hits' run is named in the main program")
     start, end = mm.CAVE_HITS
-    code, syms = build_engine.compile_code(("hits.c",), dict({"o": mm.CAVE_HITS}, **({"t": mm.CAVE_TRANS} if trans else {})), "trans" if trans else "soloend" if soloend else "hitui" if ui else "hits",
-                                           (("HITUI",) if ui else ()) + (("SOLOEND",) if soloend else ()) + (("TRANS",) if trans else ()))
+    code, syms = build_engine.compile_code(("hits.c",), dict({"o": mm.CAVE_HITS}, **({"t": mm.CAVE_TRANS} if trans else {})), "hits_sololen" if sololen else "trans" if trans else "soloend" if soloend else "hitui" if ui else "hits",
+                                           (("HITUI",) if ui else ()) + (("SOLOEND",) if soloend else ()) + (("TRANS",) if trans else ())
+                                           + (("SOLOLEN", "SOLO_TICK_AT=%#x" % sololen) if sololen else ()))
     if soloend and not (syms["solo_gone"] == mm.SOLO_GONE and code["o"][:12] == bytes(12)):
         raise fw.GuardError("the soloend image's twelve bytes must be first in the hits' run, and 0")
     new = code["o"] + build_engine.NOP * ((end - start - len(code["o"])) // 2)
@@ -1984,11 +1998,11 @@ def patches(image, mixer=True, rec=False, big=False, keep=False, double=False, s
         syms = dict(syms, **solo_syms)
     if once:
         more, once_syms = once_patches(image, srr, stay=xfade >= 10, scratch=syms["scratch_poll"] if xfade >= 47 else None,
-                                       nxt=syms["next_poll"] if xfade >= 61 else None, handrec=xfade >= 81, firstrec=xfade >= 82)
+                                       nxt=syms["next_poll"] if xfade >= 61 else None, handrec=xfade >= 81, firstrec=xfade >= 82, sololen=xfade >= 83)
         out += more
         syms = dict(syms, **once_syms)
     if xfade >= 16:  # the hits image: a long sample's hits start the filter's envelope again, by DEL
-        more, hit_syms = hits_patches(image, ui=xfade >= 17, soloend=xfade >= 48, trans=xfade >= 60)  # 17: the hitui image, DEL named HITS and no delay drawn
+        more, hit_syms = hits_patches(image, ui=xfade >= 17, soloend=xfade >= 48, trans=xfade >= 60, sololen=syms["solo_tick"] if xfade >= 83 else None)  # 17: the hitui image, DEL named HITS and no delay drawn
         out += more
         syms = dict(syms, **hit_syms)
     if xfade >= 64:  # the mirror image: the screen to a viewer over USB

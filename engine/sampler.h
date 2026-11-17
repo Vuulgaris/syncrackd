@@ -1224,4 +1224,33 @@ struct pend {
 #define CAVE_LETGO __attribute__((section(".cave.al"), noinline))
 #endif
 
+#ifdef SLEEP
+/* The sleep image (-DSLEEP): the audio CPU's interrupt for less where little sounds (docs/FINDINGS.md, "Where the
+ * audio CPU's interrupt goes when little sounds").
+ * Two things:
+ * - a stock voice rests. Stock runs a voice's engine every block, sounding or not (5,500 to 10,600 instructions a
+ * voice), and a voice that never had a trig runs engine 0 (7,000). A voice whose engine is not the sampler's and
+ * whose buffer after the last stage has been under LETGO_QUIET for SLP_BLOCKS blocks is not run: the voice loop's
+ * read of its engine (0x4000445c) goes through sleep_gate (engine/stub.S), which says engine 12 for it, and the
+ * loop's own test passes over it; its buffer is cleared. Its trig bit wakes it in the trig's own block (the stages
+ * act on a trig a block before the note starts). One block in 16, each track on its own, it is run and looked at,
+ * so a sound that comes back with no trig (a filter opened, a knob) is 11 ms late at the most. The sampler's
+ * voices are always run: a sample may hold silence, and they are cheap when no note plays;
+ * - the keep box (a save, a load), the normalizer's scaling and the hits' scan are left for a block that has been
+ * no longer, so far, than such blocks have been of late (light: the time image's timer since the voice loop was
+ * called, against a running mean of it at the same place, a 32nd over let through). P is the longest block of
+ * 256, and these fell on the heaviest as on any. A take's peak is still followed every block. */
+struct slp {
+    u8 quiet[8];            /* blocks a track's buffer has been under the floor, to 255. Any number will do at a start */
+    u32 skip;               /* the voices not run this block, a bit a track */
+    u32 count;              /* blocks, for the one in 16 */
+    u32 avg[2];             /* the timer's count since the voice loop's call, its running mean: after the loop, at the end */
+    u32 ok;                 /* this block is a light one at its end */
+};
+#define SLP ((struct slp *)0x44050ac0u)         /* free SDRAM after the srr image's holds */
+#define SLP_BLOCKS 32                           /* 21 ms of nothing before a voice rests */
+#define SLP_T_COUNT (*(const volatile u32 *)0xfc07400cu)    /* the second timer's count (engine/stub.S, T_COUNT) */
+#define SLP_T_START (*(const u32 *)0x44050a00u)             /* its count where this interrupt called the voice loop (T_STATE) */
+#endif
+
 #endif

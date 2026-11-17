@@ -77,7 +77,7 @@ def compile_code(sources, caves, name, defines=(), flags=()):
 
 def compile_engine(rec=False, keep=False, page=False, load=False, bank=False, fade=False, live=False, len_live=False,
                    floor=False, reclock=False, pitch=False, stereo=False, timed=False, twelve=False, auto=False, cross=False, pack=False,
-                   stops=False, multi=False, srr=False, soft=False, tail=False, hits=False, trim=False, slim=False, six=False, eight=False, curve=False, peak=False, xknob=False, slice=False, ring=False, allright=False, scan=False, norm=False, back=False, stretch=False, lock=False, scrub=False, slscrub=False, grain=False, spread=False, trap=False, letgo=False, handrec=False):
+                   stops=False, multi=False, srr=False, soft=False, tail=False, hits=False, trim=False, slim=False, six=False, eight=False, curve=False, peak=False, xknob=False, slice=False, ring=False, allright=False, scan=False, norm=False, back=False, stretch=False, lock=False, scrub=False, slscrub=False, grain=False, spread=False, trap=False, letgo=False, handrec=False, sleep=False):
     """The audio CPU sampler, with the recorder if asked, with the recorder's half of keeping takes if asked, with the
     sampling page's take if asked, and with slots loaded while the unit runs if asked. Returns ({cave: code bytes},
     {symbol: address}).
@@ -100,7 +100,7 @@ def compile_engine(rec=False, keep=False, page=False, load=False, bank=False, fa
                 # slot holds, said to the main CPU
                 return compile_code(SOURCES + (table,), dict(dict(caves, **m.TIMED_CAVES, **(m.CROSS_CAVES if cross else {}), **(m.SRR_CAVES if srr else {}),
                                                              **(m.HITS_CAVES if hits else {}), **(m.SCAN_CAVES if scan else {}), **(m.TRAP_CAVES if trap else {})), **(dict(m.BACK_CAVES, **(m.GRAIN_CAVES if grain else m.STRETCH_CAVES)) if stretch else m.BACK_CAVES if back else {})),
-                                    "sampler_handrec" if handrec else "sampler_letgo" if letgo else "sampler_trap" if trap else "sampler_spread" if spread else "sampler_grain" if grain else "sampler_slscrub" if slscrub else "sampler_scrub" if scrub else "sampler_lock" if lock else "sampler_stretch" if stretch else "sampler_back" if back else "sampler_norm" if norm else "sampler_scan" if scan else "sampler_allright" if allright else "sampler_ring" if ring else "sampler_slice" if slice else "sampler_xknob" if xknob else "sampler_peak" if peak else "sampler_curve" if curve else "sampler_eight" if eight else "sampler_six" if six else "sampler_slim" if slim else "sampler_trim" if trim else "sampler_hits" if hits else "sampler_tail" if tail else "sampler_soft" if soft else "sampler_srr" if srr else "sampler_multi" if multi else "sampler_stops" if stops else "sampler_pack" if pack else "sampler_cross" if cross else "sampler_mode",
+                                    "sampler_sleep" if sleep else "sampler_handrec" if handrec else "sampler_letgo" if letgo else "sampler_trap" if trap else "sampler_spread" if spread else "sampler_grain" if grain else "sampler_slscrub" if slscrub else "sampler_scrub" if scrub else "sampler_lock" if lock else "sampler_stretch" if stretch else "sampler_back" if back else "sampler_norm" if norm else "sampler_scan" if scan else "sampler_allright" if allright else "sampler_ring" if ring else "sampler_slice" if slice else "sampler_xknob" if xknob else "sampler_peak" if peak else "sampler_curve" if curve else "sampler_eight" if eight else "sampler_six" if six else "sampler_slim" if slim else "sampler_trim" if trim else "sampler_hits" if hits else "sampler_tail" if tail else "sampler_soft" if soft else "sampler_srr" if srr else "sampler_multi" if multi else "sampler_stops" if stops else "sampler_pack" if pack else "sampler_cross" if cross else "sampler_mode",
                                     defines + ("ONETRACK", "QUICK", "LEAN", "TIMED", "AUTO", "NARROW") + (("XFADE",) if cross else ())
                                     + (("PACK",) if pack else ()) + (("STOPS",) if stops else ())
                                     + (("MULTI",) if multi else ())  # the multi image: a block a track, taken before the voice loop
@@ -118,7 +118,7 @@ def compile_engine(rec=False, keep=False, page=False, load=False, bank=False, fa
                                     + (("SLICE",) if slice else ()) + (("RING",) if ring else ()) + (("ALLRIGHT",) if allright else ()) + (("HITSCAN",) if scan else ()) + (("NORM",) if norm else ())
                                     + (("BACK", "FAR_SRC=%#x" % m.IMAGE_END, "FAR_DST=%#x" % m.FAR,
                                         "FAR_LONGS=%d" % ((m.FAR_BYTES_GRAIN if grain else m.FAR_BYTES_LOCK if lock else m.FAR_BYTES_STR if stretch else m.FAR_BYTES) // 4)) if back else ())
-                                    + (("STRETCH", "STR_BASE=%#x" % m.STR_BASE) if stretch else ()) + (("LOCK",) if lock else ()) + (("SCRUB",) if scrub else ()) + (("SLSCRUB",) if slscrub else ()) + (("GRAIN",) if grain else ()) + (("SPREAD",) if spread else ()) + (("TRAP",) if trap else ()) + (("LETGO",) if letgo else ()) + (("HANDREC",) if handrec else ()))  # the slice image: the keys play slices where KEYS says     # the xknob image: DEC's slot is the crossfade's, and a note holds     # the switch image: a hit's steps from the slot's loudest frame     # the trig image: the six image's engine, a hit's loudness in finer steps
+                                    + (("STRETCH", "STR_BASE=%#x" % m.STR_BASE) if stretch else ()) + (("LOCK",) if lock else ()) + (("SCRUB",) if scrub else ()) + (("SLSCRUB",) if slscrub else ()) + (("GRAIN",) if grain else ()) + (("SPREAD",) if spread else ()) + (("TRAP",) if trap else ()) + (("LETGO",) if letgo else ()) + (("HANDREC",) if handrec else ()) + (("SLEEP",) if sleep else ()))  # the slice image: the keys play slices where KEYS says     # the xknob image: DEC's slot is the crossfade's, and a note holds     # the switch image: a hit's steps from the slot's loudest frame     # the trig image: the six image's engine, a hit's loudness in finer steps
             if timed:  # the time image: the stereo image's engine, and two calls of the interrupt's timed
                 return compile_code(SOURCES + (table,), dict(caves, **m.TIMED_CAVES), "sampler_time12" if twelve else "sampler_time",
                                     defines + ("ONETRACK", "QUICK", "LEAN", "TIMED"))
@@ -153,12 +153,13 @@ def compile_engine(rec=False, keep=False, page=False, load=False, bank=False, fa
 
 def patches(image, rec=False, keep=False, page=False, load=False, bank=False, fade=False, live=False, len_live=False,
             floor=False, reclock=False, pitch=False, stereo=False, timed=False, twelve=False, auto=False, cross=False, pack=False,
-            stops=False, multi=False, srr=False, soft=False, tail=False, hits=False, trim=False, slim=False, six=False, eight=False, curve=False, peak=False, xknob=False, slice=False, ring=False, allright=False, scan=False, norm=False, back=False, stretch=False, lock=False, scrub=False, slscrub=False, grain=False, spread=False, trap=False, letgo=False, handrec=False):
+            stops=False, multi=False, srr=False, soft=False, tail=False, hits=False, trim=False, slim=False, six=False, eight=False, curve=False, peak=False, xknob=False, slice=False, ring=False, allright=False, scan=False, norm=False, back=False, stretch=False, lock=False, scrub=False, slscrub=False, grain=False, spread=False, trap=False, letgo=False, handrec=False, sleep=False):
     """fw.Patch list that installs the sampler in the given stock section 7. The back image's code past the section's end
     is left in TAIL.
     """
     global TAIL
     TAIL = b""
+    handrec = handrec or sleep  # the sleep image: the handrec image's engine, stock's voices resting when silent
     letgo = letgo or handrec  # the handrec image: the letgo image's engine, a held take's release let be
     trap = trap or letgo  # the letgo image: the trap image's engine, a stereo note's right let go when over
     spread = spread or trap  # the trap image: the spread image's engine, a stretched note for less
@@ -206,7 +207,7 @@ def patches(image, rec=False, keep=False, page=False, load=False, bank=False, fa
     keep = keep or page
     rec = rec or keep
     code, syms = compile_engine(rec, keep, page, load, bank, fade, live, len_live, floor, reclock, pitch, stereo, timed, twelve, auto, cross, pack,
-                                stops, multi, srr, soft, tail, hits, trim, slim, six, eight, curve, peak, xknob, slice, ring, allright, scan, norm, back, stretch, lock, scrub, slscrub, grain, spread, trap, letgo, handrec)
+                                stops, multi, srr, soft, tail, hits, trim, slim, six, eight, curve, peak, xknob, slice, ring, allright, scan, norm, back, stretch, lock, scrub, slscrub, grain, spread, trap, letgo, handrec, sleep)
     out = []
     used = dict(m.CAVES, **(m.REC_CAVES if rec else {}), **(m.FADE_CAVES if fade else {}), **(m.LIVE_CAVES if len_live else {}),
                 **(m.PITCH_CAVES if pitch else {}))
@@ -267,7 +268,11 @@ def patches(image, rec=False, keep=False, page=False, load=False, bank=False, fa
         # moveq #29,%d0 ; moveq #3,%d1 ; moveb %d0,0xfc04002d (the timer's clock on) ; movew %d1,TIMER1_MODE
         if image[m.off(m.TIMER1_START) - 10:m.off(m.TIMER1_START) + 6] != bytes.fromhex(fw.sx("53136258fd1c0c7dd6cc135cdeccc685")) + m.TIMER1_MODE.to_bytes(4, "big"):
             raise fw.GuardError("stock does not start its second timer the way it did")
-    pointer(m.ISR_VOICE_LOOP_CALL + 2, m.VOICE_LOOP, "timed_hook" if timed else "sampler_hook", "interrupt: voice loop call")
+    if sleep:  # the sleep image: the voice loop's read of a voice's engine, through sleep_gate
+        # move.l (a4,d3.l),d5 ; moveq #11,d1 -> jsr sleep_gate
+        out.append(fw.Patch(7, m.off(m.SLEEP_GATE), bytes.fromhex(fw.sx("882bb113cf21616090b5")),
+                            b"\x4e\xb9" + syms["sleep_gate"].to_bytes(4, "big"), "the sleep image: a resting voice passed over"))
+    pointer(m.ISR_VOICE_LOOP_CALL + 2, m.VOICE_LOOP, "sleep_hook" if sleep else "timed_hook" if timed else "sampler_hook", "interrupt: voice loop call")
     if stereo:  # the left's last stage, then the right channels through all four
         if image[m.off(m.ISR_AMP_CALL):m.off(m.ISR_AMP_CALL) + 2] != b"\x4e\xb9":
             raise fw.GuardError("the interrupt does not call its last stage the way it did")
@@ -277,10 +282,10 @@ def patches(image, rec=False, keep=False, page=False, load=False, bank=False, fa
 
 def patched_image(image, rec=False, keep=False, page=False, load=False, bank=False, fade=False, live=False, len_live=False,
                   floor=False, reclock=False, pitch=False, stereo=False, timed=False, twelve=False, auto=False, cross=False, pack=False,
-                  stops=False, multi=False, srr=False, soft=False, tail=False, hits=False, trim=False, slim=False, six=False, eight=False, curve=False, peak=False, xknob=False, slice=False, ring=False, allright=False, scan=False, norm=False, back=False, stretch=False, lock=False, scrub=False, slscrub=False, grain=False, spread=False, trap=False, letgo=False, handrec=False):
+                  stops=False, multi=False, srr=False, soft=False, tail=False, hits=False, trim=False, slim=False, six=False, eight=False, curve=False, peak=False, xknob=False, slice=False, ring=False, allright=False, scan=False, norm=False, back=False, stretch=False, lock=False, scrub=False, slscrub=False, grain=False, spread=False, trap=False, letgo=False, handrec=False, sleep=False):
     """Stock section 7 bytes -> section 7 with the sampler installed (and the back image's code past its end)."""
     ps, syms = patches(image, rec, keep, page, load, bank, fade, live, len_live, floor, reclock, pitch, stereo, timed, twelve, auto, cross, pack,
-                       stops, multi, srr, soft, tail, hits, trim, slim, six, eight, curve, peak, xknob, slice, ring, allright, scan, norm, back, stretch, lock, scrub, slscrub, grain, spread, trap, letgo, handrec)
+                       stops, multi, srr, soft, tail, hits, trim, slim, six, eight, curve, peak, xknob, slice, ring, allright, scan, norm, back, stretch, lock, scrub, slscrub, grain, spread, trap, letgo, handrec, sleep)
     buf = bytearray(image)
     for p in ps:
         if bytes(buf[p.offset:p.offset + len(p.stock)]) != p.stock:
