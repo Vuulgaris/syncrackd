@@ -1479,3 +1479,27 @@ far_copy:
     bne.s   1b
     rts
 #endif
+
+#ifdef SLEEP
+| The sleep image (engine/sampler.h, SLEEP). In place of timed_hook in the interrupt's call of the voice loop: the
+| voices not run this block are worked out first (sleep_pre, engine/sampler.c), from the call's trig mask.
+    .section .cave.k,"ax"
+    .globl  sleep_hook
+sleep_hook:
+    move.l  12(%sp),-(%sp)          | the trig mask
+    jsr     sleep_pre
+    addq.l  #4,%sp
+    jmp     timed_hook
+| In the voice loop, in place of its read of a voice's engine (0x4000445c: move.l (a4,d3.l),d5 ; moveq #11,d1): the
+| same, and a voice not run this block is said to have engine 12, which the loop's own test after it passes over. d2
+| is the track there; d0 is free (the loop loads it again before it reads it).
+    .globl  sleep_gate
+sleep_gate:
+    move.l  (%a4,%d3.l),%d5
+    moveq   #11,%d1
+    move.l  0x44050ac8,%d0          | SLP->skip
+    btst    %d2,%d0
+    beq.s   1f
+    moveq   #12,%d5
+1:  rts
+#endif

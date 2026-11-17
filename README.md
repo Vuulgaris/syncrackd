@@ -39,9 +39,9 @@ You never download a modded OS from here. You make one from Elektron's own file,
 
 1. **Back up your +Drive** with Elektron Transfer: projects and samples. The mod writes to the drive.
 2. **Get Syntakt OS 1.42** from Elektron's website.
-3. **Patch it**, in your browser at the project's page (your file never leaves it), or with Python: download the release's one file (`syncrackd_firstrec.py` in the latest release), put it next to Elektron's, and run it. Python 3.9 or later, which a Mac already has; nothing to install.
+3. **Patch it**, in your browser at the project's page (your file never leaves it), or with Python: download the release's one file (`syncrackd_sleep.py` in the latest release), put it next to Elektron's, and run it. Python 3.9 or later, which a Mac already has; nothing to install.
    ```bash
-   python3 syncrackd_firstrec.py Syntakt_OS1.42.syx
+   python3 syncrackd_sleep.py Syntakt_OS1.42.syx
    ```
    It checks your file is the exact official 1.42, applies the mod, checks nothing changed outside the mod's own regions, and prints a SHA-256. Compare it with the one in the release notes. If they differ, do not flash.
 4. **Flash it** the way you would any OS update: with Transfer, or as SysEx from the unit's boot menu (see Elektron's manual).
@@ -55,8 +55,8 @@ You need the official 1.42 file in `firmware/`, Python 3.11+, and a ColdFire cro
 
 ```bash
 make setup
-make image-firstrec
-make check IMAGE=firstrec
+make image-sleep
+make check IMAGE=sleep
 ```
 
 Each feature is an image in a chain, each built on the one before, each with its own test file in `tests/`. The emulator (`emu/`) runs the patched code against stock's own routines before anything reaches a unit.

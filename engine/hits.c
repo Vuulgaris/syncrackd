@@ -42,6 +42,9 @@ __attribute__((section(".cave.o"))) void hits_env(u8 *params, u32 trig, u32 rele
     u16 kept[8];
     u8 *p = params;
 
+#ifdef SOLOLEN
+    ((void (*)(void))SOLO_TICK_AT)();          /* the sololen image: a solo lock ends with its step's LEN (engine/once.S) */
+#else
 #ifdef SOLOEND
     {
         u32 gone = (solo_gone[0] | release) & ~trig;  /* a release and the next trig in one block: the new note's */
@@ -53,6 +56,7 @@ __attribute__((section(".cave.o"))) void hits_env(u8 *params, u32 trig, u32 rele
             }
         solo_gone[0] = gone & 0xff;                 /* the eight digital tracks only: an analog track's lock is as it was */
     }
+#endif
 #endif
     for (t = 0; t < 8; t++, p += STRIDE) {
         u32 del = p[DEL];

@@ -524,6 +524,7 @@ TRIG_SIDE = 0x401c9b94  # its second base's table (the object's + 4): turns come
 TRIG_TURN_THUNK = 0x400416d2  # subql #4 from the object's address ; branch to TRIG_TURN
 CAVE_PRE = (0x401bf7fe, 0x401bf8dc)  # 222 bytes nothing reaches and nothing names (tools/deadcode.py): the pre image's copies
 CAVE_HITS = (0x4012d408, 0x4012d630)  # 552 bytes nothing reaches and nothing names (tools/deadcode.py): the hits image's call of the filter's envelope
+CAVE_SOLOLEN = (0x4010042c, 0x40100654)  # 552 bytes nothing reaches (tools/deadcode.py; rts before and at its end), named by no long at an even place: the sololen image's solo lengths
 SOLO_GONE = CAVE_HITS[0]  # the soloend image: twelve bytes first in the hits' run, a bit a track whose note has ended, and the eight tracks' last marks
 FILTER_ENV = 0x400965a4  # the filter's envelope, once a block: (the block's params, trigs, releases, tracks it skips), eight tracks
 FILTER_ENV_CALL = 0x400a4ccc  # the per-block routine's call of it: jsr FILTER_ENV, after pushing d6, d4, a5 and a2
